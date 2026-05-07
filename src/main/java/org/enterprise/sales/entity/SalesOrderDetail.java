@@ -1,0 +1,37 @@
+package org.enterprise.sales.entity;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.enterprise.common.entity.AuditableEntity;
+import org.enterprise.inventory.entity.Product;
+
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "sal_sales_order_details")
+@Getter
+@Setter
+public class SalesOrderDetail extends AuditableEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private SalesOrder salesOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Product product;
+
+    @Column(precision = 18, scale = 6)
+    private BigDecimal quantity = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 6)
+    private BigDecimal shippedQuantity = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 6)
+    private BigDecimal returnedQuantity = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal unitPrice = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal lineTotal = BigDecimal.ZERO;
+}
