@@ -3,13 +3,17 @@ package org.enterprise.security.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.enterprise.common.entity.AuditableEntity;
+import org.enterprise.common.entity.BaseEntity;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "permissions")
 @Getter
 @Setter
-public class Permission extends AuditableEntity {
+@SQLDelete(sql = "UPDATE permissions SET deleted = true WHERE id = ?")
+@SQLRestriction("deleted = false")
+public class Permission extends BaseEntity {
 
     @Column(unique = true)
     private String code;
@@ -19,12 +23,7 @@ public class Permission extends AuditableEntity {
     private String moduleCode;
 
     private String actionType;
-    // CREATE
-    // READ
-    // UPDATE
-    // DELETE
-    // APPROVE
-    // CANCEL
+
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)

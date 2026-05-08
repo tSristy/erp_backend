@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
 
@@ -11,19 +13,19 @@ import java.util.List;
 @Table(name = "roles")
 @Getter
 @Setter
+@SQLDelete(sql = "UPDATE roles SET deleted = true WHERE id = ?")
+@SQLRestriction("deleted = false")
 public class Role extends AuditableEntity {
 
-    @Column(unique = true)
+    @Column(nullable = false)
     private String code;
 
     private String name;
 
-    private String description;
-
-    private Boolean active = true;
-
-    @OneToMany(mappedBy = "role",
+    @OneToMany(
+            mappedBy = "role",
             cascade = CascadeType.ALL,
-            orphanRemoval = true)
+            orphanRemoval = true
+    )
     private List<RolePermission> rolePermissions;
 }

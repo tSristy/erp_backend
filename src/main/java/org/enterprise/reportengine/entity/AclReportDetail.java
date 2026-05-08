@@ -45,9 +45,11 @@ public class AclReportDetail {
     @Column(nullable = false)
     private Integer sortBy = 0;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean isMandatory = false;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean isActive = true;
 
@@ -57,6 +59,7 @@ public class AclReportDetail {
     @Column(length = 100)
     private String placeholder;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean multiple = false;
 

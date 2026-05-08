@@ -2,11 +2,17 @@ package org.enterprise.config;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.enterprise.organization.entity.Company;
 import org.enterprise.organization.repository.CompanyRepository;
 import org.enterprise.security.entity.*;
 import org.enterprise.security.repository.*;
+import org.enterprise.workflow.entity.WorkflowDefinition;
+import org.enterprise.workflow.entity.WorkflowStep;
+import org.enterprise.workflow.repository.WorkflowDefinitionRepository;
+import org.enterprise.workflow.repository.WorkflowStepRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -14,12 +20,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.enterprise.workflow.entity.WorkflowDefinition;
-import org.enterprise.workflow.repository.WorkflowDefinitionRepository;
-import org.enterprise.workflow.entity.WorkflowStep;
-import org.enterprise.workflow.repository.WorkflowStepRepository;
-
+@Slf4j
 @Component
+@Profile({"dev", "local"})
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
@@ -27,22 +30,31 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final RolePermissionRepository rolePermissionRepository;
     private final WorkflowDefinitionRepository workflowDefinitionRepository;
     private final WorkflowStepRepository workflowStepRepository;
+    private final PasswordEncoder passwordEncoder;
 
+    // =========================
+    // RUN
+    // =========================
     @Override
     @Transactional
     public void run(String... args) {
 
         Company company = seedCompany();
 
-        seedPermissions();          // GLOBAL
-        Role adminRole = seedRoles(company);
+        seedPermissions(); // GLOBAL
+
+        Role adminRole = seedAdminRole(company);
+
         seedAdminUser(company, adminRole);
-        
+
         seedAccountUsers(company);
-        seedWorkflowDefinitions(company, adminRole);
+
+        seedWorkflow(company);
+
+        log.info("Data seeding completed successfully.");
     }
 
     // =========================
@@ -52,26 +64,27 @@ public class DataSeeder implements CommandLineRunner {
 
         return companyRepository.findByCode("DEFAULT")
                 .orElseGet(() -> {
-                    Company company = new Company();
-                    company.setCode("DEFAULT");
-                    company.setName("Default Company");
-                    company.setShortName("DEF");
 
-                    company.setEmail("info@default.com");
-                    company.setPhone("000000000");
-                    company.setMobile("000000000");
+                    Company c = new Company();
+                    c.setCode("DEFAULT");
+                    c.setName("Default Company");
+                    c.setShortName("DEF");
+                    c.setEmail("info@default.com");
+                    c.setPhone("000000000");
+                    c.setMobile("000000000");
+                    c.setCountry("Bangladesh");
+                    c.setCity("Dhaka");
+                    c.setCurrencyCode("BDT");
+                    c.setTimezone("Asia/Dhaka");
+                    c.setLanguageCode("en");
+                    c.setActive(true);
+                    c.setStartDate(LocalDate.now());
 
-                    company.setCountry("Bangladesh");
-                    company.setCity("Dhaka");
+                    Company saved = companyRepository.save(c);
 
-                    company.setCurrencyCode("BDT");
-                    company.setTimezone("Asia/Dhaka");
-                    company.setLanguageCode("en");
+                    log.info("Company created: {}", saved.getCode());
 
-                    company.setActive(true);
-                    company.setStartDate(LocalDate.now());
-
-                    return companyRepository.save(company);
+                    return saved;
                 });
     }
 
@@ -82,153 +95,149 @@ public class DataSeeder implements CommandLineRunner {
 
         createPermission("INVENTORY_READ", "Inventory Read");
         createPermission("INVENTORY_WRITE", "Inventory Write");
+
         createPermission("FINANCE_READ", "Finance Read");
         createPermission("FINANCE_WRITE", "Finance Write");
-        
+
         createPermission("ACCOUNT_VIEW", "Account View");
         createPermission("ACCOUNT_READ", "Account Read");
         createPermission("ACCOUNT_WRITE", "Account Write");
+
+        createPermission("WORKFLOW_APPROVE", "Workflow Approve");
     }
 
     private Permission createPermission(String code, String name) {
 
         return permissionRepository.findByCode(code)
                 .orElseGet(() -> {
+
                     Permission p = new Permission();
                     p.setCode(code);
                     p.setName(name);
-                    return permissionRepository.save(p);
+
+                    Permission saved = permissionRepository.save(p);
+
+                    log.info("Permission created: {}", code);
+
+                    return saved;
                 });
     }
 
     // =========================
-    // ROLES
+    // ADMIN ROLE
     // =========================
-    private Role seedRoles(Company company) {
+    private Role seedAdminRole(Company company) {
 
-        String roleCode = "ADMIN_" + company.getId();
-
-        return roleRepository.findByCodeAndCompanyId(roleCode, company.getId())
+        return roleRepository.findByCodeAndCompanyId("ADMIN", company.getId())
                 .orElseGet(() -> {
 
                     Role role = new Role();
-                    role.setCode(roleCode);
+                    role.setCode("ADMIN");
                     role.setCompanyId(company.getId());
 
                     role = roleRepository.save(role);
 
-                    List<RolePermission> rolePermissions = new ArrayList<>();
+                    List<String> perms = List.of(
+                            "INVENTORY_READ",
+                            "INVENTORY_WRITE",
+                            "FINANCE_READ",
+                            "FINANCE_WRITE",
+                            "ACCOUNT_VIEW",
+                            "ACCOUNT_READ",
+                            "ACCOUNT_WRITE",
+                            "WORKFLOW_APPROVE"
+                    );
 
-                    rolePermissions.add(createRolePermission(role, "INVENTORY_READ"));
-                    rolePermissions.add(createRolePermission(role, "INVENTORY_WRITE"));
-                    rolePermissions.add(createRolePermission(role, "FINANCE_READ"));
-                    rolePermissions.add(createRolePermission(role, "FINANCE_WRITE"));
+                    List<RolePermission> links = new ArrayList<>();
 
-                    role.setRolePermissions(rolePermissions);
+                    for (String code : perms) {
+
+                        Permission permission = permissionRepository.findByCode(code)
+                                .orElseThrow();
+
+                        if (!rolePermissionRepository.existsByRoleAndPermission(role, permission)) {
+
+                            RolePermission rp = new RolePermission();
+                            rp.setRole(role);
+                            rp.setPermission(permission);
+                            rp.setCompanyId(company.getId());
+                            rp.setAllowed(true);
+
+                            links.add(rolePermissionRepository.save(rp));
+                        }
+                    }
+
+                    role.setRolePermissions(links);
 
                     return roleRepository.save(role);
                 });
     }
 
-    private RolePermission createRolePermission(Role role, String permissionCode) {
-
-        Permission permission = permissionRepository.findByCode(permissionCode)
-                .orElseThrow(() -> new RuntimeException("Permission not found: " + permissionCode));
-
-        RolePermission rp = new RolePermission();
-        rp.setRole(role);
-        rp.setPermission(permission);
-        rp.setCompanyId(role.getCompanyId());
-        rp.setAllowed(true);
-
-        return rp;
-    }
-
     // =========================
-    // ADMIN USER
+    // USERS
     // =========================
-    private void seedAdminUser(Company company, Role adminRole) {
+    private void seedAdminUser(Company company, Role role) {
 
-        String username = "admin@" + company.getCode();
+        String username = "admin@" + company.getCode().toLowerCase();
 
-        if (userRepository.findByUsernameAndCompanyId(username, company.getId()).isPresent())
+        if (userRepository.findByUsernameAndCompany(username, company.getId()).isPresent())
             return;
 
-        User user = new User();
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(getDefaultPassword()));
-        user.setActive(true);
-        user.setCompanyId(company.getId());
-
-        // USER ROLE
-        UserRole userRole = new UserRole();
-        userRole.setUser(user);
-        userRole.setRole(adminRole);
-        userRole.setCompanyId(company.getId());
-
-        user.setRoles(List.of(userRole));
-
-        // USER COMPANY
-        UserCompany userCompany = new UserCompany();
-        userCompany.setUser(user);
-        userCompany.setCompany(company);
-        userCompany.setDefaultCompany(true);
-        userCompany.setActive(true);
-
-        user.setCompanies(List.of(userCompany));
-
-        userRepository.save(user);
+        createUser(company, username, role);
     }
-    
-    // =========================
-    // ACCOUNT USERS
-    // =========================
+
     private void seedAccountUsers(Company company) {
-        // Viewer Role
-        Role viewerRole = roleRepository.findByCodeAndCompanyId("ACCOUNT_VIEWER", company.getId())
-                .orElseGet(() -> {
-                    Role role = new Role();
-                    role.setCode("ACCOUNT_VIEWER");
-                    role.setCompanyId(company.getId());
-                    role = roleRepository.save(role);
 
-                    List<RolePermission> perms = new ArrayList<>();
-                    perms.add(createRolePermission(role, "ACCOUNT_VIEW"));
-                    role.setRolePermissions(perms);
-                    return roleRepository.save(role);
-                });
+        Role viewer = createRole(company, "ACCOUNT_VIEWER", List.of("ACCOUNT_VIEW"));
+        Role manager = createRole(company, "ACCOUNT_MANAGER", List.of(
+                "ACCOUNT_VIEW",
+                "ACCOUNT_READ",
+                "ACCOUNT_WRITE"
+        ));
 
-        // Manager Role
-        Role managerRole = roleRepository.findByCodeAndCompanyId("ACCOUNT_MANAGER", company.getId())
-                .orElseGet(() -> {
-                    Role role = new Role();
-                    role.setCode("ACCOUNT_MANAGER");
-                    role.setCompanyId(company.getId());
-                    role = roleRepository.save(role);
-
-                    List<RolePermission> perms = new ArrayList<>();
-                    perms.add(createRolePermission(role, "ACCOUNT_VIEW"));
-                    perms.add(createRolePermission(role, "ACCOUNT_READ"));
-                    perms.add(createRolePermission(role, "ACCOUNT_WRITE"));
-                    role.setRolePermissions(perms);
-                    return roleRepository.save(role);
-                });
-
-        // view_user
-        seedCustomUser(company, "view_user@" + company.getCode().toLowerCase() + ".com", viewerRole);
-        // finance_user
-        seedCustomUser(company, "finance_user@" + company.getCode().toLowerCase() + ".com", managerRole);
+        createUser(company, "view_user@" + company.getCode().toLowerCase(), viewer);
+        createUser(company, "finance_user@" + company.getCode().toLowerCase(), manager);
     }
-    
-    private void seedCustomUser(Company company, String username, Role role) {
-        if (userRepository.findByUsernameAndCompanyId(username, company.getId()).isPresent())
-            return;
+
+    private Role createRole(Company company, String code, List<String> permissions) {
+
+        return roleRepository.findByCodeAndCompanyId(code, company.getId())
+                .orElseGet(() -> {
+
+                    Role role = new Role();
+                    role.setCode(code);
+                    role.setCompanyId(company.getId());
+
+                    role = roleRepository.save(role);
+
+                    List<RolePermission> list = new ArrayList<>();
+
+                    for (String permCode : permissions) {
+
+                        Permission perm = permissionRepository.findByCode(permCode)
+                                .orElseThrow();
+
+                        RolePermission rp = new RolePermission();
+                        rp.setRole(role);
+                        rp.setPermission(perm);
+                        rp.setCompanyId(company.getId());
+                        rp.setAllowed(true);
+
+                        list.add(rolePermissionRepository.save(rp));
+                    }
+
+                    role.setRolePermissions(list);
+
+                    return roleRepository.save(role);
+                });
+    }
+
+    private void createUser(Company company, String username, Role role) {
 
         User user = new User();
         user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(getDefaultPassword()));
+        user.setPassword(passwordEncoder.encode(getPassword()));
         user.setActive(true);
-        user.setCompanyId(company.getId());
 
         UserRole userRole = new UserRole();
         userRole.setUser(user);
@@ -237,46 +246,65 @@ public class DataSeeder implements CommandLineRunner {
 
         user.setRoles(List.of(userRole));
 
-        UserCompany userCompany = new UserCompany();
-        userCompany.setUser(user);
-        userCompany.setCompany(company);
-        userCompany.setDefaultCompany(true);
-        userCompany.setActive(true);
+        UserCompany uc = new UserCompany();
+        uc.setUser(user);
+        uc.setCompany(company);
+        uc.setCompanyId(company.getId());
+        uc.setDefaultCompany(true);
+        uc.setActive(true);
 
-        user.setCompanies(List.of(userCompany));
+        user.setCompanies(List.of(uc));
 
         userRepository.save(user);
-    }
-    
-    // =========================
-    // WORKFLOW DEFINITIONS
-    // =========================
-    private void seedWorkflowDefinitions(Company company, Role adminRole) {
-        workflowDefinitionRepository.findByCode("PO_APPROVAL").orElseGet(() -> {
-            WorkflowDefinition def = new WorkflowDefinition();
-            def.setCode("PO_APPROVAL");
-            def.setName("Purchase Order Approval Workflow");
-            def.setModule("INVENTORY");
-            def.setActive(true);
-            def = workflowDefinitionRepository.save(def);
 
-            // Fetch admin user
-            User admin = userRepository.findByUsernameAndCompanyId("admin@" + company.getCode(), company.getId()).orElse(null);
-
-            if (admin != null) {
-                WorkflowStep step1 = new WorkflowStep();
-                step1.setWorkflow(def);
-                step1.setStepNo(1);
-                step1.setName("Manager Approval");
-                step1.setUser(admin);
-                workflowStepRepository.save(step1);
-            }
-
-            return def;
-        });
+        log.info("User created: {}", username);
     }
 
-    private String getDefaultPassword() {
+    // =========================
+    // WORKFLOW
+    // =========================
+    private void seedWorkflow(Company company) {
+
+        workflowDefinitionRepository.findByCodeAndCompanyId("PO_APPROVAL", company.getId())
+                .orElseGet(() -> {
+
+                    WorkflowDefinition wf = new WorkflowDefinition();
+                    wf.setCode("PO_APPROVAL");
+                    wf.setName("Purchase Order Approval");
+                    wf.setModule("INVENTORY");
+                    wf.setActive(true);
+                    wf.setCompanyId(company.getId());
+
+                    wf = workflowDefinitionRepository.save(wf);
+
+                    WorkflowStep step = new WorkflowStep();
+                    step.setWorkflow(wf);
+                    step.setStepNo(1);
+                    step.setName("Manager Approval");
+
+                    User admin = userRepository.findByUsernameAndCompany(
+                            "admin@" + company.getCode().toLowerCase(),
+                            company.getId()
+                    ).orElse(null);
+
+                    if (admin != null) {
+                        step.setUser(admin);
+                    }
+
+                    step.setCompanyId(company.getId());
+
+                    workflowStepRepository.save(step);
+
+                    log.info("Workflow created: PO_APPROVAL");
+
+                    return wf;
+                });
+    }
+
+    // =========================
+    // PASSWORD
+    // =========================
+    private String getPassword() {
         return System.getenv().getOrDefault("DEFAULT_ADMIN_PASSWORD", "admin123");
     }
 }

@@ -3,7 +3,7 @@ package org.enterprise.security.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.enterprise.common.entity.AuditableEntity;
+import org.enterprise.common.entity.BaseEntity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -15,7 +15,7 @@ import java.util.List;
 @Setter
 @SQLDelete(sql = "UPDATE users SET deleted = true WHERE id = ?")
 @SQLRestriction("deleted = false")
-public class User extends AuditableEntity {
+public class User extends BaseEntity {
 
     @Column(unique = true, nullable = false)
     private String username;
@@ -32,12 +32,18 @@ public class User extends AuditableEntity {
 
     private Integer failedLoginAttempts = 0;
 
-    @OneToMany(mappedBy = "user",
+    @OneToMany(
+            mappedBy = "user",
             cascade = CascadeType.ALL,
-            orphanRemoval = true)
+            orphanRemoval = true
+    )
     private List<UserRole> roles;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<UserCompany> companies;
 
     @OneToMany(mappedBy = "user")

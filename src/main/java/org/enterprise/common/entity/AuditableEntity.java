@@ -4,7 +4,6 @@ import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
-
 import java.time.LocalDateTime;
 
 @MappedSuperclass

@@ -31,6 +31,7 @@ public class AclReportMaster {
     @Column(length = 500)
     private String remarks;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean isActive = true;
 
@@ -49,6 +50,7 @@ public class AclReportMaster {
             orphanRemoval = true,
             fetch = FetchType.LAZY)
     @OrderBy("sortBy ASC")
+    @Builder.Default
     private List<AclReportDetail> parameters = new ArrayList<>();
 }
 

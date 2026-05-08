@@ -1,40 +1,70 @@
 package org.enterprise.security.repository;
 
 import org.enterprise.security.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // 🔐 Login lookup (tenant-aware recommended)
+    // =========================================
+    // LOGIN
+    // =========================================
+
     Optional<User> findByUsername(String username);
 
-    // 🏢 Tenant-based user fetch (important for admin screens)
-    List<User> findByCompanyId(Long companyId);
+    // =========================================
+    // ACTIVE USERS
+    // =========================================
 
-    // 🔐 Active users only
-    List<User> findByCompanyIdAndActiveTrue(Long companyId);
+    List<User> findByActiveTrue();
 
-    // 🚀 Used for authentication optimization (join fetch role)
-    // 🚀 Corrected query to match the 'roles' field in User entity
+    // =========================================
+    // LOAD USER WITH ROLES
+    // =========================================
+
+    @EntityGraph(attributePaths = {
+            "roles",
+            "roles.role",
+            "roles.role.rolePermissions",
+            "roles.role.rolePermissions.permission"
+    })
+    Optional<User> findWithRolesByUsername(String username);
+
+    // =========================================
+    // TENANT USERS
+    // =========================================
+
     @Query("""
-    SELECT u FROM User u
-    JOIN FETCH u.roles ur
-    WHERE u.username = :username
-""")
-    Optional<User> findByUsernameWithRole(@Param("username") String username);
-
-    // 🔥 Optional: tenant + username safety (recommended for SaaS)
-    @Query("""
-        SELECT u FROM User u
-        WHERE u.username = :username
-        AND u.companyId = :companyId
+        SELECT DISTINCT u
+        FROM User u
+        JOIN u.companies uc
+        WHERE uc.company.id = :companyId
+        AND uc.active = true
+        AND u.active = true
     """)
-    Optional<User> findByUsernameAndCompanyId(
+    List<User> findActiveUsersByCompanyId(
+            @Param("companyId") Long companyId
+    );
+
+    // =========================================
+    // USER + COMPANY VALIDATION
+    // =========================================
+
+    @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        JOIN u.companies uc
+        WHERE u.username = :username
+        AND uc.company.id = :companyId
+        AND uc.active = true
+        AND u.active = true
+    """)
+    Optional<User> findByUsernameAndCompany(
             @Param("username") String username,
             @Param("companyId") Long companyId
     );

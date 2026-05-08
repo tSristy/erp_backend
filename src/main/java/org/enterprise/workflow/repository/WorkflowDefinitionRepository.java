@@ -9,4 +9,5 @@ public interface WorkflowDefinitionRepository
         extends JpaRepository<WorkflowDefinition, Long> {
 
     Optional<WorkflowDefinition> findByCode(String code);
+    Optional<WorkflowDefinition> findByCodeAndCompanyId(String code, Long companyId);
 }

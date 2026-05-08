@@ -14,6 +14,8 @@ public class ProductImage extends AuditableEntity {
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
+    @Builder.Default
+    @Column(nullable = false)
     private Boolean isPrimary = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
