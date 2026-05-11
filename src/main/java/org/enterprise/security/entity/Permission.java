@@ -22,6 +22,8 @@ public class Permission extends BaseEntity {
 
     private String moduleCode;
 
+    private String actionPath;
+
     private String actionType;
 
     private String description;

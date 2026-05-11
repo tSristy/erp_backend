@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
+import org.enterprise.inventory.enums.WarehouseCategory;
+import org.enterprise.inventory.enums.WarehouseType;
 import org.enterprise.organization.entity.Branch;
 import org.enterprise.finance.entity.Account;
 import org.hibernate.annotations.SQLDelete;
@@ -93,11 +95,4 @@ public class Warehouse extends AuditableEntity {
 
     @OneToMany(mappedBy = "warehouse")
     private List<Location> locations;
-
-    public enum WarehouseType {
-        CENTRAL, FACTORY, DISTRIBUTION, TRANSIT, RETAIL
-    }
-    public enum WarehouseCategory {
-        RAW, FINISHED_GOODS, DAMAGE, RETURNS
-    }
 }
