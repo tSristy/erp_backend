@@ -23,6 +23,9 @@ public class SalesQuotationDetail extends AuditableEntity {
     @Column(precision = 18, scale = 6)
     private BigDecimal quantity = BigDecimal.ZERO;
 
+    @Column(precision = 18, scale = 6)
+    private BigDecimal orderedQuantity = BigDecimal.ZERO;
+
     @Column(precision = 18, scale = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 

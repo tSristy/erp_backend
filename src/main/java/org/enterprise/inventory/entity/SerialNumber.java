@@ -19,6 +19,12 @@ public class SerialNumber extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Batch batch;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Warehouse warehouse;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Location location;
+
     @Enumerated(EnumType.STRING)
     private SerialStatus status = SerialStatus.IN_STOCK;
 

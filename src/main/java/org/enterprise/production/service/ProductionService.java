@@ -35,6 +35,7 @@ public class ProductionService {
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final JournalService journalService;
     private final CostingService costingService;
+    private final org.enterprise.inventory.service.BatchSerialTrackingService batchSerialTrackingService;
 
     @Transactional
     public void completeProduction(Long orderId, BigDecimal producedQty) {
@@ -99,13 +100,22 @@ public class ProductionService {
         }
 
         // 2. Receive Finished Goods
-        StockBalance fgStock = stockBalanceRepository
-                .findByProductIdAndWarehouseIdAndLocationId(order.getFinishedGood().getId(),
-                        order.getProductionWarehouse().getId(), null)
-                .orElseGet(StockBalance::new);
+        StockBalance fgStock;
+        if (order.getBatch() != null) {
+            fgStock = stockBalanceRepository
+                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(order.getFinishedGood().getId(),
+                            order.getProductionWarehouse().getId(), null, order.getBatch().getId())
+                    .orElseGet(StockBalance::new);
+        } else {
+            fgStock = stockBalanceRepository
+                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(order.getFinishedGood().getId(),
+                            order.getProductionWarehouse().getId(), null)
+                    .orElseGet(StockBalance::new);
+        }
 
         fgStock.setProduct(order.getFinishedGood());
         fgStock.setWarehouse(order.getProductionWarehouse());
+        fgStock.setBatch(order.getBatch());
 
         BigDecimal currentQty = Optional.ofNullable(fgStock.getQuantity()).orElse(BigDecimal.ZERO);
         BigDecimal currentTotalValue = Optional.ofNullable(fgStock.getTotalValue()).orElse(BigDecimal.ZERO);
@@ -119,6 +129,9 @@ public class ProductionService {
 
         stockBalanceRepository.save(fgStock);
 
+        batchSerialTrackingService.validateSerialNumbers(order.getFinishedGood(), order.getSerialNumbers(), producedQty.intValue());
+        batchSerialTrackingService.processInboundSerials(order.getFinishedGood(), order.getBatch(), order.getSerialNumbers(), order.getProductionWarehouse(), null, InventoryTransactionType.PRODUCTION_RECEIVE, "MO", order.getId());
+
         // Create ledger entry for receipt
         InventoryLedger receiveLedger = new InventoryLedger();
         receiveLedger.setTransactionType(InventoryTransactionType.PRODUCTION_RECEIVE);
@@ -127,6 +140,7 @@ public class ProductionService {
         receiveLedger.setTransactionDate(LocalDateTime.now());
         receiveLedger.setWarehouse(order.getProductionWarehouse());
         receiveLedger.setProduct(order.getFinishedGood());
+        receiveLedger.setBatch(order.getBatch());
 
         BigDecimal fgUnitCost = totalRawMaterialCost.divide(producedQty, 6, RoundingMode.HALF_UP);
 

@@ -22,6 +22,9 @@ public class StockTransfer extends AuditableEntity {
     private TransferStatus status = TransferStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    private TransferOrder transferOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private Warehouse sourceWarehouse;
 
     @ManyToOne(fetch = FetchType.LAZY)

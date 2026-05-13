@@ -36,6 +36,7 @@ public class DeliveryService {
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final JournalService journalService;
     private final CostingService costingService;
+    private final org.enterprise.inventory.service.BatchSerialTrackingService batchSerialTrackingService;
 
     @Transactional
     public DeliveryNote save(DeliveryNote deliveryNote) {
@@ -59,9 +60,16 @@ public class DeliveryService {
             Warehouse warehouse = delivery.getWarehouse();
             BigDecimal issueQty = detail.getQuantity();
 
-            StockBalance stock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(product.getId(), warehouse.getId(), null)
-                    .orElseGet(() -> isOutbound ? null : new StockBalance());
+            StockBalance stock;
+            if (detail.getBatch() != null) {
+                stock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(product.getId(), warehouse.getId(), null, detail.getBatch().getId())
+                        .orElseGet(() -> isOutbound ? null : new StockBalance());
+            } else {
+                stock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(product.getId(), warehouse.getId(), null)
+                        .orElseGet(() -> isOutbound ? null : new StockBalance());
+            }
             
             if (stock == null && isOutbound) {
                 throw new RuntimeException("Insufficient stock for product " + product.getName());
@@ -71,6 +79,7 @@ public class DeliveryService {
                 if (stock.getProduct() == null) {
                     stock.setProduct(product);
                     stock.setWarehouse(warehouse);
+                    stock.setBatch(detail.getBatch());
                 }
             }
 
@@ -80,6 +89,8 @@ public class DeliveryService {
                 throw new RuntimeException("Insufficient stock for product " + product.getName() +
                         ". Required: " + issueQty + ", Available: " + currentQty);
             }
+
+            batchSerialTrackingService.validateSerialNumbers(product, detail.getSerialNumbers(), issueQty.intValue());
 
             BigDecimal unitCost;
             BigDecimal issueValue;
@@ -118,6 +129,12 @@ public class DeliveryService {
 
             stockBalanceRepository.save(stock);
 
+            if (isOutbound) {
+                batchSerialTrackingService.processOutboundSerials(product, detail.getBatch(), detail.getSerialNumbers(), warehouse, null, org.enterprise.inventory.entity.SerialNumber.SerialStatus.ISSUED, InventoryTransactionType.SALES, "DELIVERY_NOTE", delivery.getId());
+            } else {
+                batchSerialTrackingService.processInboundSerials(product, detail.getBatch(), detail.getSerialNumbers(), warehouse, null, InventoryTransactionType.SALES_RETURN, "DELIVERY_NOTE", delivery.getId());
+            }
+
             // Create Ledger Entry
             InventoryLedger ledger = new InventoryLedger();
             ledger.setTransactionType(isOutbound ? InventoryTransactionType.SALES : InventoryTransactionType.SALES_RETURN);
@@ -126,6 +143,7 @@ public class DeliveryService {
             ledger.setTransactionDate(LocalDateTime.now());
             ledger.setWarehouse(warehouse);
             ledger.setProduct(product);
+            ledger.setBatch(detail.getBatch());
             ledger.setQtyIn(isOutbound ? BigDecimal.ZERO : issueQty);
             ledger.setQtyOut(isOutbound ? issueQty : BigDecimal.ZERO);
             ledger.setUnitCost(unitCost);
@@ -210,6 +228,8 @@ public class DeliveryService {
             returnDetail.setProduct(originalDetail.getProduct());
             returnDetail.setQuantity(originalDetail.getQuantity());
             returnDetail.setUnitCost(originalDetail.getUnitCost());
+            returnDetail.setBatch(originalDetail.getBatch());
+            returnDetail.setSerialNumbers(originalDetail.getSerialNumbers());
             returnDetails.add(returnDetail);
         }
         returnDelivery.setDetails(returnDetails);

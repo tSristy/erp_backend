@@ -38,6 +38,14 @@ public class ManufacturingOrder extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PLANNED;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.inventory.entity.Batch batch;
+
+    @ElementCollection
+    @CollectionTable(name = "prd_manufacturing_order_serials", joinColumns = @JoinColumn(name = "order_id"))
+    @Column(name = "serial_no")
+    private java.util.List<String> serialNumbers = new java.util.ArrayList<>();
+
     public enum OrderStatus {
         PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
     }

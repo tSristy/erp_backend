@@ -8,7 +8,14 @@ import java.util.Optional;
 public interface StockBalanceRepository
         extends JpaRepository<StockBalance, Long> {
 
-    Optional<StockBalance> findByProductIdAndWarehouseIdAndLocationId(
+    Optional<StockBalance> findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+            Long itemId,
+            Long warehouseId,
+            Long locationId,
+            Long batchId
+    );
+    
+    Optional<StockBalance> findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
             Long itemId,
             Long warehouseId,
             Long locationId

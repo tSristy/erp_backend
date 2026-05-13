@@ -26,6 +26,17 @@ public class DeliveryNoteDetail extends AuditableEntity {
     @Column(precision = 18, scale = 6)
     private BigDecimal quantity = BigDecimal.ZERO;
 
+    @Column(precision = 18, scale = 6)
+    private BigDecimal invoicedQuantity = BigDecimal.ZERO;
+
     @Column(precision = 18, scale = 2)
     private BigDecimal unitCost = BigDecimal.ZERO; // Track COGS at time of delivery
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.inventory.entity.Batch batch;
+
+    @ElementCollection
+    @CollectionTable(name = "sal_delivery_note_detail_serials", joinColumns = @JoinColumn(name = "detail_id"))
+    @Column(name = "serial_no")
+    private java.util.List<String> serialNumbers = new java.util.ArrayList<>();
 }

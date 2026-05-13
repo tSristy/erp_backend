@@ -33,6 +33,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
     private final StockBalanceRepository stockBalanceRepository;
     private final JournalService journalService;
     private final CostingService costingService;
+    private final BatchSerialTrackingService batchSerialTrackingService;
 
     public GoodsReceiptService(
             GoodsReceiptRepository goodsReceiptRepository,
@@ -43,7 +44,8 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             InventoryLedgerRepository inventoryLedgerRepository,
             StockBalanceRepository stockBalanceRepository,
             JournalService journalService,
-            CostingService costingService) {
+            CostingService costingService,
+            BatchSerialTrackingService batchSerialTrackingService) {
         super(goodsReceiptRepository);
         this.goodsReceiptRepository = goodsReceiptRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
@@ -54,6 +56,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         this.stockBalanceRepository = stockBalanceRepository;
         this.journalService = journalService;
         this.costingService = costingService;
+        this.batchSerialTrackingService = batchSerialTrackingService;
     }
 
     /**
@@ -101,6 +104,14 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             detail.setProduct(product);
             detail.setQuantity(dto.getQuantity());
             detail.setUnitCost(dto.getUnitCost());
+
+            Batch batch = batchSerialTrackingService.findOrCreateBatch(product, dto.getBatchNo(), dto.getManufactureDate(), dto.getExpiryDate());
+            detail.setBatch(batch);
+
+            batchSerialTrackingService.validateSerialNumbers(product, dto.getSerialNumbers(), dto.getQuantity().intValue());
+            if (dto.getSerialNumbers() != null) {
+                detail.setSerialNumbers(dto.getSerialNumbers());
+            }
 
             BigDecimal lineAmount = dto.getQuantity().multiply(dto.getUnitCost());
             detail.setLineTotal(lineAmount);
@@ -154,19 +165,32 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             ledger.setTransactionDate(LocalDateTime.now());
             ledger.setWarehouse(goodsReceipt.getWarehouse());
             ledger.setProduct(detail.getProduct());
+            ledger.setBatch(detail.getBatch());
             
             ledger.setQtyIn(isInbound ? detail.getQuantity() : BigDecimal.ZERO);
             ledger.setQtyOut(isInbound ? BigDecimal.ZERO : detail.getQuantity());
             ledger.setUnitCost(detail.getUnitCost());
             ledger.setTotalCost(detail.getLineTotal());
 
-            StockBalance currentStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(
-                            detail.getProduct().getId(),
-                            goodsReceipt.getWarehouse().getId(),
-                            null
-                    )
-                    .orElseGet(StockBalance::new);
+            StockBalance currentStock;
+            if (detail.getBatch() != null) {
+                currentStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+                                detail.getProduct().getId(),
+                                goodsReceipt.getWarehouse().getId(),
+                                null,
+                                detail.getBatch().getId()
+                        )
+                        .orElseGet(StockBalance::new);
+            } else {
+                currentStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+                                detail.getProduct().getId(),
+                                goodsReceipt.getWarehouse().getId(),
+                                null
+                        )
+                        .orElseGet(StockBalance::new);
+            }
 
             BigDecimal currentQty = Optional.ofNullable(currentStock.getQuantity()).orElse(BigDecimal.ZERO);
             BigDecimal currentTotalValue = Optional.ofNullable(currentStock.getTotalValue()).orElse(BigDecimal.ZERO);
@@ -185,13 +209,25 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         BigDecimal updatedTotalAmount = BigDecimal.ZERO;
         
         for (GoodsReceiptDetail detail : goodsReceipt.getDetails()) {
-            StockBalance stockBalance = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(
-                            detail.getProduct().getId(),
-                            goodsReceipt.getWarehouse().getId(),
-                            null
-                    )
-                    .orElseGet(() -> isInbound ? new StockBalance() : null);
+            StockBalance stockBalance;
+            if (detail.getBatch() != null) {
+                stockBalance = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+                                detail.getProduct().getId(),
+                                goodsReceipt.getWarehouse().getId(),
+                                null,
+                                detail.getBatch().getId()
+                        )
+                        .orElseGet(() -> isInbound ? new StockBalance() : null);
+            } else {
+                stockBalance = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+                                detail.getProduct().getId(),
+                                goodsReceipt.getWarehouse().getId(),
+                                null
+                        )
+                        .orElseGet(() -> isInbound ? new StockBalance() : null);
+            }
 
             if (stockBalance == null && !isInbound) {
                 throw new RuntimeException("Insufficient stock for product " + detail.getProduct().getName());
@@ -200,6 +236,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             if (isInbound && stockBalance.getProduct() == null) {
                 stockBalance.setProduct(detail.getProduct());
                 stockBalance.setWarehouse(goodsReceipt.getWarehouse());
+                stockBalance.setBatch(detail.getBatch());
             }
 
             BigDecimal currentQty = Optional.ofNullable(stockBalance.getQuantity()).orElse(BigDecimal.ZERO);
@@ -243,6 +280,12 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             }
 
             stockBalanceRepository.save(stockBalance);
+
+            if (isInbound) {
+                batchSerialTrackingService.processInboundSerials(detail.getProduct(), detail.getBatch(), detail.getSerialNumbers(), goodsReceipt.getWarehouse(), null, InventoryTransactionType.GRN, "GRN", goodsReceipt.getId());
+            } else {
+                batchSerialTrackingService.processOutboundSerials(detail.getProduct(), detail.getBatch(), detail.getSerialNumbers(), goodsReceipt.getWarehouse(), null, SerialNumber.SerialStatus.RETURNED, InventoryTransactionType.PURCHASE_RETURN, "GRN", goodsReceipt.getId());
+            }
             
             if (detail.getPurchaseOrderDetail() != null) {
                 if (isInbound) {
@@ -343,6 +386,8 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             returnDetail.setQuantity(originalDetail.getQuantity());
             returnDetail.setUnitCost(originalDetail.getUnitCost());
             returnDetail.setLineTotal(originalDetail.getLineTotal());
+            returnDetail.setBatch(originalDetail.getBatch());
+            returnDetail.setSerialNumbers(originalDetail.getSerialNumbers());
             totalAmount = totalAmount.add(originalDetail.getLineTotal());
             returnDetails.add(returnDetail);
         }

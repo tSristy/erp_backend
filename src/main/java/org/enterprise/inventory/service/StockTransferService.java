@@ -30,6 +30,7 @@ public class StockTransferService {
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final JournalService journalService;
     private final CostingService costingService;
+    private final BatchSerialTrackingService batchSerialTrackingService;
 
     @Transactional
     public StockTransfer save(StockTransfer stockTransfer) {
@@ -53,14 +54,24 @@ public class StockTransferService {
             BigDecimal transferQty = detail.getQuantity();
 
             // 1. Deduct from Source
-            StockBalance sourceStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(product.getId(), transfer.getSourceWarehouse().getId(), detail.getSourceLocation() != null ? detail.getSourceLocation().getId() : null)
-                    .orElseThrow(() -> new RuntimeException("Insufficient stock at source for product " + product.getName()));
+            StockBalance sourceStock;
+            if (detail.getBatch() != null) {
+                sourceStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(product.getId(), transfer.getSourceWarehouse().getId(), detail.getSourceLocation() != null ? detail.getSourceLocation().getId() : null, detail.getBatch().getId())
+                        .orElseThrow(() -> new RuntimeException("Insufficient stock at source for product " + product.getName() + " and batch " + detail.getBatch().getBatchNo()));
+            } else {
+                sourceStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(product.getId(), transfer.getSourceWarehouse().getId(), detail.getSourceLocation() != null ? detail.getSourceLocation().getId() : null)
+                        .orElseThrow(() -> new RuntimeException("Insufficient stock at source for product " + product.getName()));
+            }
 
             if (sourceStock.getQuantity().compareTo(transferQty) < 0) {
                 throw new RuntimeException("Insufficient stock at source for product " + product.getName() +
                         ". Required: " + transferQty + ", Available: " + sourceStock.getQuantity());
             }
+
+            // Validate serials provided for transfer
+            batchSerialTrackingService.validateSerialNumbers(product, detail.getSerialNumbers(), transferQty.intValue());
 
             BigDecimal unitCost;
             BigDecimal transferValue;
@@ -88,17 +99,28 @@ public class StockTransferService {
             }
             stockBalanceRepository.save(sourceStock);
 
+            // Process serials moving out of source (but remain IN_STOCK because it's a transfer)
+            batchSerialTrackingService.processOutboundSerials(product, detail.getBatch(), detail.getSerialNumbers(), transfer.getSourceWarehouse(), detail.getSourceLocation(), SerialNumber.SerialStatus.IN_STOCK, InventoryTransactionType.TRANSFER_OUT, "STOCK_TRANSFER", transfer.getId());
+
             // Source Ledger
             createLedger(transfer, detail, transfer.getSourceWarehouse(), InventoryTransactionType.TRANSFER_OUT, BigDecimal.ZERO, transferQty, unitCost, transferValue, sourceStock.getQuantity(), sourceStock.getTotalValue());
 
             // 2. Add to Destination
-            StockBalance destStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(product.getId(), transfer.getDestinationWarehouse().getId(), detail.getDestinationLocation() != null ? detail.getDestinationLocation().getId() : null)
-                    .orElseGet(StockBalance::new);
+            StockBalance destStock;
+            if (detail.getBatch() != null) {
+                destStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(product.getId(), transfer.getDestinationWarehouse().getId(), detail.getDestinationLocation() != null ? detail.getDestinationLocation().getId() : null, detail.getBatch().getId())
+                        .orElseGet(StockBalance::new);
+            } else {
+                destStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(product.getId(), transfer.getDestinationWarehouse().getId(), detail.getDestinationLocation() != null ? detail.getDestinationLocation().getId() : null)
+                        .orElseGet(StockBalance::new);
+            }
 
             destStock.setProduct(product);
             destStock.setWarehouse(transfer.getDestinationWarehouse());
             destStock.setLocation(detail.getDestinationLocation());
+            destStock.setBatch(detail.getBatch());
 
             BigDecimal currentDestQty = Optional.ofNullable(destStock.getQuantity()).orElse(BigDecimal.ZERO);
             BigDecimal currentDestValue = Optional.ofNullable(destStock.getTotalValue()).orElse(BigDecimal.ZERO);
@@ -116,6 +138,9 @@ public class StockTransferService {
                 // Deposit the exact consumed value as a new cost layer in the destination warehouse
                 costingService.addCostLayer(product, transfer.getDestinationWarehouse(), "TRANSFER_IN", transfer.getId(), transferQty, unitCost);
             }
+
+            // Process serials moving into destination
+            batchSerialTrackingService.processInboundSerials(product, detail.getBatch(), detail.getSerialNumbers(), transfer.getDestinationWarehouse(), detail.getDestinationLocation(), InventoryTransactionType.TRANSFER_IN, "STOCK_TRANSFER", transfer.getId());
 
             // Destination Ledger
             createLedger(transfer, detail, transfer.getDestinationWarehouse(), InventoryTransactionType.TRANSFER_IN, transferQty, BigDecimal.ZERO, unitCost, transferValue, newDestQty, newDestValue);
@@ -139,6 +164,7 @@ public class StockTransferService {
         ledger.setTransactionDate(LocalDateTime.now());
         ledger.setWarehouse(warehouse);
         ledger.setProduct(detail.getProduct());
+        ledger.setBatch(detail.getBatch());
         ledger.setQtyIn(qtyIn);
         ledger.setQtyOut(qtyOut);
         ledger.setUnitCost(unitCost);

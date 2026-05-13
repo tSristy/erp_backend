@@ -24,6 +24,9 @@ public class InventoryLedger extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Location location;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Batch batch;
+
     @Enumerated(EnumType.STRING)
     private InventoryTransactionType transactionType;
 

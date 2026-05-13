@@ -14,4 +14,12 @@ public class GoodsReceiptLineDto {
     private BigDecimal quantity;
 
     private BigDecimal unitCost;
+
+    private String batchNo;
+
+    private java.time.LocalDate manufactureDate;
+
+    private java.time.LocalDate expiryDate;
+
+    private java.util.List<String> serialNumbers;
 }
