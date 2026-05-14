@@ -34,9 +34,10 @@ public class PayrollService {
     private final PayslipComponentRepository payslipComponentRepository;
 
     public PayrollProcess processSalary(Integer year, Integer month) {
-        
+
         // Check if payroll is already processed
-        Optional<PayrollProcess> existingProcess = payrollProcessRepository.findByProcessYearAndProcessMonth(year, month);
+        Optional<PayrollProcess> existingProcess = payrollProcessRepository.findByProcessYearAndProcessMonth(year,
+                month);
         if (existingProcess.isPresent()) {
             throw new RuntimeException("Payroll for " + month + "/" + year + " is already processed.");
         }
@@ -53,7 +54,9 @@ public class PayrollService {
         double totalProcessDeduction = 0.0;
         double totalProcessNet = 0.0;
 
-        List<Employee> activeEmployees = employeeRepository.findAll(); // Should filter by active=true, but using findAll for simplicity assuming we have active filter in repo or doing it here
+        List<Employee> activeEmployees = employeeRepository.findAll(); // Should filter by active=true, but using
+                                                                       // findAll for simplicity assuming we have active
+                                                                       // filter in repo or doing it here
         List<SalaryComponent> components = salaryComponentRepository.findAll();
 
         for (Employee employee : activeEmployees) {
@@ -76,7 +79,7 @@ public class PayrollService {
             payslip.setProcessYear(year);
             payslip.setGrossSalary(gross);
             payslip.setStatus("Draft");
-            
+
             payslip = payslipRepository.save(payslip);
 
             double totalEarning = 0.0;
@@ -94,7 +97,7 @@ public class PayrollService {
                 } else {
                     amount = component.getAmount();
                 }
-                
+
                 pc.setAmount(amount);
                 payslipComponentRepository.save(pc);
 
@@ -108,10 +111,12 @@ public class PayrollService {
             payslip.setTotalEarning(totalEarning);
             payslip.setTotalDeduction(totalDeduction);
             payslip.setNetPayable((gross + totalEarning) - totalDeduction);
-            
-            // Note: Simplistic calculation where base is gross, and earning/deductions are added/subtracted on top.
-            // Often "Basic" is part of the components that sum up to Gross. For this example, we'll keep it simple.
-            
+
+            // Note: Simplistic calculation where base is gross, and earning/deductions are
+            // added/subtracted on top.
+            // Often "Basic" is part of the components that sum up to Gross. For this
+            // example, we'll keep it simple.
+
             payslipRepository.save(payslip);
 
             totalProcessEarning += totalEarning;
