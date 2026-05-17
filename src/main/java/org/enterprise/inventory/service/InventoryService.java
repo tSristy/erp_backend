@@ -51,10 +51,10 @@ public class InventoryService {
         Location location = locationRepository.findById(request.getLocationId())
                 .orElseThrow(() -> new RuntimeException("Location not found"));
 
-        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationId(
+        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
                         product.getId(),
                         warehouse.getId(),
-                        location.getId()
+                        location.getId(),null
                 )
                 .orElseGet(() -> {
                     StockBalance sb = new StockBalance();
@@ -120,10 +120,10 @@ public class InventoryService {
             Long locationId
     ) {
 
-        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationId(
+        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
                         itemId,
                         warehouseId,
-                        locationId
+                        locationId,null
                 )
                 .orElseThrow(() -> new RuntimeException("Stock not found"));
 

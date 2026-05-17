@@ -54,8 +54,8 @@ public class ProductionService {
             BigDecimal consumeQty = item.getQuantity().multiply(factor);
 
             StockBalance rmStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(item.getRawMaterial().getId(),
-                            order.getProductionWarehouse().getId(), null)
+                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(item.getRawMaterial().getId(),
+                            order.getProductionWarehouse().getId(), null,null)
                     .orElseThrow(() -> new RuntimeException(
                             "Raw material stock not found: " + item.getRawMaterial().getName()));
 

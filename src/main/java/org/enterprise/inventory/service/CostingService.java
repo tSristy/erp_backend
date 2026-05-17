@@ -47,7 +47,7 @@ public class CostingService {
         CostingMethod method = product.getCostingMethod();
 
         if (method == CostingMethod.AVERAGE) {
-            StockBalance stock = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationId(product.getId(), warehouse.getId(), null)
+            StockBalance stock = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(product.getId(), warehouse.getId(), null,null)
                     .orElseThrow(() -> new RuntimeException("Stock not found for AVG costing"));
             return stock.getAverageCost().multiply(qtyToConsume);
         }
@@ -78,7 +78,7 @@ public class CostingService {
         if (remainingToConsume.compareTo(BigDecimal.ZERO) > 0) {
             // Edge case: if physical stock exists but layers don't (e.g. system was switched from AVG to FIFO mid-way)
             // Fallback to average cost for the remaining
-            StockBalance stock = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationId(product.getId(), warehouse.getId(), null)
+            StockBalance stock = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(product.getId(), warehouse.getId(), null,null)
                     .orElseThrow(() -> new RuntimeException("Stock not found for fallback costing"));
             
             totalCogs = totalCogs.add(remainingToConsume.multiply(stock.getAverageCost()));

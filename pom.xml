@@ -11,6 +11,7 @@
     <groupId>com.enterprise</groupId>
     <artifactId>backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>war</packaging>
     <name>backend</name>
     <description>Enterprise Backend</description>
     <url/>

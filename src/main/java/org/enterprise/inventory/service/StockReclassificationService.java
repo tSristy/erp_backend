@@ -47,7 +47,7 @@ public class StockReclassificationService {
 
             // 1. Deduct Source Product
             StockBalance sourceStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(sourceProduct.getId(), warehouse.getId(), null)
+                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(sourceProduct.getId(), warehouse.getId(), null,null)
                     .orElseThrow(() -> new RuntimeException("Insufficient stock for source product " + sourceProduct.getName()));
 
             if (sourceStock.getQuantity().compareTo(sourceQty) < 0) {
@@ -75,7 +75,7 @@ public class StockReclassificationService {
             BigDecimal destUnitCost = consumedValue.divide(destQty, 6, RoundingMode.HALF_UP);
 
             StockBalance destStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationId(destProduct.getId(), warehouse.getId(), null)
+                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(destProduct.getId(), warehouse.getId(), null,null)
                     .orElseGet(StockBalance::new);
 
             destStock.setProduct(destProduct);
