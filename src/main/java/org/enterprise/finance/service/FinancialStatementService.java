@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -175,12 +178,9 @@ public class FinancialStatementService {
                 );
             }
 
-            ScriptEngine engine =
-                    new ScriptEngineManager()
-                            .getEngineByName("JavaScript");
-
-            Object result =
-                    engine.eval(expression);
+            ExpressionParser parser = new SpelExpressionParser();
+            Expression exp = parser.parseExpression(expression);
+            Object result = exp.getValue();
 
             return new BigDecimal(
                     result.toString()

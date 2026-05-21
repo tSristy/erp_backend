@@ -38,8 +38,8 @@ public class Employee extends AuditableEntity {
     private String presentAddress;
     private String permanentAddress;
 
-    @ManyToOne
-    private Company company;
+//    @ManyToOne
+//    private Company company;
 
     @ManyToOne
     private Branch branch;

@@ -159,14 +159,14 @@ public class EmployeeService {
         employee.setActive(dto.getActive());
 
         // COMPANY
-        if (dto.getCompanyId() != null) {
-
-            Company company = companyRepository.findById(dto.getCompanyId())
-                    .orElseThrow(() ->
-                            new RuntimeException("Company not found"));
-
-            employee.setCompany(company);
-        }
+//        if (dto.getCompanyId() != null) {
+//
+//            Company company = companyRepository.findById(dto.getCompanyId())
+//                    .orElseThrow(() ->
+//                            new RuntimeException("Company not found"));
+//
+//            employee.setCompany(company);
+//        }
 
         // BRANCH
         if (dto.getBranchId() != null) {
@@ -238,10 +238,10 @@ public class EmployeeService {
 
         dto.setActive(employee.getActive());
 
-        if (employee.getCompany() != null) {
-            dto.setCompanyId(employee.getCompany().getId());
-            dto.setCompanyName(employee.getCompany().getName());
-        }
+//        if (employee.getCompany() != null) {
+//            dto.setCompanyId(employee.getCompany().getId());
+//            dto.setCompanyName(employee.getCompany().getName());
+//        }
 
         if (employee.getBranch() != null) {
             dto.setBranchId(employee.getBranch().getId());

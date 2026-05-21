@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
+import org.enterprise.finance.enums.CostCenterType;
 import org.enterprise.organization.entity.Branch;
 
 import java.math.BigDecimal;
@@ -59,13 +60,5 @@ public class CostCenter extends AuditableEntity {
 
     @OneToMany(mappedBy = "parent")
     private List<CostCenter> children;
-
-    public enum CostCenterType {
-        DIRECT,
-        INDIRECT,
-        SHARED,
-        ADMIN,
-        PRODUCTION
-    }
 }
 

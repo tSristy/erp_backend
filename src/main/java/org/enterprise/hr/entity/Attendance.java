@@ -9,12 +9,13 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.enterprise.common.entity.AuditableEntity;
 
 @Entity
 @Table(name = "hr_attendance")
 @Getter
 @Setter
-public class Attendance {
+public class Attendance extends AuditableEntity{
 
     @ManyToOne
     private Employee employee;
