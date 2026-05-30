@@ -18,6 +18,16 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
+    public String generatePreAuthToken(String username) {
+        return Jwts.builder()
+                .subject(username)
+                .claim("type", "PRE_AUTH")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 300000)) // 5 minutes validity
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     public String generateToken(UserContext ctx) {
 
         return Jwts.builder()

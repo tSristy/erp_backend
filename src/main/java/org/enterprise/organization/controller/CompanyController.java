@@ -1,38 +1,37 @@
-package org.enterprise.hr.controller;
+package org.enterprise.organization.controller;
 
-import org.enterprise.hr.dto.LoanInstallmentDto;
-import org.enterprise.hr.service.LoanInstallmentService;
+import lombok.RequiredArgsConstructor;
+import org.enterprise.organization.dto.CompanyDto;
+import org.enterprise.organization.service.CompanyService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import lombok.RequiredArgsConstructor;
-
 @RestController
-@RequestMapping("/api/hr/loan-installments")
+@RequestMapping("/api/organization/companies")
 @RequiredArgsConstructor
-public class LoanInstallmentController {
+public class CompanyController {
 
-    private final LoanInstallmentService service;
+    private final CompanyService service;
 
     @PostMapping
-    public ResponseEntity<LoanInstallmentDto> create(@RequestBody LoanInstallmentDto dto) {
+    public ResponseEntity<CompanyDto> create(@RequestBody CompanyDto dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LoanInstallmentDto> update(@PathVariable Long id, @RequestBody LoanInstallmentDto dto) {
+    public ResponseEntity<CompanyDto> update(@PathVariable Long id, @RequestBody CompanyDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LoanInstallmentDto> getById(@PathVariable Long id) {
+    public ResponseEntity<CompanyDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping
-    public ResponseEntity<Page<LoanInstallmentDto>> search(Pageable pageable) {
+    public ResponseEntity<Page<CompanyDto>> search(Pageable pageable) {
         return ResponseEntity.ok(service.search(pageable));
     }
 

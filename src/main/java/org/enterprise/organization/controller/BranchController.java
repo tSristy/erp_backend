@@ -1,38 +1,37 @@
-package org.enterprise.hr.controller;
+package org.enterprise.organization.controller;
 
-import org.enterprise.hr.dto.PayslipDto;
-import org.enterprise.hr.service.PayslipService;
+import lombok.RequiredArgsConstructor;
+import org.enterprise.organization.dto.BranchDto;
+import org.enterprise.organization.service.BranchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import lombok.RequiredArgsConstructor;
-
 @RestController
-@RequestMapping("/api/hr/payslips")
+@RequestMapping("/api/organization/branches")
 @RequiredArgsConstructor
-public class PayslipController {
+public class BranchController {
 
-    private final PayslipService service;
+    private final BranchService service;
 
     @PostMapping
-    public ResponseEntity<PayslipDto> create(@RequestBody PayslipDto dto) {
+    public ResponseEntity<BranchDto> create(@RequestBody BranchDto dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PayslipDto> update(@PathVariable Long id, @RequestBody PayslipDto dto) {
+    public ResponseEntity<BranchDto> update(@PathVariable Long id, @RequestBody BranchDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PayslipDto> getById(@PathVariable Long id) {
+    public ResponseEntity<BranchDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping
-    public ResponseEntity<Page<PayslipDto>> search(Pageable pageable) {
+    public ResponseEntity<Page<BranchDto>> search(Pageable pageable) {
         return ResponseEntity.ok(service.search(pageable));
     }
 

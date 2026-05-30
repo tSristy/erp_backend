@@ -1,38 +1,37 @@
-package org.enterprise.hr.controller;
+package org.enterprise.organization.controller;
 
-import org.enterprise.hr.dto.PayslipComponentDto;
-import org.enterprise.hr.service.PayslipComponentService;
+import lombok.RequiredArgsConstructor;
+import org.enterprise.organization.dto.ZoneDto;
+import org.enterprise.organization.service.ZoneService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import lombok.RequiredArgsConstructor;
-
 @RestController
-@RequestMapping("/api/hr/payslip-components")
+@RequestMapping("/api/organization/zones")
 @RequiredArgsConstructor
-public class PayslipComponentController {
+public class ZoneController {
 
-    private final PayslipComponentService service;
+    private final ZoneService service;
 
     @PostMapping
-    public ResponseEntity<PayslipComponentDto> create(@RequestBody PayslipComponentDto dto) {
+    public ResponseEntity<ZoneDto> create(@RequestBody ZoneDto dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PayslipComponentDto> update(@PathVariable Long id, @RequestBody PayslipComponentDto dto) {
+    public ResponseEntity<ZoneDto> update(@PathVariable Long id, @RequestBody ZoneDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PayslipComponentDto> getById(@PathVariable Long id) {
+    public ResponseEntity<ZoneDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping
-    public ResponseEntity<Page<PayslipComponentDto>> search(Pageable pageable) {
+    public ResponseEntity<Page<ZoneDto>> search(Pageable pageable) {
         return ResponseEntity.ok(service.search(pageable));
     }
 

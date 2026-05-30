@@ -26,28 +26,18 @@ public class AuthService {
     private final JwtService jwtService;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    public String login(LoginRequest request) {
+    public java.util.Map<String, Object> preAuthenticate(LoginRequest request) {
 
         // =========================================
-        // 1. Resolve Company
+        // 1. Load User + Roles
         // =========================================
-
-        Company company = companyRepository
-                .findByCode(request.getCompanyCode())
-                .orElseThrow(() -> new RuntimeException("Invalid company"));
-
-        // =========================================
-        // 2. Load User + Roles
-        // =========================================
-
         User user = userRepository
                 .findWithRolesByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
         // =========================================
-        // 3. Validate Password
+        // 2. Validate Password
         // =========================================
-
         if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPassword()
@@ -56,17 +46,96 @@ public class AuthService {
         }
 
         // =========================================
-        // 4. Validate User Active
+        // 3. Validate User Active
         // =========================================
+        if (Boolean.FALSE.equals(user.getActive())) {
+            throw new RuntimeException("User account disabled");
+        }
+
+        // =========================================
+        // 4. Get Authorized Companies
+        // =========================================
+        List<String> companyCodes = user.getCompanies()
+                .stream()
+                .filter(UserCompany::getActive)
+                .map(uc -> uc.getCompany().getCode())
+                .toList();
+
+        // =========================================
+        // 5. Generate Pre-Auth Token
+        // =========================================
+        String token = jwtService.generatePreAuthToken(user.getUsername());
+
+        return java.util.Map.of(
+                "preAuthToken", token,
+                "companyCodes", companyCodes
+        );
+    }
+
+    public String buildUserContext(String preAuthToken, String companyCode) {
+
+        // =========================================
+        // 1. Validate Pre-Auth Token
+        // =========================================
+        if (preAuthToken == null || !preAuthToken.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid token format");
+        }
+        String token = preAuthToken.substring(7);
+
+        io.jsonwebtoken.Claims claims = jwtService.extractClaims(token);
+        if (!"PRE_AUTH".equals(claims.get("type"))) {
+            throw new RuntimeException("Invalid token type");
+        }
+
+        String username = claims.getSubject();
+        return generateContextToken(username, companyCode);
+    }
+
+    public String switchCompany(String authHeader, String companyCode) {
+        
+        // =========================================
+        // 1. Validate Access Token
+        // =========================================
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid token format");
+        }
+        String token = authHeader.substring(7);
+
+        io.jsonwebtoken.Claims claims = jwtService.extractClaims(token);
+        if ("PRE_AUTH".equals(claims.get("type"))) {
+            throw new RuntimeException("Cannot switch company with a pre-auth token");
+        }
+
+        Long userId = Long.parseLong(claims.getSubject());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return generateContextToken(user.getUsername(), companyCode);
+    }
+
+    private String generateContextToken(String username, String companyCode) {
+        
+        // =========================================
+        // 1. Resolve Company
+        // =========================================
+        Company company = companyRepository
+                .findByCode(companyCode)
+                .orElseThrow(() -> new RuntimeException("Invalid company"));
+
+        // =========================================
+        // 2. Load User + Roles
+        // =========================================
+        User user = userRepository
+                .findWithRolesByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (Boolean.FALSE.equals(user.getActive())) {
             throw new RuntimeException("User account disabled");
         }
 
         // =========================================
-        // 5. Validate Company Membership
+        // 3. Validate Company Membership
         // =========================================
-
         UserCompany membership = user.getCompanies()
                 .stream()
                 .filter(UserCompany::getActive)
@@ -76,9 +145,8 @@ public class AuthService {
                         new RuntimeException("User not assigned to company"));
 
         // =========================================
-        // 6. Extract Tenant Roles
+        // 4. Extract Tenant Roles
         // =========================================
-
         List<String> roles = user.getRoles()
                 .stream()
                 .filter(UserRole::getActive)
@@ -89,9 +157,8 @@ public class AuthService {
                 .toList();
 
         // =========================================
-        // 7. Extract Permissions
+        // 5. Extract Permissions
         // =========================================
-
         List<String> permissions = user.getRoles()
                 .stream()
                 .filter(UserRole::getActive)
@@ -107,9 +174,8 @@ public class AuthService {
                 .toList();
 
         // =========================================
-        // 8. Branch Scope
+        // 6. Branch Scope
         // =========================================
-
         List<Long> branchIds = user.getUserBranches() != null
                 ? user.getUserBranches()
                 .stream()
@@ -121,9 +187,8 @@ public class AuthService {
                 : List.of();
 
         // =========================================
-        // 9. Warehouse Scope
+        // 7. Warehouse Scope
         // =========================================
-
         List<Long> warehouseIds = user.getUserWarehouses() != null
                 ? user.getUserWarehouses()
                 .stream()
@@ -135,9 +200,8 @@ public class AuthService {
                 : List.of();
 
         // =========================================
-        // 10. Profit Center Scope
+        // 8. Profit Center Scope
         // =========================================
-
         List<Long> profitCenterIds = user.getUserProfitCenters() != null
                 ? user.getUserProfitCenters()
                 .stream()
@@ -149,9 +213,8 @@ public class AuthService {
                 : List.of();
 
         // =========================================
-        // 11. Cost Center Scope
+        // 9. Cost Center Scope
         // =========================================
-
         List<Long> costCenterIds = user.getUserCostCenters() != null
                 ? user.getUserCostCenters()
                 .stream()
@@ -163,9 +226,8 @@ public class AuthService {
                 : List.of();
 
         // =========================================
-        // 12. Build Context
+        // 10. Build Context
         // =========================================
-
         UserContext context = new UserContext(
                 user.getId(),
                 company.getId(),
@@ -180,11 +242,11 @@ public class AuthService {
         );
 
         // =========================================
-        // 13. Generate JWT
+        // 11. Generate JWT
         // =========================================
-
         return jwtService.generateToken(context);
     }
+
 
     // =========================================
     // LOGOUT

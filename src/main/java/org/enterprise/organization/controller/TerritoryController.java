@@ -1,38 +1,37 @@
-package org.enterprise.hr.controller;
+package org.enterprise.organization.controller;
 
-import org.enterprise.hr.dto.EmployeeEducationDto;
-import org.enterprise.hr.service.EmployeeEducationService;
+import lombok.RequiredArgsConstructor;
+import org.enterprise.organization.dto.TerritoryDto;
+import org.enterprise.organization.service.TerritoryService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import lombok.RequiredArgsConstructor;
-
 @RestController
-@RequestMapping("/api/hr/employee-educations")
+@RequestMapping("/api/organization/territories")
 @RequiredArgsConstructor
-public class EmployeeEducationController {
+public class TerritoryController {
 
-    private final EmployeeEducationService service;
+    private final TerritoryService service;
 
     @PostMapping
-    public ResponseEntity<EmployeeEducationDto> create(@RequestBody EmployeeEducationDto dto) {
+    public ResponseEntity<TerritoryDto> create(@RequestBody TerritoryDto dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EmployeeEducationDto> update(@PathVariable Long id, @RequestBody EmployeeEducationDto dto) {
+    public ResponseEntity<TerritoryDto> update(@PathVariable Long id, @RequestBody TerritoryDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EmployeeEducationDto> getById(@PathVariable Long id) {
+    public ResponseEntity<TerritoryDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping
-    public ResponseEntity<Page<EmployeeEducationDto>> search(Pageable pageable) {
+    public ResponseEntity<Page<TerritoryDto>> search(Pageable pageable) {
         return ResponseEntity.ok(service.search(pageable));
     }
 
