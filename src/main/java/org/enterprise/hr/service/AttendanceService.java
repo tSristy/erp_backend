@@ -56,8 +56,8 @@ public class AttendanceService {
         entity.setLate(dto.getLate());
         entity.setEarlyOut(dto.getEarlyOut());
         entity.setAbsent(dto.getAbsent());
-        // TODO: Map relation workedHours manually from workedHoursId
-        // TODO: Map relation overtimeHours manually from overtimeHoursId
+        entity.setWorkedHours(dto.getWorkedHours());
+        entity.setOvertimeHours(dto.getOvertimeHours());
     }
 
     private AttendanceDto mapEntityToDto(Attendance entity) {
@@ -75,12 +75,8 @@ public class AttendanceService {
         dto.setLate(entity.getLate());
         dto.setEarlyOut(entity.getEarlyOut());
         dto.setAbsent(entity.getAbsent());
-        if (entity.getWorkedHours() != null) {
-            dto.setWorkedHoursId(entity.getWorkedHours().getId());
-        }
-        if (entity.getOvertimeHours() != null) {
-            dto.setOvertimeHoursId(entity.getOvertimeHours().getId());
-        }
+        dto.setWorkedHours(entity.getWorkedHours());
+        dto.setOvertimeHours(entity.getOvertimeHours());
         return dto;
     }
 }

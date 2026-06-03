@@ -15,6 +15,8 @@ import org.hibernate.annotations.SQLRestriction;
 @SQLRestriction("deleted = false")
 public class Permission extends BaseEntity {
 
+    private Boolean deleted = false;
+
     @Column(unique = true)
     private String code;
 

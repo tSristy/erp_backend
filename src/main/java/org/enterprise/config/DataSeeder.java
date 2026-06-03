@@ -19,10 +19,12 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 @Slf4j
 @Component
-@Profile({"dev", "local"})
+@Profile({"default", "dev", "local"})
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 
@@ -34,6 +36,8 @@ public class DataSeeder implements CommandLineRunner {
     private final WorkflowDefinitionRepository workflowDefinitionRepository;
     private final WorkflowStepRepository workflowStepRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ModuleRepository moduleRepository;
+    private final org.enterprise.security.repository.MenuRepository menuRepository;
 
     // =========================
     // RUN
@@ -53,6 +57,8 @@ public class DataSeeder implements CommandLineRunner {
         seedAccountUsers(company);
 
         seedWorkflow(company);
+        
+        seedModules(company);
 
         log.info("Data seeding completed successfully.");
     }
@@ -148,7 +154,7 @@ public class DataSeeder implements CommandLineRunner {
                             "WORKFLOW_APPROVE"
                     );
 
-                    List<RolePermission> links = new ArrayList<>();
+                    Set<RolePermission> links = new HashSet<>();
 
                     for (String code : perms) {
 
@@ -210,7 +216,7 @@ public class DataSeeder implements CommandLineRunner {
 
                     role = roleRepository.save(role);
 
-                    List<RolePermission> list = new ArrayList<>();
+                    Set<RolePermission> list = new HashSet<>();
 
                     for (String permCode : permissions) {
 
@@ -234,6 +240,10 @@ public class DataSeeder implements CommandLineRunner {
 
     private void createUser(Company company, String username, Role role) {
 
+        if (userRepository.findByUsername(username).isPresent()) {
+            return;
+        }
+
         User user = new User();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(getPassword()));
@@ -244,7 +254,7 @@ public class DataSeeder implements CommandLineRunner {
         userRole.setRole(role);
         userRole.setCompanyId(company.getId());
 
-        user.setRoles(List.of(userRole));
+        user.setRoles(Set.of(userRole));
 
         UserCompany uc = new UserCompany();
         uc.setUser(user);
@@ -306,5 +316,79 @@ public class DataSeeder implements CommandLineRunner {
     // =========================
     private String getPassword() {
         return System.getenv().getOrDefault("DEFAULT_ADMIN_PASSWORD", "admin123");
+    }
+
+    // =========================
+    // MODULES
+    // =========================
+    private void seedModules(Company company) {
+        if (moduleRepository.count() > 0) return;
+
+        Long cid = company.getId();
+        var inventory = createModule("INVENTORY", "Inventory", "Manage stocks and business units.", "inventory", "Package", 1, cid);
+        createMenu(inventory, "Stock Items", "inventory", "Warehouse", 1, cid);
+        createMenu(inventory, "Business Units", "inventory/units", "Package", 2, cid);
+        createMenu(inventory, "Stock Reports", "inventory/reports", "BarChart2", 3, cid);
+
+        var sales = createModule("SALES_INVOICING", "Sales & Invoicing", "Track orders and VAT.", "sales", "ShoppingCart", 2, cid);
+        createMenu(sales, "Dashboard", "sales", "ShoppingCart", 1, cid);
+
+        var finance = createModule("FINANCE", "Finance", "Revenue and credit tracking.", "finance", "CreditCard", 3, cid);
+        createMenu(finance, "Dashboard", "finance", "CreditCard", 1, cid);
+
+        var iam = createModule("IAM", "I A M", "Identity & Access Management.", "identity-access", "ShieldCheck", 4, cid);
+        createMenu(iam, "Dashboard", "identity-access", "ShieldCheck", 1, cid);
+
+        var settings = createModule("SETTINGS", "Settings", "Application configuration and preferences.", "settings", "Settings", 5, cid);
+        createMenu(settings, "Dashboard", "settings", "Settings", 1, cid);
+
+        var salesCrm = createModule("SALES_CRM", "Sales CRM", "Customer relationship management for sales.", "sales-crm", "Target", 6, cid);
+        createMenu(salesCrm, "Dashboard", "sales-crm", "Target", 1, cid);
+
+        var serviceCrm = createModule("SERVICE_CRM", "Service CRM", "Customer support and service.", "service-crm", "Headset", 7, cid);
+        createMenu(serviceCrm, "Dashboard", "service-crm", "Headset", 1, cid);
+
+        var mfg = createModule("MANUFACTURING", "Manufacturing", "Production and manufacturing workflows.", "manufacturing", "Factory", 8, cid);
+        createMenu(mfg, "Dashboard", "manufacturing", "Factory", 1, cid);
+
+        var retail = createModule("RETAIL_POS", "Retail POS", "Point of sale for retail.", "retail-pos", "Store", 9, cid);
+        createMenu(retail, "Dashboard", "retail-pos", "Store", 1, cid);
+
+        var restPos = createModule("RESTAURANT_POS", "Restaurant POS", "Point of sale for restaurants.", "restaurant-pos", "Utensils", 10, cid);
+        createMenu(restPos, "Dashboard", "restaurant-pos", "Utensils", 1, cid);
+
+        var hr = createModule("HR", "HR module", "Human resources and payroll.", "hr", "Users", 11, cid);
+        createMenu(hr, "Dashboard", "hr", "Users", 1, cid);
+
+        log.info("Modules and menus seeded successfully.");
+    }
+
+    private org.enterprise.security.entity.Module createModule(String code, String name, String description, String route, String icon, int order, Long companyId) {
+        org.enterprise.security.entity.Module module = new org.enterprise.security.entity.Module();
+        module.setCode(code);
+        module.setName(name);
+        module.setCategory(description);
+        module.setRoute(route);
+        module.setIcon(icon);
+        module.setDisplayOrder(order);
+        module.setActive(true);
+        module.setInstalled(true);
+        module.setVisibleInLauncher(true);
+        module.setCompanyId(companyId);
+        module.setCompanyId(companyId);
+        return moduleRepository.save(module);
+    }
+
+    private void createMenu(org.enterprise.security.entity.Module module, String name, String path, String icon, int order, Long companyId) {
+        org.enterprise.security.entity.Menu menu = new org.enterprise.security.entity.Menu();
+        menu.setCode(name.toUpperCase().replace(" ", "_"));
+        menu.setName(name);
+        menu.setPath(path);
+        menu.setIcon(icon);
+        menu.setDisplayOrder(order);
+        menu.setVisible(true);
+        menu.setModule(module);
+        menu.setCompanyId(companyId);
+        menuRepository.save(menu);
     }
 }

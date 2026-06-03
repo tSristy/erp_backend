@@ -7,6 +7,7 @@ import org.enterprise.common.entity.AuditableEntity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 @Entity
 @Table(name = "modules")
 @Getter @Setter
@@ -27,6 +28,7 @@ public class Module extends AuditableEntity {
 
     private String category; // CORE, ERP, CRM
 
+    @JsonIgnore
     @OneToMany(mappedBy = "module")
     private List<Menu> menus;
 }

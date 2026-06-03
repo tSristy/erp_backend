@@ -8,6 +8,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -16,6 +17,8 @@ import java.util.List;
 @SQLDelete(sql = "UPDATE users SET deleted = true WHERE id = ?")
 @SQLRestriction("deleted = false")
 public class User extends BaseEntity {
+
+    private Boolean deleted = false;
 
     @Column(unique = true, nullable = false)
     private String username;
@@ -37,7 +40,7 @@ public class User extends BaseEntity {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private List<UserRole> roles;
+    private Set<UserRole> roles;
 
     @OneToMany(
             mappedBy = "user",

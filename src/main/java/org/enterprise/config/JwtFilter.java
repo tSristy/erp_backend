@@ -32,17 +32,17 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        String header = request.getHeader("Authorization");
+
+        // Skip if no token
+        if (header == null || !header.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = header.substring(7);
+
         try {
-
-            String header = request.getHeader("Authorization");
-
-            // Skip if no token
-            if (header == null || !header.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            String token = header.substring(7);
 
             // =========================
             // CHECK TOKEN BLACKLIST
@@ -123,12 +123,15 @@ public class JwtFilter extends OncePerRequestFilter {
                     .getContext()
                     .setAuthentication(authentication);
 
-            filterChain.doFilter(request, response);
-
         } catch (Exception ex) {
 
             unauthorized(response, "Invalid or expired token");
+            return;
 
+        }
+        
+        try {
+            filterChain.doFilter(request, response);
         } finally {
 
             TenantContext.clear();

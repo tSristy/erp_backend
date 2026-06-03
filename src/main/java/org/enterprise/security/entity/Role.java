@@ -7,7 +7,7 @@ import org.enterprise.common.entity.AuditableEntity;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
-import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "roles")
@@ -27,5 +27,5 @@ public class Role extends AuditableEntity {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private List<RolePermission> rolePermissions;
+    private Set<RolePermission> rolePermissions;
 }
