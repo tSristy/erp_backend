@@ -12,12 +12,14 @@ import org.enterprise.security.repository.UserRepository;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -25,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final org.enterprise.security.repository.PermissionRepository permissionRepository;
 
     public java.util.Map<String, Object> preAuthenticate(LoginRequest request) {
 
@@ -55,11 +58,21 @@ public class AuthService {
         // =========================================
         // 4. Get Authorized Companies
         // =========================================
-        List<String> companyCodes = user.getCompanies()
-                .stream()
-                .filter(UserCompany::getActive)
-                .map(uc -> uc.getCompany().getCode())
-                .toList();
+        boolean isSuperadmin = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(ur -> "SUPER-ADMIN".equals(ur.getRole().getCode()) && Boolean.TRUE.equals(ur.getActive()));
+
+        List<String> companyCodes;
+        if (isSuperadmin) {
+            companyCodes = companyRepository.findAll().stream()
+                    .map(Company::getCode)
+                    .toList();
+        } else {
+            companyCodes = user.getCompanies()
+                    .stream()
+                    .filter(UserCompany::getActive)
+                    .map(uc -> uc.getCompany().getCode())
+                    .toList();
+        }
 
         // =========================================
         // 5. Generate Pre-Auth Token
@@ -136,42 +149,59 @@ public class AuthService {
         // =========================================
         // 3. Validate Company Membership
         // =========================================
-        UserCompany membership = user.getCompanies()
-                .stream()
-                .filter(UserCompany::getActive)
-                .filter(uc -> uc.getCompany().getId().equals(company.getId()))
-                .findFirst()
-                .orElseThrow(() ->
-                        new RuntimeException("User not assigned to company"));
+        boolean isSuperadmin = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(ur -> "SUPER-ADMIN".equals(ur.getRole().getCode()) && Boolean.TRUE.equals(ur.getActive()));
+
+        if (!isSuperadmin) {
+            user.getCompanies()
+                    .stream()
+                    .filter(UserCompany::getActive)
+                    .filter(uc -> uc.getCompany().getId().equals(company.getId()))
+                    .findFirst()
+                    .orElseThrow(() ->
+                            new RuntimeException("User not assigned to company"));
+        }
 
         // =========================================
         // 4. Extract Tenant Roles
         // =========================================
-        List<String> roles = user.getRoles()
-                .stream()
-                .filter(UserRole::getActive)
-                .filter(ur ->
-                        ur.getCompanyId().equals(company.getId()))
-                .map(ur -> ur.getRole().getCode())
-                .distinct()
-                .toList();
+        List<String> roles;
+        if (isSuperadmin) {
+            roles = List.of("SUPER-ADMIN");
+        } else {
+            roles = user.getRoles()
+                    .stream()
+                    .filter(UserRole::getActive)
+                    .filter(ur ->
+                            ur.getCompanyId().equals(company.getId()))
+                    .map(ur -> ur.getRole().getCode())
+                    .distinct()
+                    .toList();
+        }
 
         // =========================================
         // 5. Extract Permissions
         // =========================================
-        List<String> permissions = user.getRoles()
-                .stream()
-                .filter(UserRole::getActive)
-                .filter(ur ->
-                        ur.getCompanyId().equals(company.getId()))
-                .flatMap(ur ->
-                        ur.getRole()
-                                .getRolePermissions()
-                                .stream())
-                .filter(rp -> Boolean.TRUE.equals(rp.getAllowed()))
-                .map(rp -> rp.getPermission().getCode())
-                .distinct()
-                .toList();
+        List<String> permissions;
+        if (isSuperadmin) {
+            permissions = permissionRepository.findAll().stream()
+                    .map(org.enterprise.security.entity.Permission::getCode)
+                    .toList();
+        } else {
+            permissions = user.getRoles()
+                    .stream()
+                    .filter(UserRole::getActive)
+                    .filter(ur ->
+                            ur.getCompanyId().equals(company.getId()))
+                    .flatMap(ur ->
+                            ur.getRole()
+                                    .getRolePermissions()
+                                    .stream())
+                    .filter(rp -> Boolean.TRUE.equals(rp.getAllowed()))
+                    .map(rp -> rp.getPermission().getCode())
+                    .distinct()
+                    .toList();
+        }
 
         // =========================================
         // 6. Branch Scope
@@ -265,11 +295,15 @@ public class AuthService {
 
         String key = "BLACKLIST:TOKEN:" + token;
 
-        redisTemplate.opsForValue().set(
-                key,
-                "LOGGED_OUT",
-                ttl,
-                TimeUnit.SECONDS
-        );
+        try {
+            redisTemplate.opsForValue().set(
+                    key,
+                    "LOGGED_OUT",
+                    ttl,
+                    TimeUnit.SECONDS
+            );
+        } catch (Exception ex) {
+            System.err.println("WARNING: Could not connect to Redis to blacklist token on logout. Error: " + ex.getMessage());
+        }
     }
 }

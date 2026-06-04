@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface MenuRepository extends JpaRepository<Menu, Long> {
-    List<Menu> findByModuleRouteAndVisibleTrueOrderByDisplayOrderAsc(String moduleRoute);
+    List<Menu> findByModuleRouteAndCompanyIdAndVisibleTrueOrderByDisplayOrderAsc(String moduleRoute, Long companyId);
 }

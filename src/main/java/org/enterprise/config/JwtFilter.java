@@ -42,28 +42,48 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
 
+        Claims claims;
         try {
 
             // =========================
             // CHECK TOKEN BLACKLIST
             // =========================
 
-            String blacklistKey = "BLACKLIST:TOKEN:" + token;
+            try {
+                String blacklistKey = "BLACKLIST:TOKEN:" + token;
+                Boolean blacklisted = redisTemplate.hasKey(blacklistKey);
 
-            Boolean blacklisted = redisTemplate.hasKey(blacklistKey);
-
-            if (Boolean.TRUE.equals(blacklisted)) {
-
-                unauthorized(response, "Token has been revoked");
-
-                return;
+                if (Boolean.TRUE.equals(blacklisted)) {
+                    unauthorized(response, "Token has been revoked");
+                    return;
+                }
+            } catch (Exception redisEx) {
+                System.err.println("WARNING: Could not connect to Redis to check token blacklist. Proceeding without blacklist check.");
             }
 
             // =========================
             // PARSE JWT
             // =========================
 
-            Claims claims = jwtService.extractClaims(token);
+            claims = jwtService.extractClaims(token);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            unauthorized(response, "Invalid or expired token. Error: " + ex.getMessage());
+            return;
+        }
+
+        if ("PRE_AUTH".equals(claims.get("type"))) {
+            try {
+                filterChain.doFilter(request, response);
+            } finally {
+                TenantContext.clear();
+                SecurityContextHolder.clearContext();
+            }
+            return;
+        }
+
+        try {
 
             // =========================
             // BUILD TENANT CONTEXT
@@ -124,8 +144,8 @@ public class JwtFilter extends OncePerRequestFilter {
                     .setAuthentication(authentication);
 
         } catch (Exception ex) {
-
-            unauthorized(response, "Invalid or expired token");
+            ex.printStackTrace();
+            unauthorized(response, "Invalid or expired token. Error: " + ex.getMessage());
             return;
 
         }

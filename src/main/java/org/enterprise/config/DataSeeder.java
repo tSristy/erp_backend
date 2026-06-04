@@ -47,6 +47,7 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
 
         Company company = seedCompany();
+        Company acme = seedAcmeCompany();
 
         seedPermissions(); // GLOBAL
 
@@ -54,11 +55,14 @@ public class DataSeeder implements CommandLineRunner {
 
         seedAdminUser(company, adminRole);
 
+        seedSuperAdmin(company);
+
         seedAccountUsers(company);
 
         seedWorkflow(company);
         
         seedModules(company);
+        seedModules(acme);
 
         log.info("Data seeding completed successfully.");
     }
@@ -90,6 +94,29 @@ public class DataSeeder implements CommandLineRunner {
 
                     log.info("Company created: {}", saved.getCode());
 
+                    return saved;
+                });
+    }
+
+    private Company seedAcmeCompany() {
+        return companyRepository.findByCode("ACME")
+                .orElseGet(() -> {
+                    Company c = new Company();
+                    c.setCode("ACME");
+                    c.setName("ACME Corp");
+                    c.setShortName("ACME");
+                    c.setEmail("info@acme.com");
+                    c.setPhone("111111111");
+                    c.setMobile("111111111");
+                    c.setCountry("USA");
+                    c.setCity("New York");
+                    c.setCurrencyCode("USD");
+                    c.setTimezone("America/New_York");
+                    c.setLanguageCode("en");
+                    c.setActive(true);
+                    c.setStartDate(LocalDate.now());
+                    Company saved = companyRepository.save(c);
+                    log.info("Company created: {}", saved.getCode());
                     return saved;
                 });
     }
@@ -203,6 +230,35 @@ public class DataSeeder implements CommandLineRunner {
 
         createUser(company, "view_user@" + company.getCode().toLowerCase(), viewer);
         createUser(company, "finance_user@" + company.getCode().toLowerCase(), manager);
+    }
+
+    private void seedSuperAdmin(Company company) {
+        Role superAdminRole = roleRepository.findByCodeAndCompanyId("SUPER-ADMIN", company.getId())
+                .orElseGet(() -> {
+                    Role role = new Role();
+                    role.setCode("SUPER-ADMIN");
+                    role.setCompanyId(company.getId());
+                    return roleRepository.save(role);
+                });
+
+        if (userRepository.findByUsername("superadmin@default").isEmpty()) {
+            User user = new User();
+            user.setUsername("superadmin@default");
+            user.setPassword(passwordEncoder.encode(getPassword()));
+            user.setActive(true);
+            user = userRepository.save(user);
+
+            UserRole ur = new UserRole();
+            ur.setUser(user);
+            ur.setRole(superAdminRole);
+            ur.setCompanyId(company.getId());
+            ur.setActive(true);
+            
+            user.setRoles(new java.util.HashSet<>(java.util.List.of(ur)));
+            userRepository.save(user);
+            
+            log.info("Superadmin user created: superadmin@default");
+        }
     }
 
     private Role createRole(Company company, String code, List<String> permissions) {
@@ -322,7 +378,7 @@ public class DataSeeder implements CommandLineRunner {
     // MODULES
     // =========================
     private void seedModules(Company company) {
-        if (moduleRepository.count() > 0) return;
+        if (moduleRepository.count() > 15) return; // Allow seeding for both companies
 
         Long cid = company.getId();
         var inventory = createModule("INVENTORY", "Inventory", "Manage stocks and business units.", "inventory", "Package", 1, cid);
