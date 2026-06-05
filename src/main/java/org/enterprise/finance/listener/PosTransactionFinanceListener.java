@@ -19,16 +19,24 @@ public class PosTransactionFinanceListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handlePosTransactionCompleted(PosTransactionCompletedEvent event) {
-        log.info("Finance Module received POS transaction completion event for: {}. Processing {} payments...", 
-                event.getTransactionNo(), event.getPayments().size());
+        log.info("Finance Module received POS transaction completion event for: {} (Type: {}). Processing payments...", event.getTransactionNo(), event.getTransactionType());
+        
+        boolean isReturn = "RETURN".equals(event.getTransactionType());
         
         for (PosTransactionCompletedEvent.PaymentDto payment : event.getPayments()) {
             if ("DUE".equalsIgnoreCase(payment.getPaymentMode())) {
                 log.info("Recording Accounts Receivable for DUE amount: {}", payment.getAmount());
                 // TODO: Debit A/R, Credit Sales Revenue
             } else {
-                log.info("Recording Receipt for payment mode {}: Amount {}", payment.getPaymentMode(), payment.getAmount());
-                // TODO: Debit Cash/Bank depending on mode, Credit Sales Revenue
+                if (isReturn) {
+                    log.info("Recording Refund for mode {} (Amount: {})", payment.getPaymentMode(), payment.getAmount());
+                    // TODO: Debit Sales Return / Revenue Account
+                    // TODO: Credit Cash/Bank Account (payment.getAmount())
+                } else {
+                    log.info("Recording Receipt for mode {} (Amount: {})", payment.getPaymentMode(), payment.getAmount());
+                    // TODO: Debit Cash/Bank Account (payment.getAmount())
+                    // TODO: Credit Sales Revenue Account
+                }
             }
         }
         

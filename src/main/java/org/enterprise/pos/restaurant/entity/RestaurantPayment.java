@@ -7,11 +7,13 @@ import org.enterprise.common.entity.AuditableEntity;
 
 import java.math.BigDecimal;
 
+import org.enterprise.common.event.PosPayment;
+
 @Entity
 @Table(name = "pos_restaurant_payments")
 @Getter
 @Setter
-public class RestaurantPayment extends AuditableEntity {
+public class RestaurantPayment extends AuditableEntity implements PosPayment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
@@ -27,7 +29,13 @@ public class RestaurantPayment extends AuditableEntity {
     @Column(precision = 18, scale = 2)
     private BigDecimal tipAmount = BigDecimal.ZERO;
 
+    @Column(length = 50)
     private String referenceNumber; // e.g., Card or MFS transaction ID
+
+    @Override
+    public String getPaymentModeName() {
+        return paymentMode != null ? paymentMode.name() : null;
+    }
 
     public enum PaymentMode {
         CASH, CARD, MFS, DUE, LOYALTY_POINTS

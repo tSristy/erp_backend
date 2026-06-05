@@ -28,6 +28,15 @@ public class RestaurantOrder extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     private OrderType orderType = OrderType.DINE_IN;
+    
+    private LocalDateTime eventDateTime; // For PRE_ORDER
+
+    @Enumerated(EnumType.STRING)
+    private TransactionType type = TransactionType.SALES;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reference_order_id")
+    private RestaurantOrder referenceOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
@@ -57,7 +66,11 @@ public class RestaurantOrder extends AuditableEntity {
     }
 
     public enum OrderType {
-        DINE_IN, TAKE_AWAY, DELIVERY
+        DINE_IN, TAKE_AWAY, DELIVERY, PRE_ORDER
+    }
+
+    public enum TransactionType {
+        SALES, RETURN
     }
 
     public void addDetail(RestaurantOrderDetail detail) {

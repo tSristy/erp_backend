@@ -19,7 +19,9 @@ public class PosTransactionInventoryListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handlePosTransactionCompleted(PosTransactionCompletedEvent event) {
-        log.info("Inventory Module received POS transaction completion event for: {}. Processing Inventory Movement (Stock Out)...", event.getTransactionNo());
+        log.info("Inventory Module received POS transaction completion event for: {} (Type: {}). Processing stock adjustments...", event.getTransactionNo(), event.getTransactionType());
+        
+        boolean isReturn = "RETURN".equals(event.getTransactionType());
         
         Long warehouseId = event.getWarehouseId();
         if (warehouseId == null) {
@@ -27,9 +29,13 @@ public class PosTransactionInventoryListener {
         }
 
         for (PosTransactionCompletedEvent.LineItemDto item : event.getLineItems()) {
-            log.info("Deducting {} units of Product ID {} from Warehouse ID {}", 
-                     item.getQuantity(), item.getProductId(), warehouseId);
-            // TODO: inventoryService.adjustStock(inventoryId, item.getQuantity().negate()); 
+            if (isReturn) {
+                log.info("Stock In for Return: Product ID {} (Qty: {}) to Warehouse ID {}", item.getProductId(), item.getQuantity(), event.getWarehouseId());
+                // TODO: inventoryService.adjustStock(event.getWarehouseId(), item.getProductId(), item.getQuantity());
+            } else {
+                log.info("Stock Out for Sale: Product ID {} (Qty: {}) from Warehouse ID {}", item.getProductId(), item.getQuantity(), event.getWarehouseId());
+                // TODO: inventoryService.adjustStock(event.getWarehouseId(), item.getProductId(), item.getQuantity().negate());
+            } 
             // Or create an InventoryTransaction entity and save it.
         }
         

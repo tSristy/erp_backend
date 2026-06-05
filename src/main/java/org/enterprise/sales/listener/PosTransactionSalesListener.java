@@ -26,12 +26,14 @@ public class PosTransactionSalesListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handlePosTransactionCompleted(PosTransactionCompletedEvent event) {
-        log.info("Sales Module received POS transaction completion event for: {}. Generating Invoice...", event.getTransactionNo());
+        log.info("Sales Module received POS transaction completion event for: {} (Type: {}). Generating Invoice...", event.getTransactionNo(), event.getTransactionType());
+        
+        boolean isReturn = "RETURN".equals(event.getTransactionType());
         
         SalesInvoice invoice = new SalesInvoice();
-        invoice.setInvoiceNo("INV-" + event.getTransactionNo());
+        invoice.setInvoiceNo((isReturn ? "RTN-" : "INV-") + event.getTransactionNo());
         invoice.setInvoiceDate(event.getTransactionDate().toLocalDate());
-        invoice.setTotalAmount(event.getTotalAmount());
+        invoice.setTotalAmount(isReturn ? event.getTotalAmount().negate() : event.getTotalAmount());
         
         if (event.getCustomerId() != null) {
             BusinessPartner customer = new BusinessPartner();
@@ -50,9 +52,9 @@ public class PosTransactionSalesListener {
 
         invoice.setDetails(event.getLineItems().stream().map(dto -> {
             SalesInvoiceDetail detail = new SalesInvoiceDetail();
-            detail.setQuantity(dto.getQuantity());
+            detail.setQuantity(isReturn ? dto.getQuantity().negate() : dto.getQuantity());
             detail.setUnitPrice(dto.getUnitPrice());
-            detail.setLineTotal(dto.getLineTotal());
+            detail.setLineTotal(isReturn ? dto.getLineTotal().negate() : dto.getLineTotal());
             detail.setSalesInvoice(invoice);
             return detail;
         }).collect(Collectors.toList()));

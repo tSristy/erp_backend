@@ -7,11 +7,13 @@ import org.enterprise.common.entity.AuditableEntity;
 
 import java.math.BigDecimal;
 
+import org.enterprise.common.event.PosLineItemDiscount;
+
 @Entity
 @Table(name = "pos_retail_transaction_detail_discounts")
 @Getter
 @Setter
-public class RetailTransactionDetailDiscount extends AuditableEntity {
+public class RetailTransactionDetailDiscount extends AuditableEntity implements PosLineItemDiscount {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_detail_id", nullable = false)

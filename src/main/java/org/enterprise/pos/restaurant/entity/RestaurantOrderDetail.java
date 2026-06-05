@@ -10,11 +10,14 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.enterprise.common.event.PosLineItem;
+import org.enterprise.common.event.PosLineItemDiscount;
+
 @Entity
 @Table(name = "pos_restaurant_order_details")
 @Getter
 @Setter
-public class RestaurantOrderDetail extends AuditableEntity {
+public class RestaurantOrderDetail extends AuditableEntity implements PosLineItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
@@ -50,5 +53,15 @@ public class RestaurantOrderDetail extends AuditableEntity {
     public void addDiscount(RestaurantOrderDetailDiscount discount) {
         discounts.add(discount);
         discount.setOrderDetail(this);
+    }
+
+    @Override
+    public Long getProductId() {
+        return product != null ? product.getId() : null;
+    }
+
+    @Override
+    public List<? extends PosLineItemDiscount> getLineDiscounts() {
+        return discounts;
     }
 }

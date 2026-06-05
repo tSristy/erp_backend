@@ -33,6 +33,13 @@ public class RetailTransaction extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private TransactionStatus status = TransactionStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    private TransactionType type = TransactionType.SALES;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reference_transaction_id")
+    private RetailTransaction referenceTransaction;
+
     @Column(precision = 18, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -44,6 +51,10 @@ public class RetailTransaction extends AuditableEntity {
 
     public enum TransactionStatus {
         PENDING, COMPLETED, VOIDED
+    }
+
+    public enum TransactionType {
+        SALES, RETURN
     }
 
     public void addDetail(RetailTransactionDetail detail) {
