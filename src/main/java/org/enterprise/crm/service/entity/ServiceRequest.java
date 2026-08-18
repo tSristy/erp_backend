@@ -12,6 +12,9 @@ import org.enterprise.inventory.entity.BusinessPartner;
 @Setter
 public class ServiceRequest extends AuditableEntity {
 
+    @Column(unique = true)
+    private String requestNumber;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registered_product_id")
     private RegisteredProduct registeredProduct;

@@ -37,7 +37,22 @@ public class BillOfMaterialService {
 
     @Transactional
     public BillOfMaterialDTO save(BillOfMaterialDTO dto) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (companyId == null) {
+            throw new RuntimeException("No active company context");
+        }
+
         BillOfMaterial entity = convertToEntity(dto);
+        entity.setCompanyId(companyId);
+        
+        if (entity.getItems() != null) {
+            for (BomItem item : entity.getItems()) {
+                if (item.getCompanyId() == null) {
+                    item.setCompanyId(companyId);
+                }
+            }
+        }
+        
         BillOfMaterial saved = repository.save(entity);
         return convertToDTO(saved);
     }
@@ -65,11 +80,21 @@ public class BillOfMaterialService {
     private BillOfMaterial convertToEntity(BillOfMaterialDTO dto) {
         BillOfMaterial entity = new BillOfMaterial();
         BeanUtils.copyProperties(dto, entity, "items");
+        if (dto.getFinishedGoodId() != null) {
+            org.enterprise.inventory.entity.Product fg = new org.enterprise.inventory.entity.Product();
+            fg.setId(dto.getFinishedGoodId());
+            entity.setFinishedGood(fg);
+        }
         if (dto.getItems() != null) {
             entity.setItems(dto.getItems().stream().map(itemDto -> {
                 BomItem item = new BomItem();
                 BeanUtils.copyProperties(itemDto, item);
                 item.setBom(entity);
+                if (itemDto.getRawMaterialId() != null) {
+                    org.enterprise.inventory.entity.Product rm = new org.enterprise.inventory.entity.Product();
+                    rm.setId(itemDto.getRawMaterialId());
+                    item.setRawMaterial(rm);
+                }
                 return item;
             }).collect(Collectors.toList()));
         }

@@ -1,10 +1,11 @@
 package org.enterprise.sales.service;
 
 import lombok.RequiredArgsConstructor;
+import org.enterprise.common.util.TenantContext;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
 import org.enterprise.finance.enums.JournalStatus;
-import org.enterprise.finance.service.JournalService;
+import org.enterprise.finance.service.JournalEntryService;
 import org.enterprise.inventory.entity.InventoryLedger;
 import org.enterprise.inventory.entity.Product;
 import org.enterprise.inventory.entity.StockBalance;
@@ -34,12 +35,28 @@ public class DeliveryService {
     private final DeliveryNoteRepository deliveryNoteRepository;
     private final StockBalanceRepository stockBalanceRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
-    private final JournalService journalService;
+    private final JournalEntryService journalService;
     private final CostingService costingService;
     private final org.enterprise.inventory.service.BatchSerialTrackingService batchSerialTrackingService;
 
     @Transactional
     public DeliveryNote save(DeliveryNote deliveryNote) {
+        Long companyId = TenantContext.getCompanyId();
+        if (companyId == null) {
+            throw new RuntimeException("No active company context");
+        }
+
+        deliveryNote.setCompanyId(companyId);
+        
+        if (deliveryNote.getDetails() != null) {
+            for (var detail : deliveryNote.getDetails()) {
+                detail.setDeliveryNote(deliveryNote);
+                if (detail.getCompanyId() == null) {
+                    detail.setCompanyId(companyId);
+                }
+            }
+        }
+        
         return deliveryNoteRepository.save(deliveryNote);
     }
 
@@ -54,6 +71,37 @@ public class DeliveryService {
 
         BigDecimal totalCogs = BigDecimal.ZERO;
         boolean isOutbound = delivery.getDeliveryType() == DeliveryNote.DeliveryType.OUTBOUND;
+
+        List<DeliveryNoteDetail> processedDetails = new ArrayList<>();
+        for (DeliveryNoteDetail detail : delivery.getDetails()) {
+            if (isOutbound && detail.getProduct().getIsBatchManaged() != null && detail.getProduct().getIsBatchManaged() && detail.getBatch() == null) {
+                BigDecimal remainingQty = detail.getQuantity();
+                List<StockBalance> availableBatches = stockBalanceRepository.findAvailableBatchesForIssue(detail.getProduct().getId(), delivery.getWarehouse().getId());
+                for (StockBalance sb : availableBatches) {
+                    if (remainingQty.compareTo(BigDecimal.ZERO) <= 0) break;
+                    BigDecimal qtyToTake = sb.getQuantity().min(remainingQty);
+
+                    DeliveryNoteDetail newDetail = new DeliveryNoteDetail();
+                    newDetail.setDeliveryNote(delivery);
+                    newDetail.setSalesOrderDetail(detail.getSalesOrderDetail());
+                    newDetail.setProduct(detail.getProduct());
+                    newDetail.setQuantity(qtyToTake);
+                    newDetail.setBatch(sb.getBatch());
+                    // Serial numbers are ignored for auto-split since they need manual tracking
+                    processedDetails.add(newDetail);
+
+                    remainingQty = remainingQty.subtract(qtyToTake);
+                }
+                if (remainingQty.compareTo(BigDecimal.ZERO) > 0) {
+                    throw new RuntimeException("Insufficient batch stock for auto-allocation for product " + detail.getProduct().getName());
+                }
+            } else {
+                processedDetails.add(detail);
+            }
+        }
+        
+        delivery.getDetails().clear();
+        delivery.getDetails().addAll(processedDetails);
 
         for (DeliveryNoteDetail detail : delivery.getDetails()) {
             Product product = detail.getProduct();
@@ -157,13 +205,11 @@ public class DeliveryService {
             // Update Sales Order shipped/returned quantity
             if (detail.getSalesOrderDetail() != null) {
                 if (isOutbound) {
-                    detail.getSalesOrderDetail().setShippedQuantity(
-                            detail.getSalesOrderDetail().getShippedQuantity().add(issueQty)
-                    );
+                    BigDecimal currentShipped = detail.getSalesOrderDetail().getShippedQuantity() != null ? detail.getSalesOrderDetail().getShippedQuantity() : BigDecimal.ZERO;
+                    detail.getSalesOrderDetail().setShippedQuantity(currentShipped.add(issueQty));
                 } else {
-                    detail.getSalesOrderDetail().setReturnedQuantity(
-                            detail.getSalesOrderDetail().getReturnedQuantity().add(issueQty)
-                    );
+                    BigDecimal currentReturned = detail.getSalesOrderDetail().getReturnedQuantity() != null ? detail.getSalesOrderDetail().getReturnedQuantity() : BigDecimal.ZERO;
+                    detail.getSalesOrderDetail().setReturnedQuantity(currentReturned.add(issueQty));
                 }
             }
         }
@@ -235,5 +281,18 @@ public class DeliveryService {
         returnDelivery.setDetails(returnDetails);
 
         return deliveryNoteRepository.save(returnDelivery);
+    }
+
+    public java.util.List<DeliveryNote> findAll() {
+        return deliveryNoteRepository.findAll();
+    }
+
+    public java.util.Optional<DeliveryNote> findById(Long id) {
+        return deliveryNoteRepository.findById(id);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void delete(Long id) {
+        deliveryNoteRepository.deleteById(id);
     }
 }

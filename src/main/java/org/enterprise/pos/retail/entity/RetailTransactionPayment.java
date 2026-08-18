@@ -17,6 +17,7 @@ public class RetailTransactionPayment extends AuditableEntity implements PosPaym
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"details", "payments"})
     private RetailTransaction transaction;
 
     @Enumerated(EnumType.STRING)

@@ -8,8 +8,7 @@ public class AreaDto {
     private Long id;
     private String code;
     private String name;
-    private String marketType;
-    private Integer priorityLevel;
+    private Long areaManagerId;
+    private Long zoneId;
     private Boolean active;
-    private Long territoryId;
 }

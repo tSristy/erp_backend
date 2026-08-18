@@ -91,6 +91,9 @@ public class Warehouse extends AuditableEntity {
     private Account salesReturnAccount;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    private Account salesDiscountAccount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private Account wipAccount;
 
     @OneToMany(mappedBy = "warehouse")

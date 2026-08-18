@@ -9,9 +9,7 @@ public class TerritoryDto {
     private String code;
     private String name;
     private String salesType;
-    private String managerName;
-    private String contactNo;
-    private Double salesTarget;
+    private Long territoryManagerId;
     private Boolean active;
-    private Long zoneId;
+    private Long areaId;
 }

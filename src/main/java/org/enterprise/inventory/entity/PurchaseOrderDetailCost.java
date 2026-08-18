@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 @Setter
 public class PurchaseOrderDetailCost extends AuditableEntity {
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     private PurchaseOrderDetail purchaseOrderDetail;
 

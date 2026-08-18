@@ -15,17 +15,41 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
-public class StockReclassificationService {
+public class StockReclassificationService extends BaseService<StockReclassification, Long> {
 
     private final StockReclassificationRepository stockReclassificationRepository;
     private final StockBalanceRepository stockBalanceRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final CostingService costingService;
 
+    public StockReclassificationService(StockReclassificationRepository stockReclassificationRepository,
+                                        StockBalanceRepository stockBalanceRepository,
+                                        InventoryLedgerRepository inventoryLedgerRepository,
+                                        CostingService costingService) {
+        super(stockReclassificationRepository);
+        this.stockReclassificationRepository = stockReclassificationRepository;
+        this.stockBalanceRepository = stockBalanceRepository;
+        this.inventoryLedgerRepository = inventoryLedgerRepository;
+        this.costingService = costingService;
+    }
+
+    @Override
     @Transactional
     public StockReclassification save(StockReclassification stockReclassification) {
-        return stockReclassificationRepository.save(stockReclassification);
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (stockReclassification.getCompanyId() == null) {
+            stockReclassification.setCompanyId(companyId);
+        }
+        
+        if (stockReclassification.getDetails() != null) {
+            for (StockReclassificationDetail detail : stockReclassification.getDetails()) {
+                if (detail.getCompanyId() == null) {
+                    detail.setCompanyId(companyId);
+                }
+                detail.setStockReclassification(stockReclassification);
+            }
+        }
+        return super.save(stockReclassification);
     }
 
     @Transactional
@@ -39,6 +63,41 @@ public class StockReclassificationService {
 
         Warehouse warehouse = reclass.getWarehouse();
 
+        java.util.List<StockReclassificationDetail> processedDetails = new java.util.ArrayList<>();
+        for (StockReclassificationDetail detail : reclass.getDetails()) {
+            if (detail.getSourceProduct().getIsBatchManaged() != null && detail.getSourceProduct().getIsBatchManaged() && detail.getSourceBatch() == null) {
+                BigDecimal remainingQty = detail.getSourceQuantity();
+                java.util.List<StockBalance> availableBatches = stockBalanceRepository.findAvailableBatchesForIssue(detail.getSourceProduct().getId(), warehouse.getId());
+                for (StockBalance sb : availableBatches) {
+                    if (remainingQty.compareTo(BigDecimal.ZERO) <= 0) break;
+                    BigDecimal qtyToTake = sb.getQuantity().min(remainingQty);
+
+                    StockReclassificationDetail newDetail = new StockReclassificationDetail();
+                    newDetail.setStockReclassification(reclass);
+                    newDetail.setSourceProduct(detail.getSourceProduct());
+                    newDetail.setDestinationProduct(detail.getDestinationProduct());
+                    newDetail.setSourceQuantity(qtyToTake);
+                    // Pro-rate destination quantity
+                    BigDecimal destQtyToGive = qtyToTake.multiply(detail.getDestinationQuantity()).divide(detail.getSourceQuantity(), 6, java.math.RoundingMode.HALF_UP);
+                    newDetail.setDestinationQuantity(destQtyToGive);
+                    newDetail.setSourceBatch(sb.getBatch());
+                    newDetail.setDestinationBatch(detail.getDestinationBatch()); // User can optionally specify dest batch
+                    newDetail.setCompanyId(detail.getCompanyId());
+                    processedDetails.add(newDetail);
+
+                    remainingQty = remainingQty.subtract(qtyToTake);
+                }
+                if (remainingQty.compareTo(BigDecimal.ZERO) > 0) {
+                    throw new RuntimeException("Insufficient batch stock for auto-allocation for source product " + detail.getSourceProduct().getName());
+                }
+            } else {
+                processedDetails.add(detail);
+            }
+        }
+        
+        reclass.getDetails().clear();
+        reclass.getDetails().addAll(processedDetails);
+
         for (StockReclassificationDetail detail : reclass.getDetails()) {
             Product sourceProduct = detail.getSourceProduct();
             Product destProduct = detail.getDestinationProduct();
@@ -46,9 +105,16 @@ public class StockReclassificationService {
             BigDecimal destQty = detail.getDestinationQuantity();
 
             // 1. Deduct Source Product
-            StockBalance sourceStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(sourceProduct.getId(), warehouse.getId(), null,null)
-                    .orElseThrow(() -> new RuntimeException("Insufficient stock for source product " + sourceProduct.getName()));
+            StockBalance sourceStock;
+            if (detail.getSourceBatch() != null) {
+                sourceStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(sourceProduct.getId(), warehouse.getId(), null, detail.getSourceBatch().getId())
+                        .orElseThrow(() -> new RuntimeException("Insufficient stock for source product " + sourceProduct.getName() + " and batch"));
+            } else {
+                sourceStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(sourceProduct.getId(), warehouse.getId(), null)
+                        .orElseThrow(() -> new RuntimeException("Insufficient stock for source product " + sourceProduct.getName()));
+            }
 
             if (sourceStock.getQuantity().compareTo(sourceQty) < 0) {
                 throw new RuntimeException("Insufficient stock for source product " + sourceProduct.getName());
@@ -74,12 +140,20 @@ public class StockReclassificationService {
             // 2. Receive Destination Product
             BigDecimal destUnitCost = consumedValue.divide(destQty, 6, RoundingMode.HALF_UP);
 
-            StockBalance destStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(destProduct.getId(), warehouse.getId(), null,null)
-                    .orElseGet(StockBalance::new);
+            StockBalance destStock;
+            if (detail.getDestinationBatch() != null) {
+                destStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(destProduct.getId(), warehouse.getId(), null, detail.getDestinationBatch().getId())
+                        .orElseGet(StockBalance::new);
+            } else {
+                destStock = stockBalanceRepository
+                        .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(destProduct.getId(), warehouse.getId(), null)
+                        .orElseGet(StockBalance::new);
+            }
 
             destStock.setProduct(destProduct);
             destStock.setWarehouse(warehouse);
+            destStock.setBatch(detail.getDestinationBatch());
 
             BigDecimal currentDestQty = Optional.ofNullable(destStock.getQuantity()).orElse(BigDecimal.ZERO);
             BigDecimal currentDestValue = Optional.ofNullable(destStock.getTotalValue()).orElse(BigDecimal.ZERO);

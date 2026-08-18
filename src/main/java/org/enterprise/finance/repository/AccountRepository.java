@@ -7,6 +7,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
     Account findByCode(String code);
+    Account findByCodeAndCompanyId(String code, Long companyId);
+    long countByCompanyId(Long companyId);
     
-    long countByAccountType(org.enterprise.finance.enums.AccountType accountType);
+    long countByAccountTypeAndCompanyId(org.enterprise.finance.enums.AccountType accountType, Long companyId);
 }

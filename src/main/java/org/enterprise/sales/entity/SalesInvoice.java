@@ -35,13 +35,37 @@ public class SalesInvoice extends AuditableEntity {
     private Warehouse warehouse;
 
     @Column(precision = 18, scale = 2)
+    private BigDecimal subTotal = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal discountTotal = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
+    @OneToMany(mappedBy = "salesInvoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SalesInvoiceDiscount> discounts;
 
     @OneToMany(mappedBy = "salesInvoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SalesInvoiceDetail> details;
 
     @Enumerated(EnumType.STRING)
     private InvoiceType invoiceType = InvoiceType.INVOICE;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.hr.entity.Employee salesPerson;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.hr.entity.Employee territoryManager;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.hr.entity.Employee areaManager;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.hr.entity.Employee regionalManager;
 
     public enum InvoiceStatus {
         DRAFT, POSTED, PAID, CANCELLED
@@ -50,4 +74,11 @@ public class SalesInvoice extends AuditableEntity {
     public enum InvoiceType {
         INVOICE, CREDIT_MEMO
     }
+
+    public enum SalesChannel {
+        B2B, B2C, RETAIL, ECOMMERCE
+    }
+
+    @Enumerated(EnumType.STRING)
+    private SalesChannel salesChannel = SalesChannel.B2C;
 }

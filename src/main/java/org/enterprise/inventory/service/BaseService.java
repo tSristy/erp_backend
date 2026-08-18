@@ -14,6 +14,12 @@ public abstract class BaseService<T, ID> {
     }
 
     public T save(T entity) {
+        if (entity instanceof org.enterprise.common.entity.TenantEntity) {
+            org.enterprise.common.entity.TenantEntity tenantEntity = (org.enterprise.common.entity.TenantEntity) entity;
+            if (tenantEntity.getCompanyId() == null) {
+                tenantEntity.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
+            }
+        }
         return repository.save(entity);
     }
 

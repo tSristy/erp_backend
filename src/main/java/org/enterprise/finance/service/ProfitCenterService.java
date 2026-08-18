@@ -7,6 +7,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.enterprise.common.util.TenantContext;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +38,12 @@ public class ProfitCenterService {
     @Transactional
     public ProfitCenterDTO save(ProfitCenterDTO dto) {
         ProfitCenter entity = convertToEntity(dto);
+        
+        Long companyId = TenantContext.getCompanyId();
+        if (companyId != null) {
+            entity.setCompanyId(companyId);
+        }
+        
         ProfitCenter saved = profitCenterRepository.save(entity);
         return convertToDTO(saved);
     }

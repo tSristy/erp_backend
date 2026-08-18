@@ -20,4 +20,8 @@ public class BusinessPartnerService extends BaseService<BusinessPartner, Long> {
         return repository.findByCodeAndCompanyId(code, companyId);
     }
 
+    public java.util.List<BusinessPartner> findAllByRole(org.enterprise.inventory.entity.BusinessPartnerRole.RoleType role) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        return repository.findByCompanyIdAndRole(companyId, role);
+    }
 }

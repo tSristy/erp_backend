@@ -20,12 +20,13 @@ public class InventoryController {
     private final InventoryService service;
 
     @GetMapping("/product/{productId}")
-    public List<Inventory> getByProduct(@PathVariable Long productId,
-                                        @RequestParam Long companyId) {
-        return service.getByProduct(productId, companyId);
+    @PreAuthorize("hasAuthority('INVENTORY_READ')")
+    public List<Inventory> getByProduct(@PathVariable Long productId) {
+        return service.getByProduct(productId);
     }
 
     @PostMapping("/adjust/{id}")
+    @PreAuthorize("hasAuthority('INVENTORY_WRITE')")
     public void adjustStock(@PathVariable Long id,
                             @RequestParam BigDecimal qty) {
         service.adjustStock(id, qty);
@@ -36,10 +37,17 @@ public class InventoryController {
     public ResponseEntity<?> receiveStock(
             @RequestBody InventoryTransactionRequest request
     ) {
-
         service.receiveStock(request);
-
         return ResponseEntity.ok("Stock received successfully");
+    }
+
+    @PostMapping("/issue")
+    @PreAuthorize("hasAuthority('INVENTORY_ISSUE')")
+    public ResponseEntity<?> issueStock(
+            @RequestBody InventoryTransactionRequest request
+    ) {
+        service.issueStock(request);
+        return ResponseEntity.ok("Stock issued successfully");
     }
 
     @GetMapping("/stock-balance")
@@ -47,9 +55,8 @@ public class InventoryController {
     public ResponseEntity<StockBalanceResponse> getStockBalance(
             @RequestParam Long itemId,
             @RequestParam Long warehouseId,
-            @RequestParam Long locationId
+            @RequestParam(required = false) Long locationId
     ) {
-
         return ResponseEntity.ok(
                 service.getStockBalance(
                         itemId,

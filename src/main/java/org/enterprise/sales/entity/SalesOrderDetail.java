@@ -34,4 +34,10 @@ public class SalesOrderDetail extends AuditableEntity {
 
     @Column(precision = 18, scale = 2)
     private BigDecimal lineTotal = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal discountTotal = BigDecimal.ZERO;
+
+    @OneToMany(mappedBy = "salesOrderDetail", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<SalesOrderDetailDiscount> discounts;
 }

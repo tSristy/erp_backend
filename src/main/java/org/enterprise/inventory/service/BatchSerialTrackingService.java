@@ -36,6 +36,7 @@ public class BatchSerialTrackingService {
                     newBatch.setManufactureDate(mfgDate);
                     newBatch.setExpiryDate(expDate);
                     newBatch.setActive(true);
+                    newBatch.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
                     return batchRepository.save(newBatch);
                 });
     }
@@ -61,6 +62,7 @@ public class BatchSerialTrackingService {
                         SerialNumber newSerial = new SerialNumber();
                         newSerial.setSerialNo(sNo);
                         newSerial.setProduct(product);
+                        newSerial.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
                         return newSerial;
                     });
 
@@ -95,6 +97,14 @@ public class BatchSerialTrackingService {
                 throw new RuntimeException("Serial number " + sNo + " does not belong to batch " + batch.getBatchNo());
             }
 
+            if (warehouse != null && serial.getWarehouse() != null && !serial.getWarehouse().getId().equals(warehouse.getId())) {
+                throw new RuntimeException("Serial number " + sNo + " is currently in warehouse " + serial.getWarehouse().getName() + " but is being issued from " + warehouse.getName());
+            }
+
+            if (location != null && serial.getLocation() != null && !serial.getLocation().getId().equals(location.getId())) {
+                throw new RuntimeException("Serial number " + sNo + " is currently at location " + serial.getLocation().getName() + " but is being issued from " + location.getName());
+            }
+
             serial.setStatus(newStatus);
             // Location and Warehouse might change based on status (e.g. cleared if ISSUED, updated if TRANSFER)
             if (newStatus == SerialNumber.SerialStatus.IN_STOCK) {
@@ -120,6 +130,7 @@ public class BatchSerialTrackingService {
         tx.setWarehouse(warehouse);
         tx.setLocation(location);
         tx.setTransactionDate(LocalDateTime.now());
+        tx.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
         serialNumberTransactionRepository.save(tx);
     }
 }

@@ -4,10 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.enterprise.common.util.TenantContext;
 import org.enterprise.workflow.dto.WorkflowActionRequest;
 import org.enterprise.workflow.dto.WorkflowStartRequest;
+import org.enterprise.workflow.dto.WorkflowTaskDto;
 import org.enterprise.workflow.entity.*;
 import org.enterprise.workflow.repository.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.enterprise.workflow.event.WorkflowStatusEvent;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +27,7 @@ public class WorkflowService {
         private final WorkflowTaskRepository taskRepository;
         private final WorkflowHistoryRepository historyRepository;
         private final WorkflowRuleEngine ruleEngine;
+        private final ApplicationEventPublisher eventPublisher;
 
         // =========================
         // START WORKFLOW
@@ -167,6 +171,13 @@ public class WorkflowService {
                 instanceRepository.save(instance);
 
                 saveHistory(task, "REJECTED", request.getRemarks());
+                
+                eventPublisher.publishEvent(new WorkflowStatusEvent(
+                        this,
+                        instance.getEntityName(),
+                        instance.getEntityId(),
+                        "REJECTED"
+                ));
         }
 
         // =========================
@@ -196,6 +207,13 @@ public class WorkflowService {
                         instance.setCompletedAt(LocalDateTime.now());
 
                         instanceRepository.save(instance);
+                        
+                        eventPublisher.publishEvent(new WorkflowStatusEvent(
+                                this,
+                                instance.getEntityName(),
+                                instance.getEntityId(),
+                                "APPROVED"
+                        ));
 
                         return;
                 }
@@ -240,8 +258,27 @@ public class WorkflowService {
         // USER TASKS
         // =========================
 
-        public List<WorkflowTask> myPendingTasks() {
+        public List<WorkflowTaskDto> myPendingTasks() {
 
-                return taskRepository.findByAssignedUserIdAndStatus(TenantContext.get().getUserId(), "PENDING");
+                List<WorkflowTask> tasks = taskRepository.findByAssignedUserIdAndStatus(TenantContext.get().getUserId(), "PENDING");
+                
+                return tasks.stream().map(task -> {
+                    WorkflowTaskDto dto = new WorkflowTaskDto();
+                    dto.setId(task.getId());
+                    if (task.getInstance() != null) {
+                        dto.setInstanceId(task.getInstance().getId());
+                        dto.setEntityName(task.getInstance().getEntityName());
+                        dto.setDocumentNo(task.getInstance().getDocumentNo());
+                        dto.setStartedAt(task.getInstance().getStartedAt());
+                    }
+                    if (task.getStep() != null) {
+                        dto.setStepNo(task.getStep().getStepNo());
+                        dto.setStepName(task.getStep().getName());
+                    }
+                    dto.setStatus(task.getStatus());
+                    dto.setRemarks(task.getRemarks());
+                    dto.setActionAt(task.getActionAt());
+                    return dto;
+                }).toList();
         }
 }

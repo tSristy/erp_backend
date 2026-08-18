@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
 import org.enterprise.organization.entity.Branch;
 
+import org.enterprise.inventory.entity.BusinessPartner;
 import java.math.BigDecimal;
 
 @Entity
@@ -34,4 +35,19 @@ public class JournalEntryLine extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Branch branch;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private BusinessPartner businessPartner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Project project;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private InternalOrder internalOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.inventory.entity.LetterOfCredit letterOfCredit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Loan loan;
 }

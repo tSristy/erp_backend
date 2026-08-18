@@ -1,5 +1,6 @@
 package org.enterprise.workflow.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,7 @@ import org.enterprise.security.entity.User;
 @Setter
 public class WorkflowStep extends AuditableEntity {
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     private WorkflowDefinition workflow;
 

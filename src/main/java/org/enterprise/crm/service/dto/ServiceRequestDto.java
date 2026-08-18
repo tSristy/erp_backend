@@ -6,6 +6,7 @@ import org.enterprise.crm.service.entity.ServiceRequest;
 @Data
 public class ServiceRequestDto {
     private Long id;
+    private String requestNumber;
     private Long registeredProductId;
     private Long customerId;
     private String issueDescription;

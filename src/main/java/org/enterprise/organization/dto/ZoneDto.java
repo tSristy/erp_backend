@@ -8,7 +8,6 @@ public class ZoneDto {
     private Long id;
     private String code;
     private String name;
-    private String managerName;
-    private String contactNo;
+    private Long regionalManagerId;
     private Boolean active;
 }

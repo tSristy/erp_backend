@@ -4,11 +4,11 @@ import java.time.LocalDate;
 
 import org.enterprise.common.entity.AuditableEntity;
 import org.enterprise.organization.entity.Branch;
-import org.enterprise.organization.entity.Company;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -38,9 +38,6 @@ public class Employee extends AuditableEntity {
     private String presentAddress;
     private String permanentAddress;
 
-//    @ManyToOne
-//    private Company company;
-
     @ManyToOne
     private Branch branch;
 
@@ -52,6 +49,10 @@ public class Employee extends AuditableEntity {
 
     @ManyToOne
     private Shift defaultShift;
+
+    @OneToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "business_partner_id")
+    private org.enterprise.inventory.entity.BusinessPartner businessPartner;
 
     private Boolean active;
 }

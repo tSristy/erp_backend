@@ -23,4 +23,11 @@ public abstract class TenantEntity extends BaseEntity {
 
     @Column(name = "company_id", nullable = false)
     private Long companyId;
+
+    @jakarta.persistence.PrePersist
+    public void setTenantPrePersist() {
+        if (companyId == null) {
+            companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        }
+    }
 }

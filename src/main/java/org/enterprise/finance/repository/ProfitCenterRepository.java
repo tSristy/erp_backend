@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProfitCenterRepository extends JpaRepository<ProfitCenter, Long> {
+    long countByCompanyId(Long companyId);
 }

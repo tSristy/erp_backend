@@ -33,6 +33,7 @@ public class DeliveryNote extends AuditableEntity {
     private Warehouse warehouse;
 
     @OneToMany(mappedBy = "deliveryNote", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("deliveryNote")
     private List<DeliveryNoteDetail> details;
 
     @Enumerated(EnumType.STRING)

@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
 import org.enterprise.finance.enums.JournalStatus;
-import org.enterprise.finance.service.JournalService;
+import org.enterprise.finance.service.JournalEntryService;
 import org.enterprise.inventory.entity.InventoryLedger;
 import org.enterprise.inventory.entity.StockBalance;
 import org.enterprise.inventory.entity.Warehouse;
@@ -33,7 +33,7 @@ public class ProductionService {
     private final ManufacturingOrderRepository orderRepository;
     private final StockBalanceRepository stockBalanceRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
-    private final JournalService journalService;
+    private final JournalEntryService journalEntryService;
     private final CostingService costingService;
     private final org.enterprise.inventory.service.BatchSerialTrackingService batchSerialTrackingService;
 
@@ -218,6 +218,6 @@ public class ProductionService {
         lines.add(crWipLine);
 
         journal.setLines(lines);
-        journalService.save(journal);
+        journalEntryService.save(journal);
     }
 }

@@ -44,6 +44,15 @@ public class PurchaseOrder extends AuditableEntity {
     private String remarks;
 
     private LocalDate expectedDeliveryDate;
+    
+    private String currency;
+    
+    @Column(precision = 18, scale = 6)
+    private BigDecimal exchangeRate;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "letter_of_credit_id")
+    private LetterOfCredit letterOfCredit;
 
     @OneToMany(mappedBy = "purchaseOrder",
             cascade = CascadeType.ALL,
@@ -58,6 +67,6 @@ public class PurchaseOrder extends AuditableEntity {
     private PurchaseOrder referenceOrder;
 
     public enum OrderType {
-        STANDARD, RETURN
+        STANDARD, RETURN, IMPORT
     }
 }

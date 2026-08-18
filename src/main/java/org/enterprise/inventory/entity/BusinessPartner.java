@@ -42,11 +42,66 @@ public class BusinessPartner extends AuditableEntity {
     @Column(columnDefinition = "TEXT")
     private String remarks;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Account grnClearingAccount;
+    @OneToMany(mappedBy = "partner", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<BusinessPartnerRole> roles = new java.util.ArrayList<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Account accountsReceivableAccount;
+    @Transient
+    private String role;
+
+    public String getRole() {
+        if (roles != null && !roles.isEmpty()) {
+            boolean hasCust = roles.stream().anyMatch(r -> r.getRole() == BusinessPartnerRole.RoleType.CUSTOMER);
+            boolean hasVend = roles.stream().anyMatch(r -> r.getRole() == BusinessPartnerRole.RoleType.VENDOR);
+            if (hasCust && hasVend) return "BOTH";
+            return roles.get(0).getRole().name();
+        }
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+        if (role != null) {
+            if (this.roles == null) {
+                this.roles = new java.util.ArrayList<>();
+            } else {
+                this.roles.clear();
+            }
+            
+            if (role.equals("BOTH")) {
+                BusinessPartnerRole c = new BusinessPartnerRole();
+                c.setRole(BusinessPartnerRole.RoleType.CUSTOMER);
+                c.setPartner(this);
+                this.roles.add(c);
+
+                BusinessPartnerRole v = new BusinessPartnerRole();
+                v.setRole(BusinessPartnerRole.RoleType.VENDOR);
+                v.setPartner(this);
+                this.roles.add(v);
+            } else {
+                try {
+                    BusinessPartnerRole r = new BusinessPartnerRole();
+                    r.setRole(BusinessPartnerRole.RoleType.valueOf(role));
+                    r.setPartner(this);
+                    this.roles.add(r);
+                } catch (IllegalArgumentException e) {
+                    // Ignore invalid roles
+                }
+            }
+        }
+    }
+
+    @OneToOne(mappedBy = "partner", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private CustomerDetail customerDetail;
+
+    @OneToOne(mappedBy = "partner", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private VendorDetail vendorDetail;
+
+    @OneToOne(mappedBy = "partner", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private ShareholderDetail shareholderDetail;
+
+
+
+
 
     public enum PartnerType {
         INDIVIDUAL, COMPANY

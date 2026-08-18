@@ -25,6 +25,9 @@ public class Menu extends AuditableEntity {
     private Integer displayOrder;
 
     private Boolean visible = true;
+    
+    @Column(name = "is_report_menu")
+    private Boolean isReportMenu = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Module module;

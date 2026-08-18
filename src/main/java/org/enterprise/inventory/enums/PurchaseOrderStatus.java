@@ -6,6 +6,7 @@ public enum PurchaseOrderStatus {
     APPROVED,
     PARTIAL_RECEIVED,
     CLOSED,
+    REJECTED,
     CANCELLED
 }
 

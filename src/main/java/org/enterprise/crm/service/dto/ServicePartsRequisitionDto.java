@@ -10,6 +10,7 @@ public class ServicePartsRequisitionDto {
     private Long id;
     private Long serviceRequestId;
     private Long requestedById;
+    private Long warehouseId;
     private ServicePartsRequisition.RequisitionStatus status;
     private List<ServicePartsRequisitionDetailDto> details;
 }

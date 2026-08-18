@@ -14,6 +14,18 @@ public class SalesQuotationService {
 
     @Transactional
     public SalesQuotation save(SalesQuotation salesQuotation) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (salesQuotation.getCompanyId() == null) {
+            salesQuotation.setCompanyId(companyId);
+        }
+        if (salesQuotation.getDetails() != null) {
+            for (var detail : salesQuotation.getDetails()) {
+                detail.setSalesQuotation(salesQuotation);
+                if (detail.getCompanyId() == null) {
+                    detail.setCompanyId(companyId);
+                }
+            }
+        }
         return salesQuotationRepository.save(salesQuotation);
     }
 
@@ -24,5 +36,18 @@ public class SalesQuotationService {
 
         quotation.setStatus(status);
         return salesQuotationRepository.save(quotation);
+    }
+
+    public java.util.List<SalesQuotation> findAll() {
+        return salesQuotationRepository.findAll();
+    }
+
+    public java.util.Optional<SalesQuotation> findById(Long id) {
+        return salesQuotationRepository.findById(id);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void delete(Long id) {
+        salesQuotationRepository.deleteById(id);
     }
 }

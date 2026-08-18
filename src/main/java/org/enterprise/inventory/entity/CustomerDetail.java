@@ -17,6 +17,17 @@ public class CustomerDetail extends AuditableEntity {
 
     private Boolean allowPartialDelivery = true;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
     private BusinessPartner partner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.organization.entity.Territory territory;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.finance.entity.Account accountsReceivableAccount;
+
+    private java.math.BigDecimal creditLimit;
+
+    private Integer paymentTermDays;
 }

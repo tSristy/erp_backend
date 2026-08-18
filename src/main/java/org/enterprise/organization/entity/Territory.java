@@ -16,13 +16,11 @@ public class Territory extends TenantEntity {
 
     private String salesType;
 
-    private String managerName;
-    private String contactNo;
-
-    private Double salesTarget;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.hr.entity.Employee territoryManager;
 
     private Boolean active = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Zone zone;
+    private Area area;
 }

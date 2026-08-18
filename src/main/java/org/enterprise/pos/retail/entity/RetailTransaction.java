@@ -26,6 +26,12 @@ public class RetailTransaction extends AuditableEntity {
     @JoinColumn(name = "customer_id")
     private BusinessPartner customer; // Can be null for walk-in
 
+    @Column(length = 100)
+    private String walkInCustomerName;
+
+    @Column(length = 20)
+    private String walkInCustomerPhone;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "warehouse_id")
     private Warehouse warehouse;

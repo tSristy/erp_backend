@@ -14,6 +14,7 @@ import java.util.List;
 @Setter
 public class PurchaseOrderDetail extends AuditableEntity {
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     private PurchaseOrder purchaseOrder;
 

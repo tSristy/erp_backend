@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
 import org.enterprise.finance.enums.JournalStatus;
-import org.enterprise.finance.service.JournalService;
+import org.enterprise.finance.service.JournalEntryService;
 import org.enterprise.inventory.entity.*;
 import org.enterprise.inventory.enums.InventoryTransactionType;
 import org.enterprise.inventory.repository.InventoryLedgerRepository;
@@ -22,19 +22,47 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
-public class StockTransferService {
+public class StockTransferService extends BaseService<StockTransfer, Long> {
 
     private final StockTransferRepository stockTransferRepository;
     private final StockBalanceRepository stockBalanceRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
-    private final JournalService journalService;
+    private final JournalEntryService journalEntryService;
     private final CostingService costingService;
     private final BatchSerialTrackingService batchSerialTrackingService;
 
+    public StockTransferService(StockTransferRepository stockTransferRepository,
+                                StockBalanceRepository stockBalanceRepository,
+                                InventoryLedgerRepository inventoryLedgerRepository,
+                                JournalEntryService journalEntryService,
+                                CostingService costingService,
+                                BatchSerialTrackingService batchSerialTrackingService) {
+        super(stockTransferRepository);
+        this.stockTransferRepository = stockTransferRepository;
+        this.stockBalanceRepository = stockBalanceRepository;
+        this.inventoryLedgerRepository = inventoryLedgerRepository;
+        this.journalEntryService = journalEntryService;
+        this.costingService = costingService;
+        this.batchSerialTrackingService = batchSerialTrackingService;
+    }
+
+    @Override
     @Transactional
     public StockTransfer save(StockTransfer stockTransfer) {
-        return stockTransferRepository.save(stockTransfer);
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (stockTransfer.getCompanyId() == null) {
+            stockTransfer.setCompanyId(companyId);
+        }
+
+        if (stockTransfer.getDetails() != null) {
+            for (StockTransferDetail detail : stockTransfer.getDetails()) {
+                if (detail.getCompanyId() == null) {
+                    detail.setCompanyId(companyId);
+                }
+                detail.setStockTransfer(stockTransfer);
+            }
+        }
+        return super.save(stockTransfer);
     }
 
     @Transactional
@@ -48,6 +76,39 @@ public class StockTransferService {
 
         boolean isInterWarehouse = !transfer.getSourceWarehouse().getId().equals(transfer.getDestinationWarehouse().getId());
         BigDecimal totalTransferValue = BigDecimal.ZERO;
+
+        List<StockTransferDetail> processedDetails = new ArrayList<>();
+        for (StockTransferDetail detail : transfer.getDetails()) {
+            if (detail.getProduct().getIsBatchManaged() != null && detail.getProduct().getIsBatchManaged() && detail.getBatch() == null) {
+                BigDecimal remainingQty = detail.getQuantity();
+                List<StockBalance> availableBatches = stockBalanceRepository.findAvailableBatchesForIssue(detail.getProduct().getId(), transfer.getSourceWarehouse().getId());
+                for (StockBalance sb : availableBatches) {
+                    if (remainingQty.compareTo(BigDecimal.ZERO) <= 0) break;
+                    BigDecimal qtyToTake = sb.getQuantity().min(remainingQty);
+
+                    StockTransferDetail newDetail = new StockTransferDetail();
+                    newDetail.setStockTransfer(transfer);
+                    newDetail.setTransferOrderDetail(detail.getTransferOrderDetail());
+                    newDetail.setProduct(detail.getProduct());
+                    newDetail.setSourceLocation(detail.getSourceLocation());
+                    newDetail.setDestinationLocation(detail.getDestinationLocation());
+                    newDetail.setQuantity(qtyToTake);
+                    newDetail.setBatch(sb.getBatch());
+                    newDetail.setCompanyId(detail.getCompanyId());
+                    processedDetails.add(newDetail);
+
+                    remainingQty = remainingQty.subtract(qtyToTake);
+                }
+                if (remainingQty.compareTo(BigDecimal.ZERO) > 0) {
+                    throw new RuntimeException("Insufficient batch stock for auto-allocation for product " + detail.getProduct().getName());
+                }
+            } else {
+                processedDetails.add(detail);
+            }
+        }
+        
+        transfer.getDetails().clear();
+        transfer.getDetails().addAll(processedDetails);
 
         for (StockTransferDetail detail : transfer.getDetails()) {
             Product product = detail.getProduct();
@@ -214,6 +275,6 @@ public class StockTransferService {
         lines.add(creditLine);
 
         journal.setLines(lines);
-        journalService.save(journal);
+        journalEntryService.save(journal);
     }
 }

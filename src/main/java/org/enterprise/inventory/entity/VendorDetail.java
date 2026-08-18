@@ -17,6 +17,15 @@ public class VendorDetail extends AuditableEntity {
 
     private Boolean preferredVendor = false;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
     private BusinessPartner partner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.finance.entity.Account accountsPayableAccount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.finance.entity.Account grnClearingAccount;
+
+    private Integer paymentTermDays;
 }

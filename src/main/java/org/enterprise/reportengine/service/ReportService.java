@@ -3,10 +3,10 @@ package org.enterprise.reportengine.service;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.reportengine.dto.ReportListDto;
 import org.enterprise.reportengine.dto.ReportParameterDto;
-import org.enterprise.reportengine.entity.AclReportDetail;
-import org.enterprise.reportengine.entity.AclReportMaster;
-import org.enterprise.reportengine.repository.AclReportDetailRepository;
-import org.enterprise.reportengine.repository.AclReportMasterRepository;
+import org.enterprise.reportengine.entity.ReportDetail;
+import org.enterprise.reportengine.entity.ReportMaster;
+import org.enterprise.reportengine.repository.ReportDetailRepository;
+import org.enterprise.reportengine.repository.ReportMasterRepository;
 import org.enterprise.reportengine.util.SqlSecurityValidator;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportService {
 
-    private final AclReportMasterRepository reportMasterRepository;
-    private final AclReportDetailRepository reportDetailRepository;
+    private final ReportMasterRepository reportMasterRepository;
+    private final ReportDetailRepository reportDetailRepository;
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public List<String> getReportGroups() {
@@ -29,7 +29,7 @@ public class ReportService {
         return reportMasterRepository.findAll()
                 .stream()
                 .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
-                .map(AclReportMaster::getRptGroup)
+                .map(ReportMaster::getRptGroup)
                 .distinct()
                 .sorted()
                 .toList();
@@ -50,7 +50,7 @@ public class ReportService {
     public List<ReportParameterDto> getParameters(String reportCode) {
 
         return reportDetailRepository
-                .findByAclReportMaster_CodeAndIsActiveOrderBySortBy(
+                .findByReportMaster_CodeAndIsActiveOrderBySortBy(
                         reportCode,
                         true
                 )
@@ -74,8 +74,8 @@ public class ReportService {
             Map<String, Object> currentValues
     ) {
 
-        AclReportDetail detail = reportDetailRepository
-                .findByAclReportMaster_CodeAndParamNameAndIsActive(
+        ReportDetail detail = reportDetailRepository
+                .findByReportMaster_CodeAndParamNameAndIsActive(
                         reportCode,
                         paramName,
                         true
@@ -101,7 +101,7 @@ public class ReportService {
             Map<String, Object> requestParams
     ) {
 
-        AclReportMaster report = reportMasterRepository.findByCodeAndIsActive(reportCode, true)
+        ReportMaster report = reportMasterRepository.findByCodeAndIsActive(reportCode, true)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
         validateMandatoryParameters(reportCode, requestParams);
@@ -127,14 +127,14 @@ public class ReportService {
             Map<String, Object> params
     ) {
 
-        List<AclReportDetail> parameterList =
+        List<ReportDetail> parameterList =
                 reportDetailRepository
-                        .findByAclReportMaster_CodeAndIsActiveOrderBySortBy(
+                        .findByReportMaster_CodeAndIsActiveOrderBySortBy(
                                 reportCode,
                                 true
                         );
 
-        for (AclReportDetail detail : parameterList) {
+        for (ReportDetail detail : parameterList) {
 
             if (Boolean.TRUE.equals(detail.getIsMandatory())) {
 

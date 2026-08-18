@@ -55,12 +55,15 @@ public class Location extends AuditableEntity {
     private String remarks;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("locations")
     private Warehouse warehouse;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"children", "warehouse"})
     private Location parent;
 
     @OneToMany(mappedBy = "parent")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("parent")
     private List<Location> children;
 
     public enum LocationType {

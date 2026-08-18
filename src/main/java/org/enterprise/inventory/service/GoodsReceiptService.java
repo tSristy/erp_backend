@@ -3,7 +3,7 @@ package org.enterprise.inventory.service;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
 import org.enterprise.finance.enums.JournalStatus;
-import org.enterprise.finance.service.JournalService;
+import org.enterprise.finance.service.JournalEntryService;
 import org.enterprise.inventory.dto.GoodsReceiptLineDto;
 import org.enterprise.inventory.dto.GoodsReceiptRequestDto;
 import org.enterprise.inventory.entity.*;
@@ -31,7 +31,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
     private final ProductRepository productRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final StockBalanceRepository stockBalanceRepository;
-    private final JournalService journalService;
+    private final JournalEntryService journalEntryService;
     private final CostingService costingService;
     private final BatchSerialTrackingService batchSerialTrackingService;
 
@@ -43,7 +43,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             ProductRepository productRepository,
             InventoryLedgerRepository inventoryLedgerRepository,
             StockBalanceRepository stockBalanceRepository,
-            JournalService journalService,
+            JournalEntryService journalEntryService,
             CostingService costingService,
             BatchSerialTrackingService batchSerialTrackingService) {
         super(goodsReceiptRepository);
@@ -54,9 +54,28 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         this.productRepository = productRepository;
         this.inventoryLedgerRepository = inventoryLedgerRepository;
         this.stockBalanceRepository = stockBalanceRepository;
-        this.journalService = journalService;
+        this.journalEntryService = journalEntryService;
         this.costingService = costingService;
         this.batchSerialTrackingService = batchSerialTrackingService;
+    }
+
+    @Override
+    @Transactional
+    public GoodsReceipt save(GoodsReceipt receipt) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (receipt.getCompanyId() == null) {
+            receipt.setCompanyId(companyId);
+        }
+        
+        if (receipt.getDetails() != null) {
+            for (GoodsReceiptDetail detail : receipt.getDetails()) {
+                if (detail.getCompanyId() == null) {
+                    detail.setCompanyId(companyId);
+                }
+                detail.setGoodsReceipt(receipt);
+            }
+        }
+        return super.save(receipt);
     }
 
     /**
@@ -123,7 +142,72 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         goodsReceipt.setDetails(details);
         goodsReceipt.setTotalAmount(totalAmount);
 
-        return goodsReceiptRepository.save(goodsReceipt);
+        return this.save(goodsReceipt);
+    }
+
+    /**
+     * UPDATE GOODS RECEIPT
+     */
+    @Transactional
+    public GoodsReceipt update(Long id, GoodsReceiptRequestDto request) {
+        GoodsReceipt goodsReceipt = goodsReceiptRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Goods Receipt not found"));
+
+        if (goodsReceipt.getStatus() != GoodsReceiptStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT receipts can be updated");
+        }
+
+        validateCreateRequest(request);
+
+        BusinessPartner vendor = businessPartnerRepository.findById(request.getVendorId())
+                .orElseThrow(() -> new RuntimeException("Vendor not found"));
+        Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
+                .orElseThrow(() -> new RuntimeException("Warehouse not found"));
+
+        goodsReceipt.setVendor(vendor);
+        goodsReceipt.setWarehouse(warehouse);
+        goodsReceipt.setGrnDate(request.getGrnDate() != null ? request.getGrnDate() : LocalDate.now());
+
+        if (request.getPurchaseOrderId() != null) {
+            PurchaseOrder po = purchaseOrderRepository.findById(request.getPurchaseOrderId())
+                    .orElseThrow(() -> new RuntimeException("PO not found"));
+            goodsReceipt.setPurchaseOrder(po);
+        } else {
+            goodsReceipt.setPurchaseOrder(null);
+        }
+
+        goodsReceipt.getDetails().clear();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (GoodsReceiptLineDto dto : request.getDetails()) {
+            GoodsReceiptDetail detail = new GoodsReceiptDetail();
+            detail.setGoodsReceipt(goodsReceipt);
+
+            Product product = productRepository.findById(dto.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+
+            detail.setProduct(product);
+            detail.setQuantity(dto.getQuantity());
+            detail.setUnitCost(dto.getUnitCost());
+
+            Batch batch = batchSerialTrackingService.findOrCreateBatch(product, dto.getBatchNo(), dto.getManufactureDate(), dto.getExpiryDate());
+            detail.setBatch(batch);
+
+            batchSerialTrackingService.validateSerialNumbers(product, dto.getSerialNumbers(), dto.getQuantity().intValue());
+            if (dto.getSerialNumbers() != null) {
+                detail.setSerialNumbers(dto.getSerialNumbers());
+            }
+
+            BigDecimal lineAmount = dto.getQuantity().multiply(dto.getUnitCost());
+            detail.setLineTotal(lineAmount);
+
+            totalAmount = totalAmount.add(lineAmount);
+            goodsReceipt.getDetails().add(detail);
+        }
+
+        goodsReceipt.setTotalAmount(totalAmount);
+
+        return this.save(goodsReceipt);
     }
 
     /**
@@ -150,7 +234,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
 
         goodsReceipt.setStatus(GoodsReceiptStatus.POSTED);
 
-        return goodsReceiptRepository.save(goodsReceipt);
+        return this.save(goodsReceipt);
     }
 
     /**
@@ -159,6 +243,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
     private void createInventoryLedger(GoodsReceipt goodsReceipt, boolean isInbound) {
         for (GoodsReceiptDetail detail : goodsReceipt.getDetails()) {
             InventoryLedger ledger = new InventoryLedger();
+            ledger.setCompanyId(goodsReceipt.getCompanyId());
             ledger.setTransactionType(isInbound ? InventoryTransactionType.GRN : InventoryTransactionType.PURCHASE_RETURN);
             ledger.setDocumentId(goodsReceipt.getId());
             ledger.setDocumentType("GRN");
@@ -234,6 +319,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             }
 
             if (isInbound && stockBalance.getProduct() == null) {
+                stockBalance.setCompanyId(goodsReceipt.getCompanyId());
                 stockBalance.setProduct(detail.getProduct());
                 stockBalance.setWarehouse(goodsReceipt.getWarehouse());
                 stockBalance.setBatch(detail.getBatch());
@@ -317,20 +403,26 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
 
         JournalEntryLine debitLine = new JournalEntryLine();
         debitLine.setJournalEntry(journal);
-        debitLine.setAccount(isInbound ? goodsReceipt.getWarehouse().getInventoryAccount() : goodsReceipt.getVendor().getGrnClearingAccount());
+        debitLine.setAccount(isInbound ? goodsReceipt.getWarehouse().getInventoryAccount() : goodsReceipt.getVendor().getVendorDetail().getGrnClearingAccount());
         debitLine.setDebit(totalAmount);
         debitLine.setCredit(BigDecimal.ZERO);
+        if (!isInbound) {
+            debitLine.setBusinessPartner(goodsReceipt.getVendor());
+        }
         lines.add(debitLine);
 
         JournalEntryLine creditLine = new JournalEntryLine();
         creditLine.setJournalEntry(journal);
-        creditLine.setAccount(isInbound ? goodsReceipt.getVendor().getGrnClearingAccount() : goodsReceipt.getWarehouse().getInventoryAccount());
+        creditLine.setAccount(isInbound ? goodsReceipt.getVendor().getVendorDetail().getGrnClearingAccount() : goodsReceipt.getWarehouse().getInventoryAccount());
         creditLine.setDebit(BigDecimal.ZERO);
         creditLine.setCredit(totalAmount);
+        if (isInbound) {
+            creditLine.setBusinessPartner(goodsReceipt.getVendor());
+        }
         lines.add(creditLine);
 
         journal.setLines(lines);
-        journalService.save(journal);
+        journalEntryService.save(journal);
     }
 
     /**
@@ -358,7 +450,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             throw new RuntimeException("Inventory account missing for warehouse: " + goodsReceipt.getWarehouse().getName());
         }
 
-        if (goodsReceipt.getVendor().getGrnClearingAccount() == null) {
+        if (goodsReceipt.getVendor() == null || goodsReceipt.getVendor().getVendorDetail() == null || goodsReceipt.getVendor().getVendorDetail().getGrnClearingAccount() == null) {
             throw new RuntimeException("GRN clearing account missing for vendor: " + goodsReceipt.getVendor().getName());
         }
     }
@@ -394,6 +486,6 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         returnReceipt.setDetails(returnDetails);
         returnReceipt.setTotalAmount(totalAmount);
 
-        return goodsReceiptRepository.save(returnReceipt);
+        return this.save(returnReceipt);
     }
 }

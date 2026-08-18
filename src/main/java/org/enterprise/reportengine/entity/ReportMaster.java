@@ -7,13 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "acl_report_master")
+@Table(name = "report_master")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AclReportMaster {
+public class ReportMaster {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,12 +45,24 @@ public class AclReportMaster {
     @Column(nullable = false)
     private Integer sortBy = 0;
 
-    @OneToMany(mappedBy = "aclReportMaster",
+    @OneToMany(mappedBy = "reportMaster",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
             fetch = FetchType.LAZY)
     @OrderBy("sortBy ASC")
     @Builder.Default
-    private List<AclReportDetail> parameters = new ArrayList<>();
+    private List<ReportDetail> parameters = new ArrayList<>();
+
+    public void setParameters(List<ReportDetail> parameters) {
+        if (parameters != null) {
+            this.parameters.clear();
+            this.parameters.addAll(parameters);
+            for (ReportDetail d : this.parameters) {
+                d.setReportMaster(this);
+            }
+        } else {
+            this.parameters.clear();
+        }
+    }
 }
 

@@ -40,6 +40,11 @@ public class ManufacturingOrderService {
 
     @Transactional
     public ManufacturingOrderDTO save(ManufacturingOrderDTO dto) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (companyId == null) {
+            throw new RuntimeException("No active company context");
+        }
+
         boolean wasCompleted = false;
         if (dto.getId() != null) {
             ManufacturingOrder existing = repository.findById(dto.getId()).orElse(null);
@@ -52,6 +57,7 @@ public class ManufacturingOrderService {
         }
 
         ManufacturingOrder entity = convertToEntity(dto);
+        entity.setCompanyId(companyId);
         ManufacturingOrder saved = repository.save(entity);
         
         if (wasCompleted && saved.getFinishedGood() != null && saved.getBom() != null && saved.getProductionWarehouse() != null) {
@@ -88,6 +94,26 @@ public class ManufacturingOrderService {
     private ManufacturingOrder convertToEntity(ManufacturingOrderDTO dto) {
         ManufacturingOrder entity = new ManufacturingOrder();
         BeanUtils.copyProperties(dto, entity);
+        if (dto.getFinishedGoodId() != null) {
+            org.enterprise.inventory.entity.Product fg = new org.enterprise.inventory.entity.Product();
+            fg.setId(dto.getFinishedGoodId());
+            entity.setFinishedGood(fg);
+        }
+        if (dto.getBomId() != null) {
+            org.enterprise.production.entity.BillOfMaterial bom = new org.enterprise.production.entity.BillOfMaterial();
+            bom.setId(dto.getBomId());
+            entity.setBom(bom);
+        }
+        if (dto.getProductionWarehouseId() != null) {
+            org.enterprise.inventory.entity.Warehouse w = new org.enterprise.inventory.entity.Warehouse();
+            w.setId(dto.getProductionWarehouseId());
+            entity.setProductionWarehouse(w);
+        }
+        if (dto.getBatchId() != null) {
+            org.enterprise.inventory.entity.Batch b = new org.enterprise.inventory.entity.Batch();
+            b.setId(dto.getBatchId());
+            entity.setBatch(b);
+        }
         return entity;
     }
 }

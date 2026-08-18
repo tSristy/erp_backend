@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
+import org.enterprise.inventory.entity.Warehouse;
 
 import java.util.List;
 
@@ -22,6 +23,10 @@ public class ServicePartsRequisition extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     private RequisitionStatus status = RequisitionStatus.REQUESTED;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "warehouse_id")
+    private Warehouse warehouse;
 
     @OneToMany(mappedBy = "requisition", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ServicePartsRequisitionDetail> details;

@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface BatchRepository extends JpaRepository<Batch, Long> {
     java.util.Optional<Batch> findByBatchNoAndProductId(String batchNo, Long productId);
+    java.util.List<Batch> findByCompanyId(Long companyId);
 }

@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 @Setter
 public class StockReclassificationDetail extends AuditableEntity {
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     private StockReclassification stockReclassification;
 
@@ -21,6 +22,12 @@ public class StockReclassificationDetail extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Product destinationProduct;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.inventory.entity.Batch sourceBatch;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private org.enterprise.inventory.entity.Batch destinationBatch;
 
     @Column(precision = 18, scale = 6)
     private BigDecimal sourceQuantity = BigDecimal.ZERO;

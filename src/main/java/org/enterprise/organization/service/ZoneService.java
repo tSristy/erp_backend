@@ -50,9 +50,15 @@ public class ZoneService {
     private void mapDtoToEntity(ZoneDto dto, Zone entity) {
         entity.setCode(dto.getCode());
         entity.setName(dto.getName());
-        entity.setManagerName(dto.getManagerName());
-        entity.setContactNo(dto.getContactNo());
         if (dto.getActive() != null) entity.setActive(dto.getActive());
+
+        if (dto.getRegionalManagerId() != null) {
+            org.enterprise.hr.entity.Employee manager = new org.enterprise.hr.entity.Employee();
+            manager.setId(dto.getRegionalManagerId());
+            entity.setRegionalManager(manager);
+        } else {
+            entity.setRegionalManager(null);
+        }
     }
 
     private ZoneDto mapEntityToDto(Zone entity) {
@@ -60,9 +66,11 @@ public class ZoneService {
         dto.setId(entity.getId());
         dto.setCode(entity.getCode());
         dto.setName(entity.getName());
-        dto.setManagerName(entity.getManagerName());
-        dto.setContactNo(entity.getContactNo());
         dto.setActive(entity.getActive());
+
+        if (entity.getRegionalManager() != null) {
+            dto.setRegionalManagerId(entity.getRegionalManager().getId());
+        }
         return dto;
     }
 }

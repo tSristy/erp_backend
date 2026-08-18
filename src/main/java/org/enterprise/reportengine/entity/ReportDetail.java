@@ -3,15 +3,17 @@ package org.enterprise.reportengine.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.enterprise.reportengine.enums.ReportParamType;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
-@Table(name = "acl_report_detail")
+@Table(name = "report_detail")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AclReportDetail {
+@JsonIgnoreProperties("reportMaster")
+public class ReportDetail {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -65,6 +67,6 @@ public class AclReportDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "report_master_id", nullable = false)
-    private AclReportMaster aclReportMaster;
+    private ReportMaster reportMaster;
 }
 

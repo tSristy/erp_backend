@@ -19,6 +19,7 @@ public class BusinessPartnerRole extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private RoleType role;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "partner_id")
     private BusinessPartner partner;
@@ -26,6 +27,8 @@ public class BusinessPartnerRole extends AuditableEntity {
     public enum RoleType {
         CUSTOMER,
         VENDOR,
-        BOTH
+        EMPLOYEE,
+        BANK,
+        SHAREHOLDER
     }
 }

@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,8 +27,33 @@ public class RestaurantOrderService {
     private final KitchenOrderTicketRepository kotRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    public List<RestaurantOrder> findAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    public List<RestaurantOrder> findOrdersByType(RestaurantOrder.TransactionType type) {
+        return orderRepository.findByType(type);
+    }
+
+    public Optional<RestaurantOrder> findOrderById(Long orderId) {
+        return orderRepository.findById(orderId);
+    }
+
     @Transactional
     public RestaurantOrder createOrder(RestaurantOrder order) {
+        if (order.getTableNumber() != null && !order.getTableNumber().isEmpty()) {
+            Optional<RestaurantOrder> existing = orderRepository.findByTableNumberAndStatusIn(
+                    order.getTableNumber(),
+                    Arrays.asList(RestaurantOrder.RestaurantOrderStatus.NEW, RestaurantOrder.RestaurantOrderStatus.KOT_SENT, RestaurantOrder.RestaurantOrderStatus.SERVED)
+            );
+            if (existing.isPresent()) {
+                throw new IllegalStateException("Table " + order.getTableNumber() + " is currently occupied.");
+            }
+        }
+        
+        // Ensure total is calculated correctly
+        recalculateTotal(order);
+        
         order.setStatus(RestaurantOrder.RestaurantOrderStatus.NEW);
         return orderRepository.save(order);
     }

@@ -52,17 +52,22 @@ public class TerritoryService {
         entity.setCode(dto.getCode());
         entity.setName(dto.getName());
         entity.setSalesType(dto.getSalesType());
-        entity.setManagerName(dto.getManagerName());
-        entity.setContactNo(dto.getContactNo());
-        entity.setSalesTarget(dto.getSalesTarget());
         if (dto.getActive() != null) entity.setActive(dto.getActive());
         
-        if (dto.getZoneId() != null) {
-            Zone zone = new Zone();
-            zone.setId(dto.getZoneId());
-            entity.setZone(zone);
+        if (dto.getAreaId() != null) {
+            org.enterprise.organization.entity.Area area = new org.enterprise.organization.entity.Area();
+            area.setId(dto.getAreaId());
+            entity.setArea(area);
         } else {
-            entity.setZone(null);
+            entity.setArea(null);
+        }
+
+        if (dto.getTerritoryManagerId() != null) {
+            org.enterprise.hr.entity.Employee manager = new org.enterprise.hr.entity.Employee();
+            manager.setId(dto.getTerritoryManagerId());
+            entity.setTerritoryManager(manager);
+        } else {
+            entity.setTerritoryManager(null);
         }
     }
 
@@ -72,13 +77,13 @@ public class TerritoryService {
         dto.setCode(entity.getCode());
         dto.setName(entity.getName());
         dto.setSalesType(entity.getSalesType());
-        dto.setManagerName(entity.getManagerName());
-        dto.setContactNo(entity.getContactNo());
-        dto.setSalesTarget(entity.getSalesTarget());
         dto.setActive(entity.getActive());
         
-        if (entity.getZone() != null) {
-            dto.setZoneId(entity.getZone().getId());
+        if (entity.getArea() != null) {
+            dto.setAreaId(entity.getArea().getId());
+        }
+        if (entity.getTerritoryManager() != null) {
+            dto.setTerritoryManagerId(entity.getTerritoryManager().getId());
         }
         return dto;
     }

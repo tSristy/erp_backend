@@ -12,19 +12,48 @@ import org.springframework.web.bind.annotation.*;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
+    private final org.enterprise.sales.mapper.SalesMapper mapper;
 
     @PostMapping
-    public ResponseEntity<DeliveryNote> create(@RequestBody DeliveryNote deliveryNote) {
-        return ResponseEntity.ok(deliveryService.save(deliveryNote));
+    public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> create(@RequestBody org.enterprise.sales.dto.DeliveryNoteDto dto) {
+        DeliveryNote entity = mapper.toEntity(dto);
+        DeliveryNote saved = deliveryService.save(entity);
+        return ResponseEntity.ok(mapper.toDto(saved));
     }
 
     @PostMapping("/{id}/confirm")
-    public ResponseEntity<DeliveryNote> confirmDelivery(@PathVariable Long id) {
-        return ResponseEntity.ok(deliveryService.confirmDelivery(id));
+    public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> confirmDelivery(@PathVariable Long id) {
+        return ResponseEntity.ok(mapper.toDto(deliveryService.confirmDelivery(id)));
     }
 
     @PostMapping("/{id}/create-return")
-    public ResponseEntity<DeliveryNote> createReturn(@PathVariable Long id) {
-        return ResponseEntity.ok(deliveryService.createReturn(id));
+    public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> createReturn(@PathVariable Long id) {
+        return ResponseEntity.ok(mapper.toDto(deliveryService.createReturn(id)));
+    }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<org.enterprise.sales.dto.DeliveryNoteDto>> getAll() {
+        return ResponseEntity.ok(mapper.toDtoListDeliveryNote(deliveryService.findAll()));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> getById(@PathVariable Long id) {
+        return deliveryService.findById(id)
+                .map(mapper::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> update(@PathVariable Long id, @RequestBody org.enterprise.sales.dto.DeliveryNoteDto dto) {
+        dto.setId(id);
+        DeliveryNote entity = mapper.toEntity(dto);
+        return ResponseEntity.ok(mapper.toDto(deliveryService.save(entity)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        deliveryService.delete(id);
+        return ResponseEntity.ok().build();
     }
 }

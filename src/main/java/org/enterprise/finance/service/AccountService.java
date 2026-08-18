@@ -6,6 +6,7 @@ import org.enterprise.finance.enums.AccountType;
 import org.enterprise.finance.repository.AccountRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.enterprise.common.util.TenantContext;
 
 import java.util.List;
 
@@ -30,9 +31,20 @@ public class AccountService {
             throw new IllegalArgumentException("AccountType is required");
         }
 
-        // Generate Account Code based on AccountType
-        String generatedCode = generateAccountCode(account.getAccountType());
-        account.setCode(generatedCode);
+        Long companyId = TenantContext.getCompanyId();
+        if (companyId == null) {
+            throw new RuntimeException("No active company context");
+        }
+        
+        account.setCompanyId(companyId);
+
+        if (account.getCode() != null && !account.getCode().trim().isEmpty()) {
+            validateAccountCodeRange(account.getCode(), account.getAccountType());
+        } else {
+            // Generate Account Code based on AccountType
+            String generatedCode = generateAccountCode(account.getAccountType(), companyId);
+            account.setCode(generatedCode);
+        }
 
         return accountRepository.save(account);
     }
@@ -50,6 +62,11 @@ public class AccountService {
             Account parent = getAccountById(accountDetails.getParent().getId());
             account.setParent(parent);
         }
+        
+        if (accountDetails.getCode() != null && !accountDetails.getCode().trim().isEmpty() && !accountDetails.getCode().equals(account.getCode())) {
+            validateAccountCodeRange(accountDetails.getCode(), account.getAccountType());
+            account.setCode(accountDetails.getCode());
+        }
 
         return accountRepository.save(account);
     }
@@ -60,8 +77,8 @@ public class AccountService {
         accountRepository.delete(account);
     }
 
-    private String generateAccountCode(AccountType accountType) {
-        long count = accountRepository.countByAccountType(accountType);
+    private String generateAccountCode(AccountType accountType, Long companyId) {
+        long count = accountRepository.countByAccountTypeAndCompanyId(accountType, companyId);
         long nextNumber = count + 1;
 
         int prefix;
@@ -87,5 +104,25 @@ public class AccountService {
 
         // e.g., 10001, 10002, 20001
         return String.format("%d%04d", prefix, nextNumber);
+    }
+    
+    private void validateAccountCodeRange(String code, AccountType type) {
+        try {
+            int codeValue = Integer.parseInt(code);
+            int min, max;
+            switch (type) {
+                case ASSET: min = 10000; max = 19999; break;
+                case LIABILITY: min = 20000; max = 29999; break;
+                case EQUITY: min = 30000; max = 39999; break;
+                case INCOME: min = 40000; max = 49999; break;
+                case EXPENSE: min = 50000; max = 59999; break;
+                default: throw new IllegalArgumentException("Unsupported AccountType: " + type);
+            }
+            if (codeValue < min || codeValue > max) {
+                throw new IllegalArgumentException(String.format("Account code for %s must be between %d and %d", type, min, max));
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Account code must be a numeric value");
+        }
     }
 }

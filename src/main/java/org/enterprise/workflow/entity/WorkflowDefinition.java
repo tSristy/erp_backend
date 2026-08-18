@@ -1,11 +1,16 @@
 package org.enterprise.workflow.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "wf_definitions")
@@ -33,6 +38,12 @@ public class WorkflowDefinition extends AuditableEntity {
     private Boolean allowReject = true;
 
     private Boolean allowSendBack = true;
+
+    @OneToMany(mappedBy = "workflow", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkflowStep> steps = new ArrayList<>();
+
+    @OneToMany(mappedBy = "workflow", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkflowRule> rules = new ArrayList<>();
 }
 
 

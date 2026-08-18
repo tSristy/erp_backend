@@ -22,4 +22,28 @@ public class StockReclassificationController {
     public ResponseEntity<StockReclassification> completeReclassification(@PathVariable Long id) {
         return ResponseEntity.ok(stockReclassificationService.completeReclassification(id));
     }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<StockReclassification>> getAll() {
+        return ResponseEntity.ok(stockReclassificationService.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<StockReclassification> getById(@PathVariable Long id) {
+        return stockReclassificationService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<StockReclassification> update(@PathVariable Long id, @RequestBody StockReclassification stockReclassification) {
+        stockReclassification.setId(id);
+        return ResponseEntity.ok(stockReclassificationService.save(stockReclassification));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        stockReclassificationService.delete(id);
+        return ResponseEntity.ok().build();
+    }
 }

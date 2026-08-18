@@ -5,6 +5,7 @@ import org.enterprise.finance.entity.FiscalYear;
 import org.enterprise.finance.repository.FiscalYearRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.enterprise.common.util.TenantContext;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -35,7 +36,20 @@ public class FiscalYearService {
 
     @Transactional
     public FiscalYearDTO save(FiscalYearDTO dto) {
+        Long companyId = TenantContext.getCompanyId();
+        if (companyId == null) {
+            throw new RuntimeException("No active company context");
+        }
+
         FiscalYear entity = convertToEntity(dto);
+        entity.setCompanyId(companyId);
+        
+        if (entity.getLines() != null) {
+            for (org.enterprise.finance.entity.FiscalPeriod line : entity.getLines()) {
+                line.setCompanyId(companyId);
+            }
+        }
+        
         FiscalYear saved = fiscalYearRepository.save(entity);
         return convertToDTO(saved);
     }

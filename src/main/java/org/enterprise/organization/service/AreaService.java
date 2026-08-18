@@ -51,16 +51,22 @@ public class AreaService {
     private void mapDtoToEntity(AreaDto dto, Area entity) {
         entity.setCode(dto.getCode());
         entity.setName(dto.getName());
-        entity.setMarketType(dto.getMarketType());
-        entity.setPriorityLevel(dto.getPriorityLevel());
         if (dto.getActive() != null) entity.setActive(dto.getActive());
         
-        if (dto.getTerritoryId() != null) {
-            Territory territory = new Territory();
-            territory.setId(dto.getTerritoryId());
-            entity.setTerritory(territory);
+        if (dto.getZoneId() != null) {
+            org.enterprise.organization.entity.Zone zone = new org.enterprise.organization.entity.Zone();
+            zone.setId(dto.getZoneId());
+            entity.setZone(zone);
         } else {
-            entity.setTerritory(null);
+            entity.setZone(null);
+        }
+
+        if (dto.getAreaManagerId() != null) {
+            org.enterprise.hr.entity.Employee manager = new org.enterprise.hr.entity.Employee();
+            manager.setId(dto.getAreaManagerId());
+            entity.setAreaManager(manager);
+        } else {
+            entity.setAreaManager(null);
         }
     }
 
@@ -69,12 +75,13 @@ public class AreaService {
         dto.setId(entity.getId());
         dto.setCode(entity.getCode());
         dto.setName(entity.getName());
-        dto.setMarketType(entity.getMarketType());
-        dto.setPriorityLevel(entity.getPriorityLevel());
         dto.setActive(entity.getActive());
         
-        if (entity.getTerritory() != null) {
-            dto.setTerritoryId(entity.getTerritory().getId());
+        if (entity.getZone() != null) {
+            dto.setZoneId(entity.getZone().getId());
+        }
+        if (entity.getAreaManager() != null) {
+            dto.setAreaManagerId(entity.getAreaManager().getId());
         }
         return dto;
     }

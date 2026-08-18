@@ -20,6 +20,18 @@ public class SalesOrderService {
 
     @Transactional
     public SalesOrder save(SalesOrder salesOrder) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (salesOrder.getCompanyId() == null) {
+            salesOrder.setCompanyId(companyId);
+        }
+        if (salesOrder.getDetails() != null) {
+            for (var detail : salesOrder.getDetails()) {
+                detail.setSalesOrder(salesOrder);
+                if (detail.getCompanyId() == null) {
+                    detail.setCompanyId(companyId);
+                }
+            }
+        }
         return salesOrderRepository.save(salesOrder);
     }
 
@@ -73,5 +85,18 @@ public class SalesOrderService {
         returnOrder.setTotalAmount(totalAmount);
 
         return salesOrderRepository.save(returnOrder);
+    }
+
+    public java.util.List<SalesOrder> findAll() {
+        return salesOrderRepository.findAll();
+    }
+
+    public java.util.Optional<SalesOrder> findById(Long id) {
+        return salesOrderRepository.findById(id);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void delete(Long id) {
+        salesOrderRepository.deleteById(id);
     }
 }

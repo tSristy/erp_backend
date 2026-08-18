@@ -1,6 +1,7 @@
 package org.enterprise.organization.service;
 
 import lombok.RequiredArgsConstructor;
+import org.enterprise.common.util.TenantContext;
 import org.enterprise.organization.dto.BranchDto;
 import org.enterprise.organization.entity.Branch;
 import org.enterprise.organization.entity.Company;
@@ -18,7 +19,14 @@ public class BranchService {
     private final BranchRepository repository;
 
     public BranchDto create(BranchDto dto) {
+
+        Long companyId = TenantContext.getCompanyId();
+        if (companyId == null) {
+            throw new RuntimeException("No active company context");
+        }
+
         Branch entity = new Branch();
+        entity.setCompanyId(companyId);
         mapDtoToEntity(dto, entity);
         entity = repository.save(entity);
         return mapEntityToDto(entity);
