@@ -32,7 +32,10 @@ public class GoodsReceiptController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAll() {
+    public ResponseEntity<?> getAll(@RequestParam(required = false) Boolean uninvoiced) {
+        if (Boolean.TRUE.equals(uninvoiced)) {
+            return ResponseEntity.ok(service.findUninvoiced());
+        }
         return ResponseEntity.ok(service.findAll());
     }
 

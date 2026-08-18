@@ -82,6 +82,11 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
      * CREATE GOODS RECEIPT
      */
     @Transactional
+    public List<GoodsReceipt> findUninvoiced() {
+        return goodsReceiptRepository.findUninvoiced();
+    }
+
+    @Transactional
     public GoodsReceipt create(GoodsReceiptRequestDto request) {
 
         validateCreateRequest(request);

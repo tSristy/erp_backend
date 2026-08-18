@@ -40,6 +40,14 @@ public class PurchaseInvoiceService {
 
     @Transactional
     public PurchaseInvoice createInvoice(PurchaseInvoice invoice) {
+        if (invoice.getGoodsReceipt() != null) {
+            boolean alreadyInvoiced = purchaseInvoiceRepository.existsByGoodsReceiptIdAndStatusNot(
+                    invoice.getGoodsReceipt().getId(), PurchaseInvoice.InvoiceStatus.CANCELLED);
+            if (alreadyInvoiced) {
+                throw new RuntimeException("This Goods Receipt has already been invoiced.");
+            }
+        }
+
         Long companyId = TenantContext.getCompanyId();
         invoice.setCompanyId(companyId);
         
