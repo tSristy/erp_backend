@@ -23,6 +23,9 @@ public class BillOfMaterial extends AuditableEntity {
 
     private Boolean active = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Routing routing;
+
     @OneToMany(mappedBy = "bom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BomItem> items;
 }

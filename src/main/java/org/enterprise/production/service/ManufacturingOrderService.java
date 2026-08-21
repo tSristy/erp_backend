@@ -88,6 +88,7 @@ public class ManufacturingOrderService {
         if (entity.getBom() != null) dto.setBomId(entity.getBom().getId());
         if (entity.getProductionWarehouse() != null) dto.setProductionWarehouseId(entity.getProductionWarehouse().getId());
         if (entity.getBatch() != null) dto.setBatchId(entity.getBatch().getId());
+        if (entity.getRouting() != null) dto.setRoutingId(entity.getRouting().getId());
         return dto;
     }
 
@@ -113,6 +114,11 @@ public class ManufacturingOrderService {
             org.enterprise.inventory.entity.Batch b = new org.enterprise.inventory.entity.Batch();
             b.setId(dto.getBatchId());
             entity.setBatch(b);
+        }
+        if (dto.getRoutingId() != null) {
+            org.enterprise.production.entity.Routing routing = new org.enterprise.production.entity.Routing();
+            routing.setId(dto.getRoutingId());
+            entity.setRouting(routing);
         }
         return entity;
     }

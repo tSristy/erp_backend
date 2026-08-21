@@ -18,9 +18,9 @@ public class AuthController {
 
     // 🔐 LOGIN (PRE-AUTH)
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
 
-        Map<String, Object> result = authService.preAuthenticate(request);
+        Map<String, Object> result = authService.preAuthenticate(request, httpRequest);
 
         return ResponseEntity.ok(result);
     }

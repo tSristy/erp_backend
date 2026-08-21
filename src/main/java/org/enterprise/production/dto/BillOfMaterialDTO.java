@@ -8,5 +8,6 @@ public class BillOfMaterialDTO {
     private Long finishedGoodId;
     private java.math.BigDecimal baseQuantity;
     private Boolean active;
+    private Long routingId;
     private java.util.List<BomItemDTO> items;
 }

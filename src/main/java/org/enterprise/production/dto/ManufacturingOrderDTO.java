@@ -14,5 +14,6 @@ public class ManufacturingOrderDTO {
     private java.math.BigDecimal producedQuantity;
     private org.enterprise.production.entity.ManufacturingOrder.OrderStatus status;
     private Long batchId;
+    private Long routingId;
     private java.util.List<String> serialNumbers;
 }

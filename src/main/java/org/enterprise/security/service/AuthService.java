@@ -28,62 +28,99 @@ public class AuthService {
     private final JwtService jwtService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final org.enterprise.security.repository.PermissionRepository permissionRepository;
+    private final org.enterprise.security.repository.LoginAuditRepository loginAuditRepository;
 
-    public java.util.Map<String, Object> preAuthenticate(LoginRequest request) {
+    public java.util.Map<String, Object> preAuthenticate(LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+        try {
+            // =========================================
+            // 1. Load User + Roles
+            // =========================================
+            User user = userRepository
+                    .findWithRolesByUsername(request.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
-        // =========================================
-        // 1. Load User + Roles
-        // =========================================
-        User user = userRepository
-                .findWithRolesByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+            // =========================================
+            // 2. Validate Password
+            // =========================================
+            if (!passwordEncoder.matches(
+                    request.getPassword(),
+                    user.getPassword()
+            )) {
+                throw new RuntimeException("Invalid credentials");
+            }
 
-        // =========================================
-        // 2. Validate Password
-        // =========================================
-        if (!passwordEncoder.matches(
-                request.getPassword(),
-                user.getPassword()
-        )) {
-            throw new RuntimeException("Invalid credentials");
+            // =========================================
+            // 3. Validate User Active
+            // =========================================
+            if (Boolean.FALSE.equals(user.getActive())) {
+                throw new RuntimeException("User account disabled");
+            }
+
+            // =========================================
+            // 4. Get Authorized Companies
+            // =========================================
+            boolean isSuperadmin = user.getRoles() != null && user.getRoles().stream()
+                    .anyMatch(ur -> "SUPER-ADMIN".equals(ur.getRole().getCode()) && Boolean.TRUE.equals(ur.getActive()));
+
+            List<String> companyCodes;
+            if (isSuperadmin) {
+                companyCodes = companyRepository.findAll().stream()
+                        .map(Company::getCode)
+                        .toList();
+            } else {
+                companyCodes = user.getCompanies()
+                        .stream()
+                        .filter(UserCompany::getActive)
+                        .map(uc -> uc.getCompany().getCode())
+                        .toList();
+            }
+
+            // =========================================
+            // 5. Generate Pre-Auth Token
+            // =========================================
+            String token = jwtService.generatePreAuthToken(user.getUsername());
+
+            logLoginAudit(request.getUsername(), httpRequest, true, null);
+
+            return java.util.Map.of(
+                    "preAuthToken", token,
+                    "companyCodes", companyCodes
+            );
+        } catch (Exception e) {
+            logLoginAudit(request.getUsername(), httpRequest, false, e.getMessage());
+            throw e;
         }
-
-        // =========================================
-        // 3. Validate User Active
-        // =========================================
-        if (Boolean.FALSE.equals(user.getActive())) {
-            throw new RuntimeException("User account disabled");
-        }
-
-        // =========================================
-        // 4. Get Authorized Companies
-        // =========================================
-        boolean isSuperadmin = user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(ur -> "SUPER-ADMIN".equals(ur.getRole().getCode()) && Boolean.TRUE.equals(ur.getActive()));
-
-        List<String> companyCodes;
-        if (isSuperadmin) {
-            companyCodes = companyRepository.findAll().stream()
-                    .map(Company::getCode)
-                    .toList();
-        } else {
-            companyCodes = user.getCompanies()
-                    .stream()
-                    .filter(UserCompany::getActive)
-                    .map(uc -> uc.getCompany().getCode())
-                    .toList();
-        }
-
-        // =========================================
-        // 5. Generate Pre-Auth Token
-        // =========================================
-        String token = jwtService.generatePreAuthToken(user.getUsername());
-
-        return java.util.Map.of(
-                "preAuthToken", token,
-                "companyCodes", companyCodes
-        );
     }
+
+    private void logLoginAudit(String username, jakarta.servlet.http.HttpServletRequest httpRequest, boolean success, String failureReason) {
+        org.enterprise.security.entity.LoginAudit audit = new org.enterprise.security.entity.LoginAudit();
+        audit.setUsername(username);
+        if (httpRequest != null) {
+            String ip = httpRequest.getHeader("X-Forwarded-For");
+            if (ip == null || ip.isEmpty()) ip = httpRequest.getRemoteAddr();
+            audit.setIpAddress(ip);
+            audit.setDeviceInfo(httpRequest.getHeader("User-Agent"));
+        }
+        audit.setSuccess(success);
+        audit.setLoginAt(java.time.LocalDateTime.now());
+        audit.setFailureReason(failureReason);
+        
+        Long companyId = 1L;
+        try {
+            User user = userRepository.findWithRolesByUsername(username).orElse(null);
+            if (user != null && user.getCompanies() != null && !user.getCompanies().isEmpty()) {
+                companyId = user.getCompanies().stream()
+                        .filter(org.enterprise.security.entity.UserCompany::getActive)
+                        .findFirst()
+                        .map(uc -> uc.getCompany().getId())
+                        .orElse(1L);
+            }
+        } catch (Exception ignored) {}
+        audit.setCompanyId(companyId);
+        
+        loginAuditRepository.save(audit);
+    }
+
 
     public String buildUserContext(String preAuthToken, String companyCode) {
 

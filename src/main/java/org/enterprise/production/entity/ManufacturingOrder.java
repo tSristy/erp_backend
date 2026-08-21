@@ -29,6 +29,9 @@ public class ManufacturingOrder extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Warehouse productionWarehouse;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Routing routing;
+
     @Column(precision = 18, scale = 6)
     private BigDecimal plannedQuantity;
 

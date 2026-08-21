@@ -66,6 +66,7 @@ public class BillOfMaterialService {
         BillOfMaterialDTO dto = new BillOfMaterialDTO();
         BeanUtils.copyProperties(entity, dto, "items");
         if (entity.getFinishedGood() != null) dto.setFinishedGoodId(entity.getFinishedGood().getId());
+        if (entity.getRouting() != null) dto.setRoutingId(entity.getRouting().getId());
         if (entity.getItems() != null) {
             dto.setItems(entity.getItems().stream().map(item -> {
                 BomItemDTO itemDto = new BomItemDTO();
@@ -84,6 +85,11 @@ public class BillOfMaterialService {
             org.enterprise.inventory.entity.Product fg = new org.enterprise.inventory.entity.Product();
             fg.setId(dto.getFinishedGoodId());
             entity.setFinishedGood(fg);
+        }
+        if (dto.getRoutingId() != null) {
+            org.enterprise.production.entity.Routing routing = new org.enterprise.production.entity.Routing();
+            routing.setId(dto.getRoutingId());
+            entity.setRouting(routing);
         }
         if (dto.getItems() != null) {
             entity.setItems(dto.getItems().stream().map(itemDto -> {

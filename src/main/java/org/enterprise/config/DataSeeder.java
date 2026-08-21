@@ -42,6 +42,7 @@ public class DataSeeder implements CommandLineRunner {
     private final ModuleRepository moduleRepository;
     private final org.enterprise.security.repository.MenuRepository menuRepository;
     private final AccountRepository accountRepository;
+    private final LoginAuditRepository loginAuditRepository;
 
     // =========================
     // RUN
@@ -283,6 +284,7 @@ public class DataSeeder implements CommandLineRunner {
         createUser(company, username, role);
     }
 
+    
     private void seedAccountUsers(Company company) {
 
         Role viewer = createRole(company, "ACCOUNT_VIEWER", List.of("ACCOUNT_VIEW"));
@@ -513,13 +515,6 @@ public class DataSeeder implements CommandLineRunner {
         var settings = createModule("SETTINGS", "Settings", "Application configuration and preferences.", "settings", "Settings", 5, cid);
         createMenu(settings, "Dashboard", "settings", "Settings", 1, cid);
 
-        // Organization
-        createMenu(settings, "Company", "settings/company", "Building", 2, cid);
-        createMenu(settings, "Branch", "settings/branch", "GitBranch", 3, cid);
-        createMenu(settings, "Area", "settings/area", "Map", 4, cid);
-        createMenu(settings, "Zone", "settings/zone", "MapPin", 5, cid);
-        createMenu(settings, "Territory", "settings/territory", "Globe", 6, cid);
-
         var salesCrm = createModule("SALES_CRM", "Sales CRM", "Customer relationship management for sales.", "sales-crm", "Target", 6, cid);
         createMenu(salesCrm, "Dashboard", "sales-crm", "Target", 1, cid);
         createMenu(salesCrm, "Leads", "sales-crm/leads", "Users", 2, cid);
@@ -537,9 +532,11 @@ public class DataSeeder implements CommandLineRunner {
 
         var mfg = createModule("MANUFACTURING", "Manufacturing", "Production and manufacturing workflows.", "manufacturing", "Factory", 8, cid);
         createMenu(mfg, "Dashboard", "manufacturing", "Factory", 1, cid);
-        createMenu(mfg, "Bill of Materials", "manufacturing/billofmaterials", "ClipboardList", 2, cid);
-        createMenu(mfg, "Manufacturing Orders", "manufacturing/orders", "FileStack", 3, cid);
-        createMenu(mfg, "Production", "manufacturing/production", "Hammer", 4, cid);
+        createMenu(mfg, "Work Centers", "manufacturing/work-centers", "Monitor", 2, cid);
+        createMenu(mfg, "Routings", "manufacturing/routings", "GitCommit", 3, cid);
+        createMenu(mfg, "Bill of Materials", "manufacturing/billofmaterials", "ClipboardList", 4, cid);
+        createMenu(mfg, "Manufacturing Orders", "manufacturing/orders", "FileStack", 5, cid);
+        createMenu(mfg, "Production", "manufacturing/production", "Hammer", 6, cid);
 
         var retail = createModule("RETAIL_POS", "Retail POS", "Point of sale for retail.", "retail-pos", "Store", 9, cid);
         createMenu(retail, "Dashboard", "retail-pos", "Store", 1, cid);
@@ -584,6 +581,13 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(workflow, "Dashboard", "workflow", "Workflow", 1, cid);
         createMenu(workflow, "My Tasks", "workflow/my-tasks", "Clock", 2, cid);
         createMenu(workflow, "Definitions", "workflow/definitions", "Settings", 3, cid);
+
+        var organizations = createModule("ORGANIZATIONS", "Organizations", "Manage company profiles, branches, and locations.", "organizations", "Building2", 13, cid);
+        createMenu(organizations, "Dashboard", "organizations", "Building2", 1, cid);
+        createMenu(organizations, "Company", "organizations/company", "Building", 2, cid);
+        createMenu(organizations, "Branches", "organizations/branches", "GitBranch", 3, cid);
+        createMenu(organizations, "Locations", "organizations/location", "Map", 4, cid);
+        createMenu(organizations, "Warehouses", "organizations/warehouse", "Box", 5, cid);
 
         log.info("Modules and menus seeded successfully.");
     }
