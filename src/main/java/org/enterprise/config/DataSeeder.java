@@ -466,8 +466,9 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(inventory, "Vendor Details", "inventory/vendordetail", "Briefcase", 15, cid);
         createMenu(inventory, "Cost Heads", "inventory/costhead", "DollarSign", 16, cid);
         createMenu(inventory, "Taxes", "inventory/tax", "Percent", 17, cid);
+        createMenu(inventory, "Batches", "inventory/batch", "Layers", 18, cid);
         // Reports
-        createMenu(inventory, "Reports", "inventory/reports", "BarChart2", 18, cid);
+        createMenu(inventory, "Reports", "inventory/reports", "BarChart2", 19, cid);
 
         var sales = createModule("SALES_INVOICING", "Sales & Invoicing", "Track orders and VAT.", "sales", "ShoppingCart", 2, cid);
         createMenu(sales, "Dashboard", "sales", "ShoppingCart", 1, cid);
