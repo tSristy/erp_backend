@@ -515,6 +515,7 @@ public class DataSeeder implements CommandLineRunner {
 
         var settings = createModule("SETTINGS", "Settings", "Application configuration and preferences.", "settings", "Settings", 5, cid);
         createMenu(settings, "Dashboard", "settings", "Settings", 1, cid);
+        createMenu(settings, "Statement Setup", "settings/statementsetup", "FileText", 2, cid);
 
         var salesCrm = createModule("SALES_CRM", "Sales CRM", "Customer relationship management for sales.", "sales-crm", "Target", 6, cid);
         createMenu(salesCrm, "Dashboard", "sales-crm", "Target", 1, cid);
@@ -538,6 +539,7 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(mfg, "Bill of Materials", "manufacturing/billofmaterials", "ClipboardList", 4, cid);
         createMenu(mfg, "Manufacturing Orders", "manufacturing/orders", "FileStack", 5, cid);
         createMenu(mfg, "Production", "manufacturing/production", "Hammer", 6, cid);
+        createMenu(mfg, "Reports", "manufacturing/reports", "BarChart2", 7, cid);
 
         var retail = createModule("RETAIL_POS", "Retail POS", "Point of sale for retail.", "retail-pos", "Store", 9, cid);
         createMenu(retail, "Dashboard", "retail-pos", "Store", 1, cid);
