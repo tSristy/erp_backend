@@ -469,6 +469,12 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(inventory, "Batches", "inventory/batch", "Layers", 18, cid);
         // Reports
         createMenu(inventory, "Reports", "inventory/reports", "BarChart2", 19, cid);
+        createReportMenu(inventory, "Inventory Stock", "inventory/reports/stock", "Package", 20, cid);
+        createReportMenu(inventory, "Movement Register", "inventory/reports/movement", "BarChart2", 21, cid);
+        createReportMenu(inventory, "Inventory Aging", "inventory/reports/aging", "Clock", 22, cid);
+        createReportMenu(inventory, "Valuation", "inventory/reports/valuation", "DollarSign", 23, cid);
+        createReportMenu(inventory, "Serial Numbers", "inventory/reports/serial", "Target", 24, cid);
+        createReportMenu(inventory, "Purchase Summary", "inventory/reports/purchase", "Receipt", 25, cid);
 
         var sales = createModule("SALES_INVOICING", "Sales & Invoicing", "Track orders and VAT.", "sales", "ShoppingCart", 2, cid);
         createMenu(sales, "Dashboard", "sales", "ShoppingCart", 1, cid);
@@ -477,6 +483,12 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(sales, "Deliveries", "sales/deliverynote", "Truck", 4, cid);
         createMenu(sales, "Sales Invoices", "sales/salesinvoice", "FileText", 5, cid);
         createMenu(sales, "Reports", "sales/reports", "BarChart2", 6, cid);
+        createReportMenu(sales, "Daily Sales", "sales/reports/daily", "Calendar", 7, cid);
+        createReportMenu(sales, "By Customer", "sales/reports/customer", "Users", 8, cid);
+        createReportMenu(sales, "By Product", "sales/reports/product", "Package", 9, cid);
+        createReportMenu(sales, "By Warehouse", "sales/reports/warehouse", "Home", 10, cid);
+        createReportMenu(sales, "By Salesperson", "sales/reports/salesperson", "UserCheck", 11, cid);
+        createReportMenu(sales, "Profitability", "sales/reports/profitability", "DollarSign", 12, cid);
 
         var finance = createModule("FINANCE", "Finance", "Revenue and credit tracking.", "finance", "CreditCard", 3, cid);
         createMenu(finance, "Dashboard", "finance", "CreditCard", 1, cid);
@@ -490,17 +502,17 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(finance, "Payment Receipts", "finance/payment-receipt", "Download", 9, cid);
         createMenu(finance, "Payment Vouchers", "finance/payment-voucher", "Upload", 10, cid);
         createMenu(finance, "Journal Vouchers", "finance/journal-voucher", "Upload", 11, cid);
-        createMenu(finance, "Customer Aging", "finance/aging/customer", "TrendingUp", 12, cid);
-        createMenu(finance, "Vendor Aging", "finance/aging/vendor", "TrendingDown", 13, cid);
         createMenu(finance, "Reports", "finance/reports", "BarChart2", 14, cid);
-        createReportMenu(finance, "GL Ledger", "finance/reports/gl-ledger", "BookOpen", 14, cid);
-        createReportMenu(finance, "Customer Ledger", "finance/reports/customer-ledger", "UserCircle", 15, cid);
-        createReportMenu(finance, "Vendor Ledger", "finance/reports/vendor-ledger", "Truck", 16, cid);
-        createReportMenu(finance, "Universal Subledger", "finance/reports/subledger", "Layers", 17, cid);
-        createReportMenu(finance, "Trial Balance", "finance/reports/trial-balance", "Scale", 18, cid);
-        createReportMenu(finance, "Balance Sheet", "finance/reports/balance-sheet", "FileText", 19, cid);
-        createReportMenu(finance, "Income Statement", "finance/reports/income-statement", "TrendingUp", 20, cid);
-        createReportMenu(finance, "Cash Flow", "finance/reports/cash-flow", "RefreshCcw", 21, cid);
+        createReportMenu(finance, "GL Ledger", "finance/reports/gl-ledger", "BookOpen", 15, cid);
+        createReportMenu(finance, "Customer Ledger", "finance/reports/customer-ledger", "UserCircle", 16, cid);
+        createReportMenu(finance, "Vendor Ledger", "finance/reports/vendor-ledger", "Truck", 17, cid);
+        createReportMenu(finance, "Universal Subledger", "finance/reports/subledger", "Layers", 18, cid);
+        createReportMenu(finance, "Trial Balance", "finance/reports/trial-balance", "Scale", 19, cid);
+        createReportMenu(finance, "Balance Sheet", "finance/reports/balance-sheet", "FileText", 20, cid);
+        createReportMenu(finance, "Income Statement", "finance/reports/income-statement", "TrendingUp", 21, cid);
+        createReportMenu(finance, "Cash Flow", "finance/reports/cash-flow", "RefreshCcw", 22, cid);
+        createReportMenu(finance, "Customer Aging", "finance/reports/customer-aging", "Users", 23, cid);
+        createReportMenu(finance, "Vendor Aging", "finance/reports/vendor-aging", "Building2", 24, cid);
 
         var iam = createModule("IAM", "I A M", "Identity & Access Management.", "identity-access", "ShieldCheck", 4, cid);
         createMenu(iam, "Dashboard", "identity-access", "ShieldCheck", 1, cid);
@@ -540,6 +552,11 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(mfg, "Manufacturing Orders", "manufacturing/orders", "FileStack", 5, cid);
         createMenu(mfg, "Production", "manufacturing/production", "Hammer", 6, cid);
         createMenu(mfg, "Reports", "manufacturing/reports", "BarChart2", 7, cid);
+        createReportMenu(mfg, "Daily Production", "manufacturing/reports/daily", "Calendar", 8, cid);
+        createReportMenu(mfg, "By Product", "manufacturing/reports/product", "Package", 9, cid);
+        createReportMenu(mfg, "By Status", "manufacturing/reports/status", "PieChart", 10, cid);
+        createReportMenu(mfg, "Production Yield", "manufacturing/reports/yield", "TrendingUp", 11, cid);
+        createReportMenu(mfg, "BOM Usage", "manufacturing/reports/bom", "Layers", 12, cid);
 
         var retail = createModule("RETAIL_POS", "Retail POS", "Point of sale for retail.", "retail-pos", "Store", 9, cid);
         createMenu(retail, "Dashboard", "retail-pos", "Store", 1, cid);
@@ -579,6 +596,10 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(hr, "Tax Slab", "hr/taxslab", "Percent", 23, cid);
         createMenu(hr, "Weekend", "hr/weekend", "CalendarDays", 24, cid);
         createMenu(hr, "Reports", "hr/reports", "BarChart2", 25, cid);
+        createReportMenu(hr, "Employee Summary", "hr/reports/employee-summary", "Users", 26, cid);
+        createReportMenu(hr, "Attendance Report", "hr/reports/attendance", "Clock", 27, cid);
+        createReportMenu(hr, "Leave Balance", "hr/reports/leave-balance", "CalendarHeart", 28, cid);
+        createReportMenu(hr, "Payroll Summary", "hr/reports/payroll-summary", "DollarSign", 29, cid);
 
         var workflow = createModule("WORKFLOW", "Workflow", "Approval engines and processes.", "workflow", "Workflow", 12, cid);
         createMenu(workflow, "Dashboard", "workflow", "Workflow", 1, cid);
