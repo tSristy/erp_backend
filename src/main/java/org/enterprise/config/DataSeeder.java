@@ -611,7 +611,7 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(organizations, "Company", "organizations/company", "Building", 2, cid);
         createMenu(organizations, "Branches", "organizations/branches", "GitBranch", 3, cid);
         createMenu(organizations, "Locations", "organizations/location", "Map", 4, cid);
-        createMenu(organizations, "Warehouses", "organizations/warehouse", "Box", 5, cid);
+        createMenu(organizations, "Warehouse", "organizations/warehouse", "Box", 5, cid);
 
         log.info("Modules and menus seeded successfully.");
     }
