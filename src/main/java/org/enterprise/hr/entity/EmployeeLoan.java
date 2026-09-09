@@ -21,5 +21,9 @@ public class EmployeeLoan extends AuditableEntity {
     private Double installment;
     private Integer months;
     private Integer paidMonths;
+    private String status;
+
+    @jakarta.persistence.OneToMany(mappedBy = "loan", cascade = jakarta.persistence.CascadeType.ALL, fetch = jakarta.persistence.FetchType.LAZY)
+    private java.util.List<LoanInstallment> installments;
 
 }

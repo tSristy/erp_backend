@@ -75,6 +75,25 @@ public class PayslipService {
         dto.setTotalDeduction(entity.getTotalDeduction());
         dto.setNetPayable(entity.getNetPayable());
         dto.setStatus(entity.getStatus());
+        
+        if (entity.getComponents() != null) {
+            java.util.List<org.enterprise.hr.dto.PayslipComponentDto> comps = new java.util.ArrayList<>();
+            for (org.enterprise.hr.entity.PayslipComponent c : entity.getComponents()) {
+                org.enterprise.hr.dto.PayslipComponentDto cdto = new org.enterprise.hr.dto.PayslipComponentDto();
+                cdto.setId(c.getId());
+                cdto.setType(c.getType());
+                cdto.setAmount(c.getAmount());
+                if (c.getSalaryComponent() != null) {
+                    cdto.setSalaryComponentId(c.getSalaryComponent().getId());
+                    cdto.setSalaryComponentName(c.getSalaryComponent().getName());
+                } else {
+                    cdto.setSalaryComponentName("Loan Repayment");
+                }
+                comps.add(cdto);
+            }
+            dto.setComponents(comps);
+        }
+        
         return dto;
     }
 }

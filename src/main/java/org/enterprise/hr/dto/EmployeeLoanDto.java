@@ -18,4 +18,6 @@ public class EmployeeLoanDto {
     private Double installment;
     private Integer months;
     private Integer paidMonths;
+    private String status;
+    private java.util.List<LoanInstallmentDto> installments;
 }

@@ -20,4 +20,5 @@ public class PayrollProcessDto {
     private Double totalEarning;
     private Double totalDeduction;
     private Double netPayment;
+    private Long workflowInstanceId;
 }

@@ -22,4 +22,5 @@ public class PayslipDto {
     private Double totalDeduction;
     private Double netPayable;
     private String status;
+    private java.util.List<PayslipComponentDto> components;
 }

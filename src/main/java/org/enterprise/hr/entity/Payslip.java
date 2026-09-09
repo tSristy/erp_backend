@@ -31,4 +31,7 @@ public class Payslip extends AuditableEntity {
 
     private String status; // Draft, Generated, Paid
 
+    @jakarta.persistence.OneToMany(mappedBy = "payslip", cascade = jakarta.persistence.CascadeType.ALL, fetch = jakarta.persistence.FetchType.LAZY)
+    private java.util.List<PayslipComponent> components;
+
 }

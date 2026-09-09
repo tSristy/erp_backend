@@ -1,9 +1,7 @@
 package org.enterprise.hr.controller;
 
 import org.enterprise.hr.dto.EmployeeLoanDto;
-import org.enterprise.hr.dto.LoanInstallmentDto;
 import org.enterprise.hr.service.EmployeeLoanService;
-import org.enterprise.hr.service.LoanInstallmentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 public class EmployeeLoanController {
 
     private final EmployeeLoanService service;
-    private final LoanInstallmentService installmentService;
 
     @PostMapping
     public ResponseEntity<EmployeeLoanDto> create(@RequestBody EmployeeLoanDto dto) {
@@ -45,29 +42,4 @@ public class EmployeeLoanController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/installments")
-    public ResponseEntity<LoanInstallmentDto> createInstallment(@RequestBody LoanInstallmentDto dto) {
-        return ResponseEntity.ok(installmentService.create(dto));
-    }
-
-    @PutMapping("/installments/{id}")
-    public ResponseEntity<LoanInstallmentDto> updateInstallment(@PathVariable Long id, @RequestBody LoanInstallmentDto dto) {
-        return ResponseEntity.ok(installmentService.update(id, dto));
-    }
-
-    @GetMapping("/installments/{id}")
-    public ResponseEntity<LoanInstallmentDto> getInstallmentById(@PathVariable Long id) {
-        return ResponseEntity.ok(installmentService.getById(id));
-    }
-
-    @GetMapping("/installments")
-    public ResponseEntity<Page<LoanInstallmentDto>> searchInstallments(Pageable pageable) {
-        return ResponseEntity.ok(installmentService.search(pageable));
-    }
-
-    @DeleteMapping("/installments/{id}")
-    public ResponseEntity<Void> deleteInstallment(@PathVariable Long id) {
-        installmentService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }

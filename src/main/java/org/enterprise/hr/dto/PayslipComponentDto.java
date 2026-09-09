@@ -17,4 +17,5 @@ public class PayslipComponentDto {
     private Long salaryComponentId;
     private String type;
     private Double amount;
+    private String salaryComponentName;
 }

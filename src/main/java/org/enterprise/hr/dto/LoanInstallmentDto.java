@@ -16,4 +16,5 @@ public class LoanInstallmentDto {
     private Long loanId;
     private LocalDate dueDate;
     private Double amount;
+    private String status;
 }

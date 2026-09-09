@@ -1,5 +1,6 @@
 package org.enterprise.hr.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -19,4 +20,6 @@ public interface EmployeeRepository
             String employeeCode, String fullName, Pageable pageable);
 
     boolean existsByEmployeeCode(String employeeCode);
+
+    List<Employee> findByActiveTrue();
 }

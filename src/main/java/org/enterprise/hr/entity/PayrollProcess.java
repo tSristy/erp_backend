@@ -26,4 +26,6 @@ public class PayrollProcess extends AuditableEntity {
     private Double totalDeduction;
     private Double netPayment;
 
+    private Long workflowInstanceId;
+
 }

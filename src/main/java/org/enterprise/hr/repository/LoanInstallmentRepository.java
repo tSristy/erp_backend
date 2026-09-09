@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface LoanInstallmentRepository extends JpaRepository<LoanInstallment, Long> {
+    java.util.List<LoanInstallment> findByLoan_Employee_IdAndStatus(Long employeeId, String status);
 }

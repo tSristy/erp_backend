@@ -22,5 +22,6 @@ public class LoanInstallment extends AuditableEntity {
     private LocalDate dueDate;
 
     private Double amount;
+    private String status;
 
 }
