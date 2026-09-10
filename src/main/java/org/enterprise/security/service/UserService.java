@@ -114,17 +114,16 @@ public class UserService {
         Long currentCompanyId = TenantContext.get().getCompanyId();
         
         // Roles
-        if (user.getRoles() != null) {
-            user.getRoles().clear();
-        } else {
+        if (user.getRoles() == null) {
             user.setRoles(new HashSet<>());
         }
-        
-        if (request.getRoles() != null) {
-            for (Long roleId : request.getRoles()) {
+        Set<Long> requestedRoles = request.getRoles() != null ? new HashSet<>(request.getRoles()) : new HashSet<>();
+        user.getRoles().removeIf(ur -> !requestedRoles.contains(ur.getRole().getId()));
+        Set<Long> existingRoleIds = user.getRoles().stream().map(ur -> ur.getRole().getId()).collect(java.util.stream.Collectors.toSet());
+        for (Long roleId : requestedRoles) {
+            if (!existingRoleIds.contains(roleId)) {
                 Role role = roleRepository.findById(roleId)
                         .orElseThrow(() -> new RuntimeException("Role not found: " + roleId));
-                
                 UserRole ur = new UserRole();
                 ur.setUser(user);
                 ur.setRole(role);
@@ -135,17 +134,16 @@ public class UserService {
         }
         
         // Companies
-        if (user.getCompanies() != null) {
-            user.getCompanies().clear();
-        } else {
+        if (user.getCompanies() == null) {
             user.setCompanies(new java.util.ArrayList<>());
         }
-        
-        if (request.getCompanies() != null) {
-            for (Long companyId : request.getCompanies()) {
+        Set<Long> requestedCompanies = request.getCompanies() != null ? new HashSet<>(request.getCompanies()) : new HashSet<>();
+        user.getCompanies().removeIf(uc -> !requestedCompanies.contains(uc.getCompany().getId()));
+        Set<Long> existingCompanyIds = user.getCompanies().stream().map(uc -> uc.getCompany().getId()).collect(java.util.stream.Collectors.toSet());
+        for (Long companyId : requestedCompanies) {
+            if (!existingCompanyIds.contains(companyId)) {
                 Company company = companyRepository.findById(companyId)
                         .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
-                
                 UserCompany uc = new UserCompany();
                 uc.setUser(user);
                 uc.setCompany(company);
@@ -157,14 +155,14 @@ public class UserService {
         }
         
         // Branches
-        if (user.getUserBranches() != null) {
-            user.getUserBranches().clear();
-        } else {
+        if (user.getUserBranches() == null) {
             user.setUserBranches(new java.util.ArrayList<>());
         }
-        
-        if (request.getBranches() != null) {
-            for (Long branchId : request.getBranches()) {
+        Set<Long> requestedBranches = request.getBranches() != null ? new HashSet<>(request.getBranches()) : new HashSet<>();
+        user.getUserBranches().removeIf(ub -> !requestedBranches.contains(ub.getBranch().getId()));
+        Set<Long> existingBranchIds = user.getUserBranches().stream().map(ub -> ub.getBranch().getId()).collect(java.util.stream.Collectors.toSet());
+        for (Long branchId : requestedBranches) {
+            if (!existingBranchIds.contains(branchId)) {
                 Branch branch = branchRepository.findById(branchId)
                         .orElseThrow(() -> new RuntimeException("Branch not found: " + branchId));
                 UserBranch ub = new UserBranch();
@@ -176,14 +174,14 @@ public class UserService {
         }
         
         // Warehouses
-        if (user.getUserWarehouses() != null) {
-            user.getUserWarehouses().clear();
-        } else {
+        if (user.getUserWarehouses() == null) {
             user.setUserWarehouses(new java.util.ArrayList<>());
         }
-        
-        if (request.getWarehouses() != null) {
-            for (Long warehouseId : request.getWarehouses()) {
+        Set<Long> requestedWarehouses = request.getWarehouses() != null ? new HashSet<>(request.getWarehouses()) : new HashSet<>();
+        user.getUserWarehouses().removeIf(uw -> !requestedWarehouses.contains(uw.getWarehouse().getId()));
+        Set<Long> existingWarehouseIds = user.getUserWarehouses().stream().map(uw -> uw.getWarehouse().getId()).collect(java.util.stream.Collectors.toSet());
+        for (Long warehouseId : requestedWarehouses) {
+            if (!existingWarehouseIds.contains(warehouseId)) {
                 Warehouse warehouse = warehouseRepository.findById(warehouseId)
                         .orElseThrow(() -> new RuntimeException("Warehouse not found: " + warehouseId));
                 UserWarehouse uw = new UserWarehouse();
@@ -195,14 +193,14 @@ public class UserService {
         }
         
         // Profit Centers
-        if (user.getUserProfitCenters() != null) {
-            user.getUserProfitCenters().clear();
-        } else {
+        if (user.getUserProfitCenters() == null) {
             user.setUserProfitCenters(new java.util.ArrayList<>());
         }
-        
-        if (request.getProfitCenters() != null) {
-            for (Long pcId : request.getProfitCenters()) {
+        Set<Long> requestedProfitCenters = request.getProfitCenters() != null ? new HashSet<>(request.getProfitCenters()) : new HashSet<>();
+        user.getUserProfitCenters().removeIf(upc -> !requestedProfitCenters.contains(upc.getProfitCenter().getId()));
+        Set<Long> existingProfitCenterIds = user.getUserProfitCenters().stream().map(upc -> upc.getProfitCenter().getId()).collect(java.util.stream.Collectors.toSet());
+        for (Long pcId : requestedProfitCenters) {
+            if (!existingProfitCenterIds.contains(pcId)) {
                 ProfitCenter pc = profitCenterRepository.findById(pcId)
                         .orElseThrow(() -> new RuntimeException("ProfitCenter not found: " + pcId));
                 UserProfitCenter upc = new UserProfitCenter();
@@ -214,14 +212,14 @@ public class UserService {
         }
         
         // Cost Centers
-        if (user.getUserCostCenters() != null) {
-            user.getUserCostCenters().clear();
-        } else {
+        if (user.getUserCostCenters() == null) {
             user.setUserCostCenters(new java.util.ArrayList<>());
         }
-        
-        if (request.getCostCenters() != null) {
-            for (Long ccId : request.getCostCenters()) {
+        Set<Long> requestedCostCenters = request.getCostCenters() != null ? new HashSet<>(request.getCostCenters()) : new HashSet<>();
+        user.getUserCostCenters().removeIf(ucc -> !requestedCostCenters.contains(ucc.getCostCenter().getId()));
+        Set<Long> existingCostCenterIds = user.getUserCostCenters().stream().map(ucc -> ucc.getCostCenter().getId()).collect(java.util.stream.Collectors.toSet());
+        for (Long ccId : requestedCostCenters) {
+            if (!existingCostCenterIds.contains(ccId)) {
                 CostCenter cc = costCenterRepository.findById(ccId)
                         .orElseThrow(() -> new RuntimeException("CostCenter not found: " + ccId));
                 UserCostCenter ucc = new UserCostCenter();

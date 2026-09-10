@@ -100,8 +100,16 @@ public class DeliveryService {
             }
         }
         
-        delivery.getDetails().clear();
-        delivery.getDetails().addAll(processedDetails);
+        // Find which details need to be removed (those that were split)
+        List<DeliveryNoteDetail> originalDetails = new ArrayList<>(delivery.getDetails());
+        delivery.getDetails().removeIf(d -> !processedDetails.contains(d));
+        
+        // Add only the newly created split details
+        for (DeliveryNoteDetail pd : processedDetails) {
+            if (!delivery.getDetails().contains(pd)) {
+                delivery.getDetails().add(pd);
+            }
+        }
 
         for (DeliveryNoteDetail detail : delivery.getDetails()) {
             Product product = detail.getProduct();

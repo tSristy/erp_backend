@@ -524,6 +524,7 @@ public class DataSeeder implements CommandLineRunner {
         createMenu(iam, "Modules", "identity-access/module", "Grid", 10, cid);
         createMenu(iam, "Menus", "identity-access/menu", "Menu", 11, cid);
         createMenu(iam, "Login Audits", "identity-access/loginaudit", "Activity", 12, cid);
+        createMenu(iam, "System Audits", "identity-access/systemaudit", "Database", 13, cid);
 
         var settings = createModule("SETTINGS", "Settings", "Application configuration and preferences.", "settings", "Settings", 5, cid);
         createMenu(settings, "Dashboard", "settings", "Settings", 1, cid);

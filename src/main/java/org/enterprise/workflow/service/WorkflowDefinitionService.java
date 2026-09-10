@@ -66,8 +66,6 @@ public class WorkflowDefinitionService {
         WorkflowDefinition entity;
         if (dto.getId() != null) {
             entity = repository.findById(dto.getId()).orElse(new WorkflowDefinition());
-            entity.getSteps().clear();
-            entity.getRules().clear();
         } else {
             entity = new WorkflowDefinition();
         }
@@ -75,8 +73,16 @@ public class WorkflowDefinitionService {
         BeanUtils.copyProperties(dto, entity, "id", "steps", "rules");
 
         if (dto.getSteps() != null) {
+            if (entity.getSteps() == null) entity.setSteps(new java.util.ArrayList<>());
+            entity.getSteps().removeIf(existing -> dto.getSteps().stream().noneMatch(incoming -> incoming.getId() != null && incoming.getId().equals(existing.getId())));
             for (WorkflowStepDto stepDto : dto.getSteps()) {
-                WorkflowStep step = new WorkflowStep();
+                WorkflowStep step;
+                if (stepDto.getId() == null || entity.getSteps().stream().noneMatch(s -> s.getId() != null && s.getId().equals(stepDto.getId()))) {
+                    step = new WorkflowStep();
+                    entity.getSteps().add(step);
+                } else {
+                    step = entity.getSteps().stream().filter(s -> s.getId() != null && s.getId().equals(stepDto.getId())).findFirst().orElse(new WorkflowStep());
+                }
                 BeanUtils.copyProperties(stepDto, step, "id");
                 step.setWorkflow(entity);
                 if (stepDto.getRoleId() != null) {
@@ -85,29 +91,33 @@ public class WorkflowDefinitionService {
                 if (stepDto.getUserId() != null) {
                     step.setUser(userRepository.findById(stepDto.getUserId()).orElse(null));
                 }
-                entity.getSteps().add(step);
             }
+        } else if (entity.getSteps() != null) {
+            entity.getSteps().clear();
         }
 
         if (dto.getRules() != null) {
+            if (entity.getRules() == null) entity.setRules(new java.util.ArrayList<>());
+            entity.getRules().removeIf(existing -> dto.getRules().stream().noneMatch(incoming -> incoming.getId() != null && incoming.getId().equals(existing.getId())));
             for (WorkflowRuleDto ruleDto : dto.getRules()) {
-                WorkflowRule rule = new WorkflowRule();
-                BeanUtils.copyProperties(ruleDto, rule, "id", "stepId");
-                rule.setWorkflow(entity);
-
-                // Find the associated step by index/stepNo or just leave it null if simple workflow
-                // Actually, step mapping is important. Let's find it by stepNo if stepId is not a real DB ID yet.
-                // Assuming the frontend sends stepId as the index of the step in the array (e.g. 1, 2)
-                if (ruleDto.getStepId() != null) {
-                    WorkflowStep associatedStep = entity.getSteps().stream()
-                            .filter(s -> s.getStepNo().equals(ruleDto.getStepId().intValue()))
-                            .findFirst()
-                            .orElse(null);
-                    rule.setStep(associatedStep);
+                WorkflowRule rule;
+                if (ruleDto.getId() == null || entity.getRules().stream().noneMatch(r -> r.getId() != null && r.getId().equals(ruleDto.getId()))) {
+                    rule = new WorkflowRule();
+                    entity.getRules().add(rule);
+                } else {
+                    rule = entity.getRules().stream().filter(r -> r.getId() != null && r.getId().equals(ruleDto.getId())).findFirst().orElse(new WorkflowRule());
                 }
-
-                entity.getRules().add(rule);
+                BeanUtils.copyProperties(ruleDto, rule, "id");
+                rule.setWorkflow(entity);
+                if (ruleDto.getStepId() != null) {
+                    rule.setStep(entity.getSteps().stream()
+                            .filter(s -> s.getStepNo() != null && s.getStepNo().equals(ruleDto.getStepId().intValue()))
+                            .findFirst()
+                            .orElse(null));
+                }
             }
+        } else if (entity.getRules() != null) {
+            entity.getRules().clear();
         }
 
         repository.save(entity);

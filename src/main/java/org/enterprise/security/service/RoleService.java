@@ -91,18 +91,28 @@ public class RoleService {
         role.setCode(request.getCode());
         role.setName(request.getName());
         
-        // Clear old permissions for simplicity
-        if (role.getRolePermissions() != null) {
-            rolePermissionRepository.deleteAll(role.getRolePermissions());
-            role.getRolePermissions().clear();
-        } else {
+        // Clear old permissions for simplicity? No, do delta merge
+        if (role.getRolePermissions() == null) {
             role.setRolePermissions(new HashSet<>());
         }
         
         Long companyId = TenantContext.get().getCompanyId();
         
-        if (request.getPermissions() != null) {
-            for (String pCode : request.getPermissions()) {
+        Set<String> requestedPerms = request.getPermissions() != null ? new HashSet<>(request.getPermissions()) : new HashSet<>();
+        
+        // Remove permissions that are no longer requested
+        java.util.List<RolePermission> toRemove = role.getRolePermissions().stream()
+                .filter(rp -> !requestedPerms.contains(rp.getPermission().getCode()))
+                .toList();
+        rolePermissionRepository.deleteAll(toRemove);
+        role.getRolePermissions().removeAll(toRemove);
+        
+        Set<String> existingPerms = role.getRolePermissions().stream()
+                .map(rp -> rp.getPermission().getCode())
+                .collect(java.util.stream.Collectors.toSet());
+                
+        for (String pCode : requestedPerms) {
+            if (!existingPerms.contains(pCode)) {
                 Permission perm = permissionRepository.findByCode(pCode)
                         .orElseThrow(() -> new RuntimeException("Permission not found: " + pCode));
                 
@@ -111,7 +121,6 @@ public class RoleService {
                 rp.setPermission(perm);
                 rp.setCompanyId(companyId);
                 rp.setAllowed(true);
-                
                 role.getRolePermissions().add(rolePermissionRepository.save(rp));
             }
         }

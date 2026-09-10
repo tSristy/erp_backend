@@ -55,10 +55,15 @@ public class ReportMaster {
 
     public void setParameters(List<ReportDetail> parameters) {
         if (parameters != null) {
-            this.parameters.clear();
-            this.parameters.addAll(parameters);
-            for (ReportDetail d : this.parameters) {
-                d.setReportMaster(this);
+            this.parameters.removeIf(existing -> parameters.stream().noneMatch(incoming -> incoming.getId() != null && incoming.getId().equals(existing.getId())));
+            for (ReportDetail item : parameters) {
+                if (item.getId() == null || this.parameters.stream().noneMatch(e -> e.getId().equals(item.getId()))) {
+                    item.setReportMaster(this);
+                    this.parameters.add(item);
+                } else {
+                    ReportDetail existing = this.parameters.stream().filter(e -> e.getId().equals(item.getId())).findFirst().orElse(null);
+                    if (existing != null) org.springframework.beans.BeanUtils.copyProperties(item, existing, "id", "reportMaster");
+                }
             }
         } else {
             this.parameters.clear();

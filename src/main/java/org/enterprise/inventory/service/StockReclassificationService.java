@@ -13,6 +13,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 
 @Service
 public class StockReclassificationService extends BaseService<StockReclassification, Long> {
@@ -95,8 +97,13 @@ public class StockReclassificationService extends BaseService<StockReclassificat
             }
         }
         
-        reclass.getDetails().clear();
-        reclass.getDetails().addAll(processedDetails);
+        List<StockReclassificationDetail> originalDetails = new ArrayList<>(reclass.getDetails());
+        reclass.getDetails().removeIf(d -> !processedDetails.contains(d));
+        for (StockReclassificationDetail pd : processedDetails) {
+            if (!reclass.getDetails().contains(pd)) {
+                reclass.getDetails().add(pd);
+            }
+        }
 
         for (StockReclassificationDetail detail : reclass.getDetails()) {
             Product sourceProduct = detail.getSourceProduct();

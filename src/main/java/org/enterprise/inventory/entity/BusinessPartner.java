@@ -59,6 +59,9 @@ public class BusinessPartner extends AuditableEntity {
     }
 
     public void setRole(String role) {
+        if (role != null && role.equals(this.getRole())) {
+            return;
+        }
         this.role = role;
         if (role != null) {
             if (this.roles == null) {

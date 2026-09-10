@@ -107,8 +107,13 @@ public class StockTransferService extends BaseService<StockTransfer, Long> {
             }
         }
         
-        transfer.getDetails().clear();
-        transfer.getDetails().addAll(processedDetails);
+        List<StockTransferDetail> originalDetails = new ArrayList<>(transfer.getDetails());
+        transfer.getDetails().removeIf(d -> !processedDetails.contains(d));
+        for (StockTransferDetail pd : processedDetails) {
+            if (!transfer.getDetails().contains(pd)) {
+                transfer.getDetails().add(pd);
+            }
+        }
 
         for (StockTransferDetail detail : transfer.getDetails()) {
             Product product = detail.getProduct();
