@@ -20,6 +20,10 @@ public class TransferOrderDetail extends AuditableEntity {
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private Location sourceLocation; // Optional target location request
 
     @ManyToOne(fetch = FetchType.LAZY)

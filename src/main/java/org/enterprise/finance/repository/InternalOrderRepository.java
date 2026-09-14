@@ -21,4 +21,7 @@ public interface InternalOrderRepository extends JpaRepository<InternalOrder, Lo
     Optional<InternalOrder> findByIdAndCompanyId(Long id, Long companyId);
 
     Optional<InternalOrder> findByCodeAndCompanyId(String code, Long companyId);
+
+    @Query("SELECT MAX(i.code) FROM InternalOrder i WHERE i.companyId = :companyId AND i.code LIKE 'IO-%'")
+    Optional<String> findMaxCodeByCompanyId(@Param("companyId") Long companyId);
 }

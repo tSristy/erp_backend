@@ -32,7 +32,19 @@ public class InternalOrderService {
     public InternalOrder createInternalOrder(InternalOrder internalOrder) {
         Long companyId = TenantContext.getCompanyId();
         
-        if (internalOrder.getCode() != null) {
+        if (internalOrder.getCode() == null || internalOrder.getCode().trim().isEmpty()) {
+            String maxCode = internalOrderRepository.findMaxCodeByCompanyId(companyId).orElse(null);
+            int nextNum = 1;
+            if (maxCode != null && maxCode.matches("^IO-\\d{6}$")) {
+                try {
+                    nextNum = Integer.parseInt(maxCode.substring(3)) + 1;
+                } catch (NumberFormatException ignored) {}
+            }
+            internalOrder.setCode(String.format("IO-%06d", nextNum));
+        } else {
+            if (!internalOrder.getCode().matches("^[A-Z0-9]+-\\d{6}$")) {
+                throw new RuntimeException("Internal Order code must have a prefix followed by 6 digits (e.g., IO-000001)");
+            }
             internalOrderRepository.findByCodeAndCompanyId(internalOrder.getCode(), companyId)
                     .ifPresent(p -> {
                         throw new RuntimeException("Internal Order code already exists: " + internalOrder.getCode());
@@ -48,6 +60,9 @@ public class InternalOrderService {
         InternalOrder internalOrder = getInternalOrderById(id);
         
         if (details.getCode() != null && !details.getCode().equals(internalOrder.getCode())) {
+            if (!details.getCode().matches("^[A-Z0-9]+-\\d{6}$")) {
+                throw new RuntimeException("Internal Order code must have a prefix followed by 6 digits (e.g., IO-000001)");
+            }
             internalOrderRepository.findByCodeAndCompanyId(details.getCode(), TenantContext.getCompanyId())
                     .ifPresent(p -> {
                         throw new RuntimeException("Internal Order code already exists: " + details.getCode());

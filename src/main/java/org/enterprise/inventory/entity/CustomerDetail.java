@@ -17,7 +17,7 @@ public class CustomerDetail extends AuditableEntity {
 
     private Boolean allowPartialDelivery = true;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"vendorDetail", "customerDetail", "shareholderDetail"})
     @OneToOne(fetch = FetchType.LAZY)
     private BusinessPartner partner;
 

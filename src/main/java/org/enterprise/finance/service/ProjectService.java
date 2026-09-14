@@ -32,7 +32,19 @@ public class ProjectService {
     public Project createProject(Project project) {
         Long companyId = TenantContext.getCompanyId();
         
-        if (project.getCode() != null) {
+        if (project.getCode() == null || project.getCode().trim().isEmpty()) {
+            String maxCode = projectRepository.findMaxCodeByCompanyId(companyId).orElse(null);
+            int nextNum = 1;
+            if (maxCode != null && maxCode.matches("^PRJ-\\d{6}$")) {
+                try {
+                    nextNum = Integer.parseInt(maxCode.substring(4)) + 1;
+                } catch (NumberFormatException ignored) {}
+            }
+            project.setCode(String.format("PRJ-%06d", nextNum));
+        } else {
+            if (!project.getCode().matches("^[A-Z0-9]+-\\d{6}$")) {
+                throw new RuntimeException("Project code must have a prefix followed by 6 digits (e.g., PRJ-000001)");
+            }
             projectRepository.findByCodeAndCompanyId(project.getCode(), companyId)
                     .ifPresent(p -> {
                         throw new RuntimeException("Project code already exists: " + project.getCode());
@@ -48,6 +60,9 @@ public class ProjectService {
         Project project = getProjectById(id);
         
         if (details.getCode() != null && !details.getCode().equals(project.getCode())) {
+            if (!details.getCode().matches("^[A-Z0-9]+-\\d{6}$")) {
+                throw new RuntimeException("Project code must have a prefix followed by 6 digits (e.g., PRJ-000001)");
+            }
             projectRepository.findByCodeAndCompanyId(details.getCode(), TenantContext.getCompanyId())
                     .ifPresent(p -> {
                         throw new RuntimeException("Project code already exists: " + details.getCode());

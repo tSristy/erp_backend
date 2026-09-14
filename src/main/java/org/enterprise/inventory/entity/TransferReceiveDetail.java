@@ -23,6 +23,10 @@ public class TransferReceiveDetail extends AuditableEntity {
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private Location destinationLocation;
 
     @Column(precision = 18, scale = 6)

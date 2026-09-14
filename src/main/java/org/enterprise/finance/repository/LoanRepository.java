@@ -21,4 +21,7 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     Optional<Loan> findByIdAndCompanyId(Long id, Long companyId);
 
     Optional<Loan> findByCodeAndCompanyId(String code, Long companyId);
+
+    @Query("SELECT MAX(l.code) FROM Loan l WHERE l.companyId = :companyId AND l.code LIKE 'LOAN-%'")
+    Optional<String> findMaxCodeByCompanyId(@Param("companyId") Long companyId);
 }

@@ -18,7 +18,12 @@ public class GoodsReceiptDetail extends AuditableEntity {
     private GoodsReceipt goodsReceipt;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
     private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
 
     @Column(precision = 18, scale = 6)
     private BigDecimal quantity;

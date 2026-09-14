@@ -13,7 +13,7 @@ public class ShareholderDetail extends AuditableEntity {
 
     private java.math.BigDecimal equityPercentage;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"vendorDetail", "customerDetail", "shareholderDetail"})
     @OneToOne(fetch = FetchType.LAZY)
     private BusinessPartner partner;
 

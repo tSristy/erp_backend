@@ -21,6 +21,10 @@ public class PurchaseOrderDetail extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Product product;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
+
     private BigDecimal orderedQty = BigDecimal.ZERO;
 
     private BigDecimal receivedQty = BigDecimal.ZERO;

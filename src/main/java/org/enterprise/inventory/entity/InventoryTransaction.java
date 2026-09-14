@@ -30,7 +30,12 @@ public class InventoryTransaction extends AuditableEntity {
     private String remarks;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Location location;

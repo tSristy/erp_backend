@@ -17,7 +17,7 @@ public class VendorDetail extends AuditableEntity {
 
     private Boolean preferredVendor = false;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"vendorDetail", "customerDetail", "shareholderDetail"})
     @OneToOne(fetch = FetchType.LAZY)
     private BusinessPartner partner;
 

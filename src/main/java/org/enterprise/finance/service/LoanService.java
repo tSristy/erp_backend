@@ -32,7 +32,19 @@ public class LoanService {
     public Loan createLoan(Loan loan) {
         Long companyId = TenantContext.getCompanyId();
         
-        if (loan.getCode() != null) {
+        if (loan.getCode() == null || loan.getCode().trim().isEmpty()) {
+            String maxCode = loanRepository.findMaxCodeByCompanyId(companyId).orElse(null);
+            int nextNum = 1;
+            if (maxCode != null && maxCode.matches("^LOAN-\\d{6}$")) {
+                try {
+                    nextNum = Integer.parseInt(maxCode.substring(5)) + 1;
+                } catch (NumberFormatException ignored) {}
+            }
+            loan.setCode(String.format("LOAN-%06d", nextNum));
+        } else {
+            if (!loan.getCode().matches("^[A-Z0-9]+-\\d{6}$")) {
+                throw new RuntimeException("Loan code must have a prefix followed by 6 digits (e.g., LOAN-000001)");
+            }
             loanRepository.findByCodeAndCompanyId(loan.getCode(), companyId)
                     .ifPresent(p -> {
                         throw new RuntimeException("Loan code already exists: " + loan.getCode());
@@ -48,6 +60,9 @@ public class LoanService {
         Loan loan = getLoanById(id);
         
         if (details.getCode() != null && !details.getCode().equals(loan.getCode())) {
+            if (!details.getCode().matches("^[A-Z0-9]+-\\d{6}$")) {
+                throw new RuntimeException("Loan code must have a prefix followed by 6 digits (e.g., LOAN-000001)");
+            }
             loanRepository.findByCodeAndCompanyId(details.getCode(), TenantContext.getCompanyId())
                     .ifPresent(p -> {
                         throw new RuntimeException("Loan code already exists: " + details.getCode());

@@ -21,4 +21,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     Optional<Project> findByIdAndCompanyId(Long id, Long companyId);
 
     Optional<Project> findByCodeAndCompanyId(String code, Long companyId);
+
+    @Query("SELECT MAX(p.code) FROM Project p WHERE p.companyId = :companyId AND p.code LIKE 'PRJ-%'")
+    Optional<String> findMaxCodeByCompanyId(@Param("companyId") Long companyId);
 }

@@ -21,7 +21,13 @@ public class StockReclassificationDetail extends AuditableEntity {
     private Product sourceProduct;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    private ProductVariant sourceVariant;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private Product destinationProduct;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ProductVariant destinationVariant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private org.enterprise.inventory.entity.Batch sourceBatch;
