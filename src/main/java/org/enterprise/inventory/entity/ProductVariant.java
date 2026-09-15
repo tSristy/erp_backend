@@ -23,6 +23,8 @@ public class ProductVariant extends AuditableEntity {
     private String sku;
     private String barcode;
 
+    
+    @org.hibernate.annotations.ColumnTransformer(write = "?::json")
     @Column(columnDefinition = "JSON")
     private String attributesJson;
 

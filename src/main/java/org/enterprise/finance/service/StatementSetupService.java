@@ -49,9 +49,14 @@ public class StatementSetupService {
         StatementSetupDTO dto = new StatementSetupDTO();
         BeanUtils.copyProperties(entity, dto, "accounts");
         if (entity.getAccounts() != null) {
-            dto.setAccounts(entity.getAccounts().stream().map(account -> {
+                        dto.setAccounts(entity.getAccounts().stream().map(account -> {
                 org.enterprise.finance.dto.StatementSetupAccountDTO accountDto = new org.enterprise.finance.dto.StatementSetupAccountDTO();
                 BeanUtils.copyProperties(account, accountDto);
+                if (account.getAccount() != null) {
+                    org.enterprise.finance.dto.AccountDTO accDto = new org.enterprise.finance.dto.AccountDTO();
+                    BeanUtils.copyProperties(account.getAccount(), accDto);
+                    accountDto.setAccount(accDto);
+                }
                 return accountDto;
             }).collect(Collectors.toList()));
         }
@@ -62,9 +67,14 @@ public class StatementSetupService {
         StatementSetup entity = new StatementSetup();
         BeanUtils.copyProperties(dto, entity, "accounts");
         if (dto.getAccounts() != null) {
-            entity.setAccounts(dto.getAccounts().stream().map(accountDto -> {
+                        entity.setAccounts(dto.getAccounts().stream().map(accountDto -> {
                 org.enterprise.finance.entity.StatementSetupAccount account = new org.enterprise.finance.entity.StatementSetupAccount();
                 BeanUtils.copyProperties(accountDto, account);
+                if (accountDto.getAccount() != null && accountDto.getAccount().getId() != null) {
+                    org.enterprise.finance.entity.Account acc = new org.enterprise.finance.entity.Account();
+                    acc.setId(accountDto.getAccount().getId());
+                    account.setAccount(acc);
+                }
                 account.setStatementSetup(entity);
                 return account;
             }).collect(Collectors.toList()));

@@ -12,5 +12,7 @@ import org.enterprise.common.entity.AuditableEntity;
 public class Brand extends AuditableEntity {
 
     @Column(nullable = false)
+    private String code;
+
     private String name;
 }

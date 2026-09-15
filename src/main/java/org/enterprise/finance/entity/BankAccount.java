@@ -11,6 +11,8 @@ import org.enterprise.common.entity.AuditableEntity;
 @Setter
 public class BankAccount extends AuditableEntity {
 
+    private String accountName;
+
     private String bankName;
     
     private String branchName;

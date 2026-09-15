@@ -12,6 +12,8 @@ import org.enterprise.common.entity.AuditableEntity;
 public class Category extends AuditableEntity {
 
     @Column(nullable = false)
+    private String code;
+
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)

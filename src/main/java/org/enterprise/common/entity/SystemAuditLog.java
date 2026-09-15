@@ -28,10 +28,14 @@ public class SystemAuditLog {
     private String action; // INSERT, UPDATE, DELETE
 
     @JdbcTypeCode(SqlTypes.JSON)
+    
+    @org.hibernate.annotations.ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String oldState;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    
+    @org.hibernate.annotations.ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb")
     private String newState;
 

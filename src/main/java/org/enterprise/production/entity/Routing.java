@@ -14,6 +14,8 @@ import java.util.List;
 public class Routing extends AuditableEntity {
 
     @Column(nullable = false, unique = true)
+    private String code;
+
     private String name;
 
     private Boolean active = true;

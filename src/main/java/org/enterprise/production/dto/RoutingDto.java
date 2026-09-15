@@ -6,6 +6,8 @@ import java.util.List;
 @Data
 public class RoutingDto {
     private Long id;
+    private String code;
+
     private String name;
     private Boolean active;
     private List<RoutingOperationDto> operations;

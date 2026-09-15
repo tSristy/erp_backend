@@ -18,6 +18,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.core.annotation.Order;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.HashSet;
 
 @Slf4j
 @Component
+@Order(2)
 @Profile({"default", "dev", "local"})
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
@@ -49,10 +51,9 @@ public class DataSeeder implements CommandLineRunner {
     // =========================
     @Override
     @Transactional
-    public void run(String... args) {
-
-        Company company = seedCompany();
-        Company acme = seedAcmeCompany();
+        public void run(String... args) {
+        Company company = companyRepository.findByCode("C01").orElseThrow(() -> new RuntimeException("C01 missing, run MasterDataSeeder first"));
+        Company acme = companyRepository.findByCode("C02").orElseThrow(() -> new RuntimeException("C02 missing, run MasterDataSeeder first"));
 
         seedPermissions(); // GLOBAL
 
@@ -64,7 +65,7 @@ public class DataSeeder implements CommandLineRunner {
 
         seedAccountUsers(company);
 
-        seedAccounts(company);
+
 
         seedWorkflow(company);
         
@@ -74,88 +75,8 @@ public class DataSeeder implements CommandLineRunner {
         log.info("Data seeding completed successfully.");
     }
 
-    // =========================
-    // ACCOUNTS
-    // =========================
-    private void seedAccounts(Company company) {
-        // Accounts Receivable (Needs Business Partner)
-        if (accountRepository.findByCodeAndCompanyId("AR-001", company.getId()) == null) {
-            Account ar = new Account();
-            ar.setCode("AR-001");
-            ar.setName("Accounts Receivable");
-            ar.setAccountType(AccountType.ASSET);
-            ar.setCompanyId(company.getId());
-            ar.setBusinessPartnerRequired(true);
-            accountRepository.save(ar);
-        }
 
-        // Office Supplies Expense (Needs Cost Center and Project)
-        if (accountRepository.findByCodeAndCompanyId("EXP-001", company.getId()) == null) {
-            Account exp = new Account();
-            exp.setCode("EXP-001");
-            exp.setName("Office Supplies Expense");
-            exp.setAccountType(AccountType.EXPENSE);
-            exp.setCompanyId(company.getId());
-            exp.setCostCenterRequired(true);
-            exp.setProjectRequired(true);
-            accountRepository.save(exp);
-        }
-    }
-
-    // =========================
-    // COMPANY
-    // =========================
-    private Company seedCompany() {
-
-        return companyRepository.findByCode("DEFAULT")
-                .orElseGet(() -> {
-
-                    Company c = new Company();
-                    c.setCode("DEFAULT");
-                    c.setName("Default Company");
-                    c.setShortName("DEF");
-                    c.setEmail("info@default.com");
-                    c.setPhone("000000000");
-                    c.setMobile("000000000");
-                    c.setCountry("Bangladesh");
-                    c.setCity("Dhaka");
-                    c.setCurrencyCode("BDT");
-                    c.setTimezone("Asia/Dhaka");
-                    c.setLanguageCode("en");
-                    c.setActive(true);
-                    c.setStartDate(LocalDate.now());
-
-                    Company saved = companyRepository.save(c);
-
-                    log.info("Company created: {}", saved.getCode());
-
-                    return saved;
-                });
-    }
-
-    private Company seedAcmeCompany() {
-        return companyRepository.findByCode("ACME")
-                .orElseGet(() -> {
-                    Company c = new Company();
-                    c.setCode("ACME");
-                    c.setName("ACME Corp");
-                    c.setShortName("ACME");
-                    c.setEmail("info@acme.com");
-                    c.setPhone("111111111");
-                    c.setMobile("111111111");
-                    c.setCountry("USA");
-                    c.setCity("New York");
-                    c.setCurrencyCode("USD");
-                    c.setTimezone("America/New_York");
-                    c.setLanguageCode("en");
-                    c.setActive(true);
-                    c.setStartDate(LocalDate.now());
-                    Company saved = companyRepository.save(c);
-                    log.info("Company created: {}", saved.getCode());
-                    return saved;
-                });
-    }
-
+    
     // =========================
     // PERMISSIONS (GLOBAL)
     // =========================

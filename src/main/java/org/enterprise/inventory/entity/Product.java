@@ -31,6 +31,11 @@ public class Product extends AuditableEntity {
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "brand_id")
+    private Brand brand;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private UnitOfMeasure baseUom;
 
     private Boolean isBatchManaged = false;
@@ -221,5 +226,18 @@ public class Product extends AuditableEntity {
         } else {
             this.bundles.clear();
         }
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void prePersistProduct() {
+        if (prices != null) prices.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
+        if (suppliers != null) suppliers.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
+        if (taxes != null) taxes.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
+        if (images != null) images.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
+        if (attributes != null) attributes.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
+        if (variants != null) variants.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
+        if (uomConversions != null) uomConversions.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
+        if (bundles != null) bundles.forEach(item -> { if (item.getCompanyId() == null) item.setCompanyId(this.getCompanyId()); });
     }
 }

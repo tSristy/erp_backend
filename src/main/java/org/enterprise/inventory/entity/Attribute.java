@@ -12,5 +12,7 @@ import org.enterprise.common.entity.AuditableEntity;
 public class Attribute extends AuditableEntity {
 
     @Column(nullable = false)
+    private String code;
+
     private String name;
 }
