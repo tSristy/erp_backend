@@ -85,7 +85,12 @@ public class BusinessPartnerController {
             }
             existing.getCustomerDetail().setCreditLimit(bp.getCustomerDetail().getCreditLimit());
             existing.getCustomerDetail().setPaymentTermDays(bp.getCustomerDetail().getPaymentTermDays());
+                        existing.getCustomerDetail().setCreditLimit(bp.getCustomerDetail().getCreditLimit());
+            existing.getCustomerDetail().setPaymentTermDays(bp.getCustomerDetail().getPaymentTermDays());
             existing.getCustomerDetail().setAccountsReceivableAccount(bp.getCustomerDetail().getAccountsReceivableAccount());
+            existing.getCustomerDetail().setCustomerGroup(bp.getCustomerDetail().getCustomerGroup());
+            existing.getCustomerDetail().setPriceList(bp.getCustomerDetail().getPriceList());
+            if (bp.getCustomerDetail().getAllowPartialDelivery() != null) existing.getCustomerDetail().setAllowPartialDelivery(bp.getCustomerDetail().getAllowPartialDelivery());
         }
 
         if (bp.getVendorDetail() != null) {
@@ -94,7 +99,12 @@ public class BusinessPartnerController {
             }
             existing.getVendorDetail().setPaymentTermDays(bp.getVendorDetail().getPaymentTermDays());
             existing.getVendorDetail().setAccountsPayableAccount(bp.getVendorDetail().getAccountsPayableAccount());
+                        existing.getVendorDetail().setPaymentTermDays(bp.getVendorDetail().getPaymentTermDays());
+            existing.getVendorDetail().setAccountsPayableAccount(bp.getVendorDetail().getAccountsPayableAccount());
             existing.getVendorDetail().setGrnClearingAccount(bp.getVendorDetail().getGrnClearingAccount());
+            existing.getVendorDetail().setLeadTimeDays(bp.getVendorDetail().getLeadTimeDays());
+            existing.getVendorDetail().setSupplierType(bp.getVendorDetail().getSupplierType());
+            if (bp.getVendorDetail().getPreferredVendor() != null) existing.getVendorDetail().setPreferredVendor(bp.getVendorDetail().getPreferredVendor());
         }
 
         if (bp.getShareholderDetail() != null) {
