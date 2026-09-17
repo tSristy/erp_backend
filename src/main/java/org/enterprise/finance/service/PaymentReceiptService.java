@@ -155,8 +155,33 @@ public class PaymentReceiptService {
         journalEntryService.save(journal);
     }
 
+    
+    @Transactional
+    public PaymentReceipt updateReceipt(Long id, PaymentReceipt update) {
+        PaymentReceipt existing = getReceiptById(id);
+        if (existing.getStatus() != PaymentReceipt.PaymentStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT receipts can be updated");
+        }
+        existing.setReceiptDate(update.getReceiptDate());
+        existing.setCustomer(update.getCustomer());
+        existing.setBankAccount(update.getBankAccount());
+        existing.setTotalAmount(update.getTotalAmount());
+        existing.setPaymentMethod(update.getPaymentMethod());
+        existing.setReferenceNo(update.getReferenceNo());
+        
+        existing.getDetails().clear();
+        if (update.getDetails() != null) {
+            for (var detail : update.getDetails()) {
+                detail.setReceipt(existing);
+                existing.getDetails().add(detail);
+            }
+        }
+        return paymentReceiptRepository.save(existing);
+    }
+    
     @Transactional
     public void deleteReceipt(Long id) {
+
         PaymentReceipt receipt = getReceiptById(id);
         if (receipt.getStatus() == PaymentReceipt.PaymentStatus.POSTED) {
             throw new RuntimeException("Cannot delete a POSTED receipt. Cancel it instead.");

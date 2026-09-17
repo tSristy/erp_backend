@@ -35,7 +35,14 @@ public class PaymentReceiptController {
         return ResponseEntity.ok(paymentReceiptService.updateStatus(id, status));
     }
 
+    
+    @PutMapping("/{id}")
+    public ResponseEntity<PaymentReceipt> updateReceipt(@PathVariable Long id, @RequestBody PaymentReceipt receipt) {
+        return ResponseEntity.ok(paymentReceiptService.updateReceipt(id, receipt));
+    }
+
     @DeleteMapping("/{id}")
+
     public ResponseEntity<Void> deleteReceipt(@PathVariable Long id) {
         paymentReceiptService.deleteReceipt(id);
         return ResponseEntity.noContent().build();

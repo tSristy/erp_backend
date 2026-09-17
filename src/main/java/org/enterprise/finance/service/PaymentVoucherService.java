@@ -155,8 +155,33 @@ public class PaymentVoucherService {
         journalEntryService.save(journal);
     }
 
+    
+    @Transactional
+    public PaymentVoucher updateVoucher(Long id, PaymentVoucher update) {
+        PaymentVoucher existing = getVoucherById(id);
+        if (existing.getStatus() != PaymentVoucher.PaymentStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT vouchers can be updated");
+        }
+        existing.setVoucherDate(update.getVoucherDate());
+        existing.setVendor(update.getVendor());
+        existing.setBankAccount(update.getBankAccount());
+        existing.setTotalAmount(update.getTotalAmount());
+        existing.setPaymentMethod(update.getPaymentMethod());
+        existing.setReferenceNo(update.getReferenceNo());
+        
+        existing.getDetails().clear();
+        if (update.getDetails() != null) {
+            for (var detail : update.getDetails()) {
+                detail.setVoucher(existing);
+                existing.getDetails().add(detail);
+            }
+        }
+        return paymentVoucherRepository.save(existing);
+    }
+    
     @Transactional
     public void deleteVoucher(Long id) {
+
         PaymentVoucher voucher = getVoucherById(id);
         if (voucher.getStatus() == PaymentVoucher.PaymentStatus.POSTED) {
             throw new RuntimeException("Cannot delete a POSTED voucher. Cancel it instead.");

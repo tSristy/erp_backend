@@ -35,7 +35,14 @@ public class PaymentVoucherController {
         return ResponseEntity.ok(paymentVoucherService.updateStatus(id, status));
     }
 
+    
+    @PutMapping("/{id}")
+    public ResponseEntity<PaymentVoucher> updateVoucher(@PathVariable Long id, @RequestBody PaymentVoucher voucher) {
+        return ResponseEntity.ok(paymentVoucherService.updateVoucher(id, voucher));
+    }
+
     @DeleteMapping("/{id}")
+
     public ResponseEntity<Void> deleteVoucher(@PathVariable Long id) {
         paymentVoucherService.deleteVoucher(id);
         return ResponseEntity.noContent().build();
