@@ -154,4 +154,13 @@ public class PaymentReceiptService {
         journal.setLines(lines);
         journalEntryService.save(journal);
     }
+
+    @Transactional
+    public void deleteReceipt(Long id) {
+        PaymentReceipt receipt = getReceiptById(id);
+        if (receipt.getStatus() == PaymentReceipt.PaymentStatus.POSTED) {
+            throw new RuntimeException("Cannot delete a POSTED receipt. Cancel it instead.");
+        }
+        paymentReceiptRepository.delete(receipt);
+    }
 }

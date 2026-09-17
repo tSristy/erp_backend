@@ -154,4 +154,13 @@ public class PaymentVoucherService {
         journal.setLines(lines);
         journalEntryService.save(journal);
     }
+
+    @Transactional
+    public void deleteVoucher(Long id) {
+        PaymentVoucher voucher = getVoucherById(id);
+        if (voucher.getStatus() == PaymentVoucher.PaymentStatus.POSTED) {
+            throw new RuntimeException("Cannot delete a POSTED voucher. Cancel it instead.");
+        }
+        paymentVoucherRepository.delete(voucher);
+    }
 }

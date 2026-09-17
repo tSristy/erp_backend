@@ -34,4 +34,10 @@ public class PaymentVoucherController {
     public ResponseEntity<PaymentVoucher> updateStatus(@PathVariable Long id, @RequestParam PaymentVoucher.PaymentStatus status) {
         return ResponseEntity.ok(paymentVoucherService.updateStatus(id, status));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteVoucher(@PathVariable Long id) {
+        paymentVoucherService.deleteVoucher(id);
+        return ResponseEntity.noContent().build();
+    }
 }
