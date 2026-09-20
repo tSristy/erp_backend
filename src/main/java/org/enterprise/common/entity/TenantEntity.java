@@ -21,7 +21,7 @@ import org.hibernate.annotations.ParamDef;
 @Setter
 public abstract class TenantEntity extends BaseEntity {
 
-    @Column(name = "company_id", nullable = false)
+    @Column(name = "company_id", nullable = false, updatable = false)
     private Long companyId;
 
     @jakarta.persistence.PrePersist
