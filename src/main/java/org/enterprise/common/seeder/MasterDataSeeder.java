@@ -5,17 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.enterprise.workflow.repository.WorkflowStepRepository;
 import jakarta.transaction.Transactional;
 import org.enterprise.finance.repository.AccountRepository;
-import org.springframework.stereotype.Component;
-import java.util.ArrayList;
 import org.enterprise.security.entity.*;
 import org.enterprise.security.repository.*;
 import org.enterprise.workflow.entity.WorkflowDefinition;
 import org.enterprise.workflow.entity.WorkflowStep;
-import org.springframework.context.annotation.Profile;
 import org.enterprise.finance.enums.AccountType;
 import java.util.HashSet;
 import org.enterprise.workflow.repository.WorkflowDefinitionRepository;
-import org.enterprise.organization.repository.CompanyRepository;
 import java.util.Set;
 import org.enterprise.finance.entity.Account;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -322,6 +318,10 @@ public class MasterDataSeeder implements CommandLineRunner {
         createPermission("USER_READ", "User Read");
         createPermission("USER_WRITE", "User Write");
         createPermission("MENU_READ", "Menu Read");
+        
+        createPermission("REPORT_ENGINE_VIEW", "Report Engine View");
+        createPermission("REPORT_ENGINE_READ", "Report Engine Read");
+        createPermission("REPORT_ENGINE_WRITE", "Report Engine Write");
     }
 
     private Permission createPermission(String code, String name) {
@@ -373,7 +373,10 @@ public class MasterDataSeeder implements CommandLineRunner {
                 "USER_READ",
                 "USER_WRITE",
                 "ROLE_READ",
-                "ROLE_WRITE"
+                "ROLE_WRITE",
+                "REPORT_ENGINE_VIEW",
+                "REPORT_ENGINE_READ",
+                "REPORT_ENGINE_WRITE"
         );
 
         Set<RolePermission> existingLinks = role.getRolePermissions();
@@ -664,6 +667,7 @@ public class MasterDataSeeder implements CommandLineRunner {
         var settings = createModule("SETTINGS", "Settings", "Application configuration and preferences.", "settings", "Settings", 5, cid);
         createMenu(settings, "Dashboard", "settings", "Settings", 1, cid);
         createMenu(settings, "Statement Setup", "settings/statementsetup", "FileText", 2, cid);
+        createMenu(settings, "Report Master", "settings/report-master", "Database", 3, cid);
 
         var salesCrm = createModule("SALES_CRM", "Sales CRM", "Customer relationship management for sales.", "sales-crm", "Target", 6, cid);
         createMenu(salesCrm, "Dashboard", "sales-crm", "Target", 1, cid);
@@ -748,6 +752,9 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(organizations, "Branches", "organizations/branches", "GitBranch", 3, cid);
         createMenu(organizations, "Locations", "organizations/location", "Map", 4, cid);
         createMenu(organizations, "Warehouse", "organizations/warehouse", "Box", 5, cid);
+        createMenu(organizations, "Zones", "organizations/zone", "Map", 6, cid);
+        createMenu(organizations, "Areas", "organizations/area", "MapPin", 7, cid);
+        createMenu(organizations, "Territories", "organizations/territory", "Navigation", 8, cid);
 
         log.info("Modules and menus seeded successfully.");
     }

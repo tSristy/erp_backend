@@ -23,7 +23,7 @@ public class BankAccount extends AuditableEntity {
     
     private String currencyCode;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
 

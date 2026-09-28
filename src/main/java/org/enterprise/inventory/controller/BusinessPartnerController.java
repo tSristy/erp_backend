@@ -90,6 +90,7 @@ public class BusinessPartnerController {
             existing.getCustomerDetail().setAccountsReceivableAccount(bp.getCustomerDetail().getAccountsReceivableAccount());
             existing.getCustomerDetail().setCustomerGroup(bp.getCustomerDetail().getCustomerGroup());
             existing.getCustomerDetail().setPriceList(bp.getCustomerDetail().getPriceList());
+            existing.getCustomerDetail().setTerritory(bp.getCustomerDetail().getTerritory());
             if (bp.getCustomerDetail().getAllowPartialDelivery() != null) existing.getCustomerDetail().setAllowPartialDelivery(bp.getCustomerDetail().getAllowPartialDelivery());
         }
 
