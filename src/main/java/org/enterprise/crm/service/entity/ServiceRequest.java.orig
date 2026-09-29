@@ -38,21 +38,11 @@ public class ServiceRequest extends AuditableEntity {
     @Column(name = "assigned_technician_id")
     private Long assignedTechnicianId;
 
-    @Enumerated(EnumType.STRING)
-    private ServiceLocationType serviceLocationType = ServiceLocationType.IN_SHOP;
-
-    @Column(columnDefinition = "TEXT")
-    private String serviceAddress;
-
     public enum ServiceRequestPriority {
         LOW, MEDIUM, HIGH, CRITICAL
     }
 
     public enum ServiceRequestStatus {
         OPEN, DIAGNOSIS, PENDING_ESTIMATE, WAITING_APPROVAL, APPROVED, IN_PROGRESS, WAITING_PARTS, RESOLVED, CLOSED
-    }
-
-    public enum ServiceLocationType {
-        IN_SHOP, ON_SITE, REMOTE
     }
 }
