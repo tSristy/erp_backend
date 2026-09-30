@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 public class ServicePartsRequisitionDto {
     private Long id;
-    private Long serviceRequestId;
+    private Long serviceOrderId;
     private Long requestedById;
     private Long warehouseId;
     private ServicePartsRequisition.RequisitionStatus status;

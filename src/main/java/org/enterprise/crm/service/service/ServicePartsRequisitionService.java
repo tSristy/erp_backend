@@ -36,8 +36,8 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
         this.journalEntryService = journalEntryService;
     }
 
-    public List<ServicePartsRequisition> findByServiceRequestId(Long serviceRequestId) {
-        return repository.findByServiceRequestId(serviceRequestId);
+    public List<ServicePartsRequisition> findByServiceOrderId(Long serviceOrderId) {
+        return repository.findByServiceOrderId(serviceOrderId);
     }
 
     @Override

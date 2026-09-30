@@ -1,0 +1,18 @@
+--- src/main/java/org/enterprise/crm/service/service/RegisteredProductService.java
++++ src/main/java/org/enterprise/crm/service/service/RegisteredProductService.java
+@@ -6,6 +6,7 @@
+ import org.enterprise.inventory.entity.Product;
+ import org.enterprise.inventory.repository.ProductRepository;
+ import org.springframework.stereotype.Service;
++import org.springframework.transaction.annotation.Transactional;
+ 
+ import java.util.List;
+ 
+@@ -23,6 +24,7 @@
+         return repository.findByCustomerId(customerId);
+     }
+ 
++    @Transactional
+     @Override
+     public RegisteredProduct save(RegisteredProduct entity) {
+         if (entity.getProduct() != null && entity.getProduct().getId() != null) {

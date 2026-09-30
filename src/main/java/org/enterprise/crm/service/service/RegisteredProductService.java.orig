@@ -6,7 +6,6 @@ import org.enterprise.inventory.service.BaseService;
 import org.enterprise.inventory.entity.Product;
 import org.enterprise.inventory.repository.ProductRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -26,7 +25,6 @@ public class RegisteredProductService extends BaseService<RegisteredProduct, Lon
         return repository.findByCustomerId(customerId);
     }
 
-    @Transactional
     @Override
     public RegisteredProduct save(RegisteredProduct entity) {
         if (entity.getProduct() != null && entity.getProduct().getId() != null) {

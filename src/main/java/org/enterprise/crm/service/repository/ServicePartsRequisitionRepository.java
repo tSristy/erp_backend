@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ServicePartsRequisitionRepository extends JpaRepository<ServicePartsRequisition, Long> {
-    List<ServicePartsRequisition> findByServiceRequestId(Long serviceRequestId);
+    List<ServicePartsRequisition> findByServiceOrderId(Long serviceOrderId);
 }

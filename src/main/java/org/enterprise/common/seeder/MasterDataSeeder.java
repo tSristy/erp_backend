@@ -679,6 +679,7 @@ public class MasterDataSeeder implements CommandLineRunner {
         var serviceCrm = createModule("SERVICE_CRM", "Service CRM", "Customer support and service.", "service-crm", "Headset", 7, cid);
         createMenu(serviceCrm, "Dashboard", "service-crm", "Headset", 1, cid);
         createMenu(serviceCrm, "Service Requests", "service-crm/servicerequests", "Wrench", 2, cid);
+        createMenu(serviceCrm, "Service Orders", "service-crm/serviceorders", "ClipboardList", 3, cid);
         createMenu(serviceCrm, "Service Estimates", "service-crm/serviceestimates", "FileText", 3, cid);
         createMenu(serviceCrm, "Parts Requisitions", "service-crm/servicepartsrequisitions", "Tool", 4, cid);
         createMenu(serviceCrm, "Maintenance Schedules", "service-crm/maintenanceschedules", "Calendar", 5, cid);
