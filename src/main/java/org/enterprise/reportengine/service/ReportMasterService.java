@@ -38,4 +38,9 @@ public class ReportMasterService {
         }
         reportMasterRepository.deleteById(id);
     }
+
+    public org.springframework.data.domain.Page<ReportMaster> searchReportMasters(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return reportMasterRepository.findAll(pageable);
+    }
+
 }

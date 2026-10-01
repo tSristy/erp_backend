@@ -49,4 +49,9 @@ public class KitchenOrderTicketService {
 
         return kotRepository.save(kot);
     }
+
+    public org.springframework.data.domain.Page<KitchenOrderTicket> searchKitchenOrderTicketDtos(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return kotRepository.findAll(pageable);
+    }
+
 }

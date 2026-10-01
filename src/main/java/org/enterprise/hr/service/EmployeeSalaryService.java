@@ -61,4 +61,9 @@ public class EmployeeSalaryService {
         dto.setGrossSalary(entity.getGrossSalary());
         return dto;
     }
+
+    public org.springframework.data.domain.Page<org.enterprise.hr.dto.EmployeeSalaryDto> searchEmployeeSalarys(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::mapEntityToDto);
+    }
+
 }

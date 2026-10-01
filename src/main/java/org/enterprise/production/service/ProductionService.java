@@ -220,4 +220,9 @@ public class ProductionService {
         journal.setLines(lines);
         journalEntryService.save(journal);
     }
+
+    public org.springframework.data.domain.Page<ManufacturingOrder> searchProductions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return orderRepository.findAll(pageable);
+    }
+
 }

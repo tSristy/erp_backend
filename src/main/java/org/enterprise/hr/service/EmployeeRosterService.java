@@ -69,4 +69,9 @@ public class EmployeeRosterService {
         dto.setWeeklyOff(entity.getWeeklyOff());
         return dto;
     }
+
+    public org.springframework.data.domain.Page<org.enterprise.hr.dto.EmployeeRosterDto> searchEmployeeRosters(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::mapEntityToDto);
+    }
+
 }

@@ -194,4 +194,9 @@ public class RestaurantOrderService {
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         order.setTotalAmount(total);
     }
+
+    public org.springframework.data.domain.Page<RestaurantOrder> searchRestaurantOrderDtos(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return orderRepository.findAll(pageable);
+    }
+
 }

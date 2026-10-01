@@ -20,4 +20,9 @@ public class OpportunityService extends BaseService<Opportunity, Long> {
     public List<Opportunity> findByLeadId(Long leadId) {
         return repository.findByLeadId(leadId);
     }
+
+    public org.springframework.data.domain.Page<Opportunity> searchOpportunitys(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

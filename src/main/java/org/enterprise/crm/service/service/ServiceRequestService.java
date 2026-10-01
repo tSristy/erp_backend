@@ -29,4 +29,9 @@ public class ServiceRequestService extends BaseService<ServiceRequest, Long> {
         }
         return super.save(entity);
     }
+
+    public org.springframework.data.domain.Page<ServiceRequest> searchServiceRequests(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

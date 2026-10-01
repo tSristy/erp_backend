@@ -20,4 +20,9 @@ public class ServiceOrderService extends BaseService<ServiceOrder, Long> {
     public List<ServiceOrder> findByServiceRequestId(Long serviceRequestId) {
         return repository.findByServiceRequestId(serviceRequestId);
     }
+
+    public org.springframework.data.domain.Page<ServiceOrder> searchServiceOrders(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

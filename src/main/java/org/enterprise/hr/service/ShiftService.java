@@ -65,4 +65,9 @@ public class ShiftService {
         dto.setGraceMinutes(entity.getGraceMinutes());
         return dto;
     }
+
+    public org.springframework.data.domain.Page<org.enterprise.hr.dto.ShiftDto> searchShifts(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::mapEntityToDto);
+    }
+
 }

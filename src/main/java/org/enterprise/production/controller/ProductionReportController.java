@@ -54,4 +54,5 @@ public class ProductionReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(reportService.getBomUsageReport(startDate, endDate));
     }
+
 }

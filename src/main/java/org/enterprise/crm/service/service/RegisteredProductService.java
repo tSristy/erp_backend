@@ -42,4 +42,9 @@ public class RegisteredProductService extends BaseService<RegisteredProduct, Lon
         }
         return super.save(entity);
     }
+
+    public org.springframework.data.domain.Page<RegisteredProduct> searchRegisteredProducts(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

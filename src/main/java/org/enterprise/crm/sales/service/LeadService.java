@@ -14,4 +14,9 @@ public class LeadService extends BaseService<Lead, Long> {
         super(repository);
         this.repository = repository;
     }
+
+    public org.springframework.data.domain.Page<Lead> searchLeads(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

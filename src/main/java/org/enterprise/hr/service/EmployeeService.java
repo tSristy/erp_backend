@@ -265,4 +265,9 @@ public class EmployeeService {
 
         return dto;
     }
+
+    public org.springframework.data.domain.Page<org.enterprise.hr.dto.EmployeeDto> searchEmployees(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return employeeRepository.findAll(pageable).map(this::mapEntityToDto);
+    }
+
 }

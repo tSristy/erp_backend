@@ -63,4 +63,9 @@ public class WeekendService {
         dto.setWeekend2(entity.getWeekend2());
         return dto;
     }
+
+    public org.springframework.data.domain.Page<org.enterprise.hr.dto.WeekendDto> searchWeekends(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::mapEntityToDto);
+    }
+
 }

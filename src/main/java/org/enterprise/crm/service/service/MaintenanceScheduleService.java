@@ -20,4 +20,9 @@ public class MaintenanceScheduleService extends BaseService<MaintenanceSchedule,
     public List<MaintenanceSchedule> findByRegisteredProductId(Long registeredProductId) {
         return repository.findByRegisteredProductId(registeredProductId);
     }
+
+    public org.springframework.data.domain.Page<MaintenanceSchedule> searchMaintenanceSchedules(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

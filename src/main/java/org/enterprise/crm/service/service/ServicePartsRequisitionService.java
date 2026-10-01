@@ -136,4 +136,9 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
 
         return saved;
     }
+
+    public org.springframework.data.domain.Page<ServicePartsRequisition> searchServicePartsRequisitions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

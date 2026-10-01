@@ -20,4 +20,9 @@ public class ServiceEstimateService extends BaseService<ServiceEstimate, Long> {
     public List<ServiceEstimate> findByServiceRequestId(Long serviceRequestId) {
         return repository.findByServiceRequestId(serviceRequestId);
     }
+
+    public org.springframework.data.domain.Page<ServiceEstimate> searchServiceEstimates(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

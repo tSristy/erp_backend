@@ -65,4 +65,9 @@ public class LeaveApplicationService {
         dto.setStatus(entity.getStatus());
         return dto;
     }
+
+    public org.springframework.data.domain.Page<org.enterprise.hr.dto.LeaveApplicationDto> searchLeaveApplications(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::mapEntityToDto);
+    }
+
 }

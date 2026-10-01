@@ -106,4 +106,9 @@ public class BillOfMaterialService {
         }
         return entity;
     }
+
+    public org.springframework.data.domain.Page<BillOfMaterialDTO> searchBillOfMaterialDTOs(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::convertToDTO);
+    }
+
 }

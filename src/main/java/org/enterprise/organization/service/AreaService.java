@@ -85,4 +85,9 @@ public class AreaService {
         }
         return dto;
     }
+
+    public org.springframework.data.domain.Page<Area> searchAreas(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

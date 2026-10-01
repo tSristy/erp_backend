@@ -63,4 +63,9 @@ public class WorkCenterService {
         BeanUtils.copyProperties(dto, entity);
         return entity;
     }
+
+    public org.springframework.data.domain.Page<WorkCenterDto> searchWorkCenterDtos(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::convertToDTO);
+    }
+
 }

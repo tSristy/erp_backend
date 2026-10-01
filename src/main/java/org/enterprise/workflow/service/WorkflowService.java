@@ -14,6 +14,11 @@ import org.enterprise.workflow.event.WorkflowStatusEvent;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.enterprise.workflow.dto.WorkflowDefinitionDto;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 @Service
 @RequiredArgsConstructor
@@ -281,4 +286,13 @@ public class WorkflowService {
                     return dto;
                 }).toList();
         }
+
+    public Page<WorkflowDefinitionDto> searchWorkflows(Long companyId, String searchTerm, Pageable pageable) {
+        return definitionRepository.findAll(pageable).map(entity -> {
+            WorkflowDefinitionDto dto = new WorkflowDefinitionDto();
+            BeanUtils.copyProperties(entity, dto);
+            return dto;
+        });
+    }
+
 }

@@ -87,4 +87,9 @@ public class TerritoryService {
         }
         return dto;
     }
+
+    public org.springframework.data.domain.Page<Territory> searchTerritorys(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

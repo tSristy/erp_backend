@@ -63,4 +63,9 @@ public class BiometricDeviceService {
         dto.setPort(entity.getPort());
         return dto;
     }
+
+    public org.springframework.data.domain.Page<org.enterprise.hr.dto.BiometricDeviceDto> searchBiometricDevices(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::mapEntityToDto);
+    }
+
 }

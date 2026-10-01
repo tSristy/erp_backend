@@ -127,4 +127,9 @@ public class WorkflowDefinitionService {
     public void delete(Long id) {
         repository.deleteById(id);
     }
+
+    public org.springframework.data.domain.Page<WorkflowDefinitionDto> searchWorkflowDefinitionDtos(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::mapToDto);
+    }
+
 }

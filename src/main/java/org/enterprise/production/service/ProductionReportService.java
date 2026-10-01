@@ -45,4 +45,5 @@ public class ProductionReportService {
         Long companyId = TenantContext.get().getCompanyId();
         return orderRepository.getBomUsageReport(companyId, getValidStatuses(), startDate, endDate);
     }
+
 }

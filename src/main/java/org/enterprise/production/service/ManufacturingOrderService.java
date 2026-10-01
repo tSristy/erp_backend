@@ -122,4 +122,9 @@ public class ManufacturingOrderService {
         }
         return entity;
     }
+
+    public org.springframework.data.domain.Page<ManufacturingOrderDTO> searchManufacturingOrderDTOs(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable).map(this::convertToDTO);
+    }
+
 }

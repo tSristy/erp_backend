@@ -73,4 +73,9 @@ public class ZoneService {
         }
         return dto;
     }
+
+    public org.springframework.data.domain.Page<Zone> searchZones(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }

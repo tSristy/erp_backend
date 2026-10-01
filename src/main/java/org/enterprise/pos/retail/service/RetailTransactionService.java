@@ -108,4 +108,9 @@ public class RetailTransactionService {
     public void delete(Long id) {
         retailTransactionRepository.deleteById(id);
     }
+
+    public org.springframework.data.domain.Page<RetailTransaction> searchRetailTransactions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return retailTransactionRepository.findAll(pageable);
+    }
+
 }

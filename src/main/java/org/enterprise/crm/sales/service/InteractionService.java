@@ -20,4 +20,9 @@ public class InteractionService extends BaseService<Interaction, Long> {
     public List<Interaction> findByOpportunityId(Long opportunityId) {
         return repository.findByOpportunityId(opportunityId);
     }
+
+    public org.springframework.data.domain.Page<Interaction> searchInteractions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
 }
