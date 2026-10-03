@@ -28,7 +28,7 @@ public class ZoneController {
         return ResponseEntity.ok(mapper.toDtoListZone(service.findAll()));
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public ResponseEntity<Page<ZoneDto>> search(
             @RequestParam(required = false) String query,
             Pageable pageable) {

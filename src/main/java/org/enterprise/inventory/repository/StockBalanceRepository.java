@@ -2,11 +2,12 @@ package org.enterprise.inventory.repository;
 
 import org.enterprise.inventory.entity.StockBalance;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 
 public interface StockBalanceRepository
-        extends JpaRepository<StockBalance, Long> {
+        extends JpaRepository<StockBalance, Long>, JpaSpecificationExecutor<StockBalance> {
 
     Optional<StockBalance> findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
             Long itemId,

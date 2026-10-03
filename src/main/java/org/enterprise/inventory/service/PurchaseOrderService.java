@@ -269,4 +269,40 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
             });
         }
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.PurchaseOrder> searchPurchaseOrders(String query, org.springframework.data.domain.Pageable pageable) {
+        return purchaseOrderRepository.findAll(org.enterprise.inventory.specification.PurchaseOrderSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.BusinessPartner> searchBusinessPartners(String query, org.springframework.data.domain.Pageable pageable) {
+        return businessPartnerRepository.findAll(org.enterprise.inventory.specification.BusinessPartnerSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Warehouse> searchWarehouses(String query, org.springframework.data.domain.Pageable pageable) {
+        return warehouseRepository.findAll(org.enterprise.inventory.specification.WarehouseSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Product> searchProducts(String query, org.springframework.data.domain.Pageable pageable) {
+        return productRepository.findAll(org.enterprise.inventory.specification.ProductSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.CostHead> searchCostHeads(String query, org.springframework.data.domain.Pageable pageable) {
+        return costHeadRepository.findAll(org.enterprise.inventory.specification.CostHeadSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.LetterOfCredit> searchLetterOfCredits(String query, org.springframework.data.domain.Pageable pageable) {
+        return letterOfCreditRepository.findAll(org.enterprise.inventory.specification.LetterOfCreditSpecification.searchByQuery(query), pageable);
+    }
 }

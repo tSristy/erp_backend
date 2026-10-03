@@ -86,4 +86,10 @@ public class ProjectService {
         Project project = getProjectById(id);
         projectRepository.delete(project);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.Project> searchProjectRecords(String query, org.springframework.data.domain.Pageable pageable) {
+        return projectRepository.findAll(org.enterprise.finance.specification.ProjectSpecification.searchByQuery(query), pageable);
+    }
 }

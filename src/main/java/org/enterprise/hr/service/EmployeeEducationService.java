@@ -65,4 +65,10 @@ public class EmployeeEducationService {
         dto.setPassingYear(entity.getPassingYear());
         return dto;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.EmployeeEducation> searchEmployeeEducations(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.hr.specification.EmployeeEducationSpecification.searchByQuery(query), pageable);
+    }
 }

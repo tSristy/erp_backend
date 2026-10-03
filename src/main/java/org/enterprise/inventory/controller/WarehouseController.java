@@ -26,7 +26,7 @@ public class WarehouseController {
         return ResponseEntity.ok(mapper.toDtoListWarehouse(warehouseService.findAll()));
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public ResponseEntity<Page<org.enterprise.inventory.dto.WarehouseDto>> search(
             @RequestParam(required = false) String query,
             Pageable pageable) {
@@ -67,4 +67,6 @@ public class WarehouseController {
         warehouseService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+
 }

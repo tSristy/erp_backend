@@ -191,4 +191,16 @@ public class FinancialStatementService {
             return BigDecimal.ZERO;
         }
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.StatementSetup> searchStatementSetups(String query, org.springframework.data.domain.Pageable pageable) {
+        return setupRepository.findAll(org.enterprise.finance.specification.StatementSetupSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.AccountBalance> searchAccountBalances(String query, org.springframework.data.domain.Pageable pageable) {
+        return balanceRepository.findAll(org.enterprise.finance.specification.AccountBalanceSpecification.searchByQuery(query), pageable);
+    }
 }

@@ -11,6 +11,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayInputStream;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/reports")
+@RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
 public class ReportController {
 
@@ -56,7 +57,7 @@ public class ReportController {
 
     @PostMapping("/dropdown-data")
     public ResponseEntity<?> getDropdownData(
-            @RequestBody DropdownRequestDto request
+            @Valid @RequestBody DropdownRequestDto request
     ) {
 
         return ResponseEntity.ok(
@@ -72,7 +73,7 @@ public class ReportController {
     public ResponseEntity<?> generateReport(
             @PathVariable String reportCode,
             @RequestParam ReportOutputFormat format,
-            @RequestBody GenerateReportRequestDto request
+            @Valid @RequestBody GenerateReportRequestDto request
     ) throws Exception {
 
         List<Map<String, Object>> data =

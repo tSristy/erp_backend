@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/financial-statements")
+@RequestMapping("/api/v1/financial-statements")
 @RequiredArgsConstructor
 public class FinancialStatementController {
 
@@ -29,18 +29,6 @@ public class FinancialStatementController {
                 periodId
         );
     }
+
+
 }
-/*
-GET /api/financial-statements?
-reportType=INCOME_STATEMENT&
-periodId=5
-
-GET /api/financial-statements?
-reportType=BALANCE_SHEET&
-periodId=5
-
-GET /api/financial-statements?
-reportType=CASH_FLOW&
-periodId=5
-
- */

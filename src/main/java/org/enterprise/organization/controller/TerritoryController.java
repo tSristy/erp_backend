@@ -28,7 +28,7 @@ public class TerritoryController {
         return ResponseEntity.ok(mapper.toDtoListTerritory(service.findAll()));
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public ResponseEntity<Page<TerritoryDto>> search(
             @RequestParam(required = false) String query,
             Pageable pageable) {

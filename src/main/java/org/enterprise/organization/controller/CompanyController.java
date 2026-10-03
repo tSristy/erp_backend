@@ -28,7 +28,7 @@ public class CompanyController {
         return ResponseEntity.ok(mapper.toDtoListCompany(service.findAll()));
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public ResponseEntity<Page<CompanyDto>> search(
             @RequestParam(required = false) String query,
             Pageable pageable) {

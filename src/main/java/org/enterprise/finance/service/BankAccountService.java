@@ -55,4 +55,10 @@ public class BankAccountService {
         BankAccount bankAccount = getBankAccountById(id);
         bankAccountRepository.delete(bankAccount);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.BankAccount> searchBankAccounts(String query, org.springframework.data.domain.Pageable pageable) {
+        return bankAccountRepository.findAll(org.enterprise.finance.specification.BankAccountSpecification.searchByQuery(query), pageable);
+    }
 }

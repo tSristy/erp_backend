@@ -18,4 +18,10 @@ public class CostHeadService extends BaseService<CostHead, Long> {
     public List<CostHead> findByCompanyId(Long companyId) {
         return repository.findByCompanyId(companyId);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.CostHead> searchCostHeads(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.inventory.specification.CostHeadSpecification.searchByQuery(query), pageable);
+    }
 }

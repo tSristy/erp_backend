@@ -18,4 +18,10 @@ public class TaxService extends BaseService<Tax, Long> {
     public List<Tax> findByCompanyId(Long companyId) {
         return repository.findByCompanyId(companyId);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Tax> searchTaxs(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.inventory.specification.TaxSpecification.searchByQuery(query), pageable);
+    }
 }

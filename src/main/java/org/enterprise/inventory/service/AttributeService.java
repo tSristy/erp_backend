@@ -18,4 +18,10 @@ public class AttributeService extends BaseService<Attribute, Long> {
     public List<Attribute> findByCompanyId(Long companyId) {
         return repository.findByCompanyId(companyId);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Attribute> searchAttributes(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.inventory.specification.AttributeSpecification.searchByQuery(query), pageable);
+    }
 }

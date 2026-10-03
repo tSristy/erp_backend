@@ -28,7 +28,7 @@ public class BranchController {
         return ResponseEntity.ok(mapper.toDtoListBranch(service.findAll()));
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public ResponseEntity<Page<BranchDto>> search(
             @RequestParam(required = false) String query,
             Pageable pageable) {

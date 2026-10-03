@@ -85,4 +85,10 @@ public class FiscalYearService {
         }
         return entity;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.FiscalYear> searchFiscalYears(String query, org.springframework.data.domain.Pageable pageable) {
+        return fiscalYearRepository.findAll(org.enterprise.finance.specification.FiscalYearSpecification.searchByQuery(query), pageable);
+    }
 }

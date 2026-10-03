@@ -133,4 +133,22 @@ public class BatchSerialTrackingService {
         tx.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
         serialNumberTransactionRepository.save(tx);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Batch> searchBatchs(String query, org.springframework.data.domain.Pageable pageable) {
+        return batchRepository.findAll(org.enterprise.inventory.specification.BatchSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.SerialNumber> searchSerialNumbers(String query, org.springframework.data.domain.Pageable pageable) {
+        return serialNumberRepository.findAll(org.enterprise.inventory.specification.SerialNumberSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.SerialNumberTransaction> searchSerialNumberTransactions(String query, org.springframework.data.domain.Pageable pageable) {
+        return serialNumberTransactionRepository.findAll(org.enterprise.inventory.specification.SerialNumberTransactionSpecification.searchByQuery(query), pageable);
+    }
 }

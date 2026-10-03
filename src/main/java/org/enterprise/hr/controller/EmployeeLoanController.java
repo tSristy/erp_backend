@@ -5,24 +5,27 @@ import org.enterprise.hr.service.EmployeeLoanService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/hr/employee-loans")
+@RequestMapping("/api/v1/hr/employee-loans")
 @RequiredArgsConstructor
 public class EmployeeLoanController {
 
     private final EmployeeLoanService service;
 
     @PostMapping
-    public ResponseEntity<EmployeeLoanDto> create(@RequestBody EmployeeLoanDto dto) {
+    public ResponseEntity<EmployeeLoanDto> create(@Valid @RequestBody EmployeeLoanDto dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EmployeeLoanDto> update(@PathVariable Long id, @RequestBody EmployeeLoanDto dto) {
+    public ResponseEntity<EmployeeLoanDto> update(@PathVariable Long id, @Valid @RequestBody EmployeeLoanDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
@@ -45,7 +48,6 @@ public class EmployeeLoanController {
 
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<org.enterprise.hr.dto.EmployeeLoanDto> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
@@ -53,7 +55,7 @@ public class EmployeeLoanController {
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchEmployeeLoans(companyId, q, pageable);
+        return service.searchEmployeeLoans(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
     }
 
 }

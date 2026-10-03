@@ -233,4 +233,28 @@ public class JournalEntryService {
         }
         return entity;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.JournalEntry> searchJournalEntrys(String query, org.springframework.data.domain.Pageable pageable) {
+        return journalEntryRepository.findAll(org.enterprise.finance.specification.JournalEntrySpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.AccountBalance> searchAccountBalances(String query, org.springframework.data.domain.Pageable pageable) {
+        return accountBalanceRepository.findAll(org.enterprise.finance.specification.AccountBalanceSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.DimensionBalance> searchDimensionBalances(String query, org.springframework.data.domain.Pageable pageable) {
+        return dimensionBalanceRepository.findAll(org.enterprise.finance.specification.DimensionBalanceSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.FiscalPeriod> searchFiscalPeriods(String query, org.springframework.data.domain.Pageable pageable) {
+        return fiscalPeriodRepository.findAll(org.enterprise.finance.specification.FiscalPeriodSpecification.searchByQuery(query), pageable);
+    }
 }

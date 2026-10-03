@@ -202,4 +202,40 @@ public class InventoryService {
                 balance.getTotalValue()
         );
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.InventoryLedger> searchInventoryLedgers(String query, org.springframework.data.domain.Pageable pageable) {
+        return inventoryLedgerRepository.findAll(org.enterprise.inventory.specification.InventoryLedgerSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.StockBalance> searchStockBalances(String query, org.springframework.data.domain.Pageable pageable) {
+        return stockBalanceRepository.findAll(org.enterprise.inventory.specification.StockBalanceSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Product> searchProducts(String query, org.springframework.data.domain.Pageable pageable) {
+        return productRepository.findAll(org.enterprise.inventory.specification.ProductSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Inventory> searchInventorys(String query, org.springframework.data.domain.Pageable pageable) {
+        return inventoryRepository.findAll(org.enterprise.inventory.specification.InventorySpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Warehouse> searchWarehouses(String query, org.springframework.data.domain.Pageable pageable) {
+        return warehouseRepository.findAll(org.enterprise.inventory.specification.WarehouseSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Location> searchLocations(String query, org.springframework.data.domain.Pageable pageable) {
+        return locationRepository.findAll(org.enterprise.inventory.specification.LocationSpecification.searchByQuery(query), pageable);
+    }
 }

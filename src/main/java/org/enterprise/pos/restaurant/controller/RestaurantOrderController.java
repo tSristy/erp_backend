@@ -11,13 +11,16 @@ import org.enterprise.pos.restaurant.entity.RestaurantOrderDetail;
 import org.enterprise.pos.restaurant.entity.RestaurantPayment;
 import org.enterprise.pos.restaurant.service.RestaurantOrderService;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/pos/restaurant/orders")
+@RequestMapping("/api/v1/pos/restaurant/orders")
 @RequiredArgsConstructor
 public class RestaurantOrderController {
 
@@ -46,8 +49,10 @@ public class RestaurantOrderController {
     }
 
     @PostMapping
-    public ResponseEntity<RestaurantOrderDto> createOrder(@RequestBody RestaurantOrder order) {
-        return ResponseEntity.ok(mapToDto(orderService.createOrder(order)));
+    public ResponseEntity<RestaurantOrderDto> createOrder(@Valid @RequestBody RestaurantOrder order) {
+        RestaurantOrderDto created = mapToDto(orderService.createOrder(order));
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(created.getId()).toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PostMapping("/{orderId}/kot")
@@ -130,7 +135,6 @@ public class RestaurantOrderController {
 
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<org.enterprise.pos.restaurant.entity.RestaurantOrder> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
@@ -138,7 +142,7 @@ public class RestaurantOrderController {
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return orderService.searchRestaurantOrderDtos(companyId, q, pageable);
+        return orderService.searchRestaurantOrderDtos(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
     }
 
 }

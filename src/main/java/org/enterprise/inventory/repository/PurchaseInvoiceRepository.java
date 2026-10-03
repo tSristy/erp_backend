@@ -2,12 +2,13 @@ package org.enterprise.inventory.repository;
 
 import org.enterprise.inventory.entity.PurchaseInvoice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice, Long> {
+public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice, Long>, JpaSpecificationExecutor<PurchaseInvoice> {
     List<PurchaseInvoice> findByCompanyId(Long companyId);
     PurchaseInvoice findByInvoiceNoAndCompanyId(String invoiceNo, Long companyId);
 

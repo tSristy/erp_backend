@@ -86,4 +86,16 @@ public class CostingService {
 
         return totalCogs;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.InventoryCostLayer> searchInventoryCostLayers(String query, org.springframework.data.domain.Pageable pageable) {
+        return costLayerRepository.findAll(org.enterprise.inventory.specification.InventoryCostLayerSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.StockBalance> searchStockBalances(String query, org.springframework.data.domain.Pageable pageable) {
+        return stockBalanceRepository.findAll(org.enterprise.inventory.specification.StockBalanceSpecification.searchByQuery(query), pageable);
+    }
 }

@@ -120,4 +120,10 @@ public class PurchaseInvoiceService {
         journal.setLines(lines);
         journalEntryService.save(journal);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.PurchaseInvoice> searchPurchaseInvoices(String query, org.springframework.data.domain.Pageable pageable) {
+        return purchaseInvoiceRepository.findAll(org.enterprise.inventory.specification.PurchaseInvoiceSpecification.searchByQuery(query), pageable);
+    }
 }

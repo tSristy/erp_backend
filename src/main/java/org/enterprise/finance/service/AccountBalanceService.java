@@ -56,4 +56,10 @@ public class AccountBalanceService {
         BeanUtils.copyProperties(dto, entity);
         return entity;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.AccountBalance> searchAccountBalances(String query, org.springframework.data.domain.Pageable pageable) {
+        return accountBalanceRepository.findAll(org.enterprise.finance.specification.AccountBalanceSpecification.searchByQuery(query), pageable);
+    }
 }

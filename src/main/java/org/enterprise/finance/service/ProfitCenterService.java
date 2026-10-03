@@ -64,4 +64,10 @@ public class ProfitCenterService {
         BeanUtils.copyProperties(dto, entity);
         return entity;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.ProfitCenter> searchProfitCenters(String query, org.springframework.data.domain.Pageable pageable) {
+        return profitCenterRepository.findAll(org.enterprise.finance.specification.ProfitCenterSpecification.searchByQuery(query), pageable);
+    }
 }

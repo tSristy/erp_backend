@@ -28,18 +28,15 @@ public class SalesInvoiceService {
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         if (salesInvoice.getCompanyId() == null) {
             salesInvoice.setCompanyId(companyId);
-        }
-        if (salesInvoice.getDetails() != null) {
+}        if (salesInvoice.getDetails() != null) {
             for (var detail : salesInvoice.getDetails()) {
                 detail.setSalesInvoice(salesInvoice);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
-                }
-            }
-        }
-        return salesInvoiceRepository.save(salesInvoice);
-    }
-
+}
+}
+}        return salesInvoiceRepository.save(salesInvoice);
+}
     @Transactional
     public SalesInvoice postInvoice(Long invoiceId) {
         SalesInvoice invoice = salesInvoiceRepository.findById(invoiceId)
@@ -47,15 +44,13 @@ public class SalesInvoiceService {
 
         if (invoice.getStatus() != SalesInvoice.InvoiceStatus.DRAFT) {
             throw new RuntimeException("Only DRAFT invoices can be posted");
-        }
-
+}
         boolean isInvoice = invoice.getInvoiceType() == SalesInvoice.InvoiceType.INVOICE;
         createAccountingEntry(invoice, isInvoice);
 
         invoice.setStatus(SalesInvoice.InvoiceStatus.POSTED);
         return salesInvoiceRepository.save(invoice);
-    }
-
+}
     private void createAccountingEntry(SalesInvoice invoice, boolean isInvoice) {
         BigDecimal totalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO;
         BigDecimal discountTotal = invoice.getDiscountTotal() != null ? invoice.getDiscountTotal() : BigDecimal.ZERO;
@@ -65,20 +60,16 @@ public class SalesInvoiceService {
 
         if (invoice.getCustomer().getCustomerDetail() == null || invoice.getCustomer().getCustomerDetail().getAccountsReceivableAccount() == null) {
             throw new RuntimeException("Accounts Receivable account missing on Customer");
-        }
-        
+}        
         if (isInvoice && invoice.getWarehouse().getSalesRevenueAccount() == null) {
             throw new RuntimeException("Sales Revenue account missing on Warehouse");
-        }
-        
+}        
         if (!isInvoice && invoice.getWarehouse().getSalesReturnAccount() == null) {
             throw new RuntimeException("Sales Return account missing on Warehouse");
-        }
-        
+}        
         if (discountTotal.compareTo(BigDecimal.ZERO) > 0 && invoice.getWarehouse().getSalesDiscountAccount() == null) {
             throw new RuntimeException("Sales Discount account missing on Warehouse");
-        }
-
+}
         JournalEntry journal = new JournalEntry();
         journal.setPostingDate(invoice.getInvoiceDate() != null ? invoice.getInvoiceDate() : LocalDate.now());
         journal.setReferenceType("SALES_INVOICE");
@@ -106,8 +97,7 @@ public class SalesInvoiceService {
                 discountLine.setDebit(discountTotal);
                 discountLine.setCredit(BigDecimal.ZERO);
                 lines.add(discountLine);
-            }
-            
+}            
             JournalEntryLine revenueLine = new JournalEntryLine();
             revenueLine.setJournalEntry(journal);
             revenueLine.setAccount(invoice.getWarehouse().getSalesRevenueAccount());
@@ -133,8 +123,7 @@ public class SalesInvoiceService {
                 discountLine.setDebit(BigDecimal.ZERO);
                 discountLine.setCredit(discountTotal);
                 lines.add(discountLine);
-            }
-            
+}            
             JournalEntryLine arLine = new JournalEntryLine();
             arLine.setJournalEntry(journal);
             arLine.setAccount(invoice.getCustomer().getCustomerDetail().getAccountsReceivableAccount());
@@ -143,12 +132,10 @@ public class SalesInvoiceService {
             arLine.setDebit(BigDecimal.ZERO);
             arLine.setCredit(totalAmount);
             lines.add(arLine);
-        }
-
+}
         journal.setLines(lines);
         journalService.save(journal);
-    }
-
+}
     @Transactional
     public SalesInvoice createCreditMemo(Long originalInvoiceId) {
         SalesInvoice original = salesInvoiceRepository.findById(originalInvoiceId)
@@ -170,10 +157,8 @@ public class SalesInvoiceService {
                 cd.setDiscountName(d.getDiscountName());
                 cd.setDiscountAmount(d.getDiscountAmount());
                 copiedDiscounts.add(cd);
-            }
-            creditMemo.setDiscounts(copiedDiscounts);
-        }
-
+}            creditMemo.setDiscounts(copiedDiscounts);
+}
         List<SalesInvoiceDetail> creditDetails = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
         BigDecimal discountTotal = BigDecimal.ZERO;
@@ -197,48 +182,44 @@ public class SalesInvoiceService {
                     cd.setDiscountName(d.getDiscountName());
                     cd.setDiscountAmount(d.getDiscountAmount());
                     copiedDetailDiscounts.add(cd);
-                }
-                creditDetail.setDiscounts(copiedDetailDiscounts);
-            }
-
+}                creditDetail.setDiscounts(copiedDetailDiscounts);
+}
             subTotal = subTotal.add(originalDetail.getLineTotal());
             if (originalDetail.getDiscountTotal() != null) {
                 discountTotal = discountTotal.add(originalDetail.getDiscountTotal());
-            }
-
+}
             creditDetails.add(creditDetail);
-        }
-
+}
         if (original.getDiscountTotal() != null) {
             discountTotal = original.getDiscountTotal();
-        }
-        if (original.getSubTotal() != null) {
+}        if (original.getSubTotal() != null) {
             subTotal = original.getSubTotal();
-        }
-        if (original.getTotalAmount() != null) {
+}        if (original.getTotalAmount() != null) {
             totalAmount = original.getTotalAmount();
         } else {
             totalAmount = subTotal.subtract(discountTotal);
-        }
-
+}
         creditMemo.setDetails(creditDetails);
         creditMemo.setSubTotal(subTotal);
         creditMemo.setDiscountTotal(discountTotal);
         creditMemo.setTotalAmount(totalAmount);
 
         return salesInvoiceRepository.save(creditMemo);
-    }
-
+}
     public java.util.List<SalesInvoice> findAll() {
         return salesInvoiceRepository.findAll();
-    }
-
+}
     public java.util.Optional<SalesInvoice> findById(Long id) {
         return salesInvoiceRepository.findById(id);
-    }
-
+}
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
         salesInvoiceRepository.deleteById(id);
+}
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<SalesInvoice> search(String query, org.springframework.data.domain.Pageable pageable) {
+        return salesInvoiceRepository.findAll(org.enterprise.sales.specification.SalesInvoiceSpecification.searchByQuery(query), pageable);
     }
 }

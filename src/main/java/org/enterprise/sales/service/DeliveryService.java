@@ -44,8 +44,7 @@ public class DeliveryService {
         Long companyId = TenantContext.getCompanyId();
         if (companyId == null) {
             throw new RuntimeException("No active company context");
-        }
-
+}
         deliveryNote.setCompanyId(companyId);
         
         if (deliveryNote.getDetails() != null) {
@@ -53,13 +52,11 @@ public class DeliveryService {
                 detail.setDeliveryNote(deliveryNote);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
-                }
-            }
-        }
-        
+}
+}
+}        
         return deliveryNoteRepository.save(deliveryNote);
-    }
-
+}
     @Transactional
     public DeliveryNote confirmDelivery(Long deliveryNoteId) {
         DeliveryNote delivery = deliveryNoteRepository.findById(deliveryNoteId)
@@ -67,8 +64,7 @@ public class DeliveryService {
 
         if (delivery.getStatus() != DeliveryNote.DeliveryStatus.DRAFT) {
             throw new RuntimeException("Only DRAFT deliveries can be confirmed");
-        }
-
+}
         BigDecimal totalCogs = BigDecimal.ZERO;
         boolean isOutbound = delivery.getDeliveryType() == DeliveryNote.DeliveryType.OUTBOUND;
 
@@ -91,15 +87,12 @@ public class DeliveryService {
                     processedDetails.add(newDetail);
 
                     remainingQty = remainingQty.subtract(qtyToTake);
-                }
-                if (remainingQty.compareTo(BigDecimal.ZERO) > 0) {
+}                if (remainingQty.compareTo(BigDecimal.ZERO) > 0) {
                     throw new RuntimeException("Insufficient batch stock for auto-allocation for product " + detail.getProduct().getName());
-                }
-            } else {
+}            } else {
                 processedDetails.add(detail);
-            }
-        }
-        
+}
+}        
         // Find which details need to be removed (those that were split)
         List<DeliveryNoteDetail> originalDetails = new ArrayList<>(delivery.getDetails());
         delivery.getDetails().removeIf(d -> !processedDetails.contains(d));
@@ -108,9 +101,8 @@ public class DeliveryService {
         for (DeliveryNoteDetail pd : processedDetails) {
             if (!delivery.getDetails().contains(pd)) {
                 delivery.getDetails().add(pd);
-            }
-        }
-
+}
+}
         for (DeliveryNoteDetail detail : delivery.getDetails()) {
             Product product = detail.getProduct();
             Warehouse warehouse = delivery.getWarehouse();
@@ -125,27 +117,23 @@ public class DeliveryService {
                 stock = stockBalanceRepository
                         .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(product.getId(), warehouse.getId(), null)
                         .orElseGet(() -> isOutbound ? null : new StockBalance());
-            }
-            
+}            
             if (stock == null && isOutbound) {
                 throw new RuntimeException("Insufficient stock for product " + product.getName());
-            }
-
+}
             if (!isOutbound) {
                 if (stock.getProduct() == null) {
                     stock.setProduct(product);
                     stock.setWarehouse(warehouse);
                     stock.setBatch(detail.getBatch());
-                }
-            }
-
+}
+}
             BigDecimal currentQty = stock.getQuantity() == null ? BigDecimal.ZERO : stock.getQuantity();
             
             if (isOutbound && currentQty.compareTo(issueQty) < 0) {
                 throw new RuntimeException("Insufficient stock for product " + product.getName() +
                         ". Required: " + issueQty + ", Available: " + currentQty);
-            }
-
+}
             batchSerialTrackingService.validateSerialNumbers(product, detail.getSerialNumbers(), issueQty.intValue());
 
             BigDecimal unitCost;
@@ -169,8 +157,7 @@ public class DeliveryService {
                 costingService.addCostLayer(product, warehouse, "DELIVERY_NOTE", delivery.getId(), issueQty, unitCost);
                 newQty = currentQty.add(issueQty);
                 newTotalValue = currentTotalValue.add(issueValue);
-            }
-
+}
             detail.setUnitCost(unitCost);
 
             stock.setQuantity(newQty);
@@ -181,16 +168,14 @@ public class DeliveryService {
                 stock.setTotalValue(BigDecimal.ZERO);
             } else if (!isOutbound && newQty.compareTo(BigDecimal.ZERO) > 0) {
                 stock.setAverageCost(newTotalValue.divide(newQty, 6, RoundingMode.HALF_UP));
-            }
-
+}
             stockBalanceRepository.save(stock);
 
             if (isOutbound) {
                 batchSerialTrackingService.processOutboundSerials(product, detail.getBatch(), detail.getSerialNumbers(), warehouse, null, org.enterprise.inventory.entity.SerialNumber.SerialStatus.ISSUED, InventoryTransactionType.SALES, "DELIVERY_NOTE", delivery.getId());
             } else {
                 batchSerialTrackingService.processInboundSerials(product, detail.getBatch(), detail.getSerialNumbers(), warehouse, null, InventoryTransactionType.SALES_RETURN, "DELIVERY_NOTE", delivery.getId());
-            }
-
+}
             // Create Ledger Entry
             InventoryLedger ledger = new InventoryLedger();
             ledger.setTransactionType(isOutbound ? InventoryTransactionType.SALES : InventoryTransactionType.SALES_RETURN);
@@ -218,23 +203,20 @@ public class DeliveryService {
                 } else {
                     BigDecimal currentReturned = detail.getSalesOrderDetail().getReturnedQuantity() != null ? detail.getSalesOrderDetail().getReturnedQuantity() : BigDecimal.ZERO;
                     detail.getSalesOrderDetail().setReturnedQuantity(currentReturned.add(issueQty));
-                }
-            }
-        }
-
+}
+}
+}
         createAccountingEntry(delivery, totalCogs, isOutbound);
 
         delivery.setStatus(DeliveryNote.DeliveryStatus.SHIPPED);
         return deliveryNoteRepository.save(delivery);
-    }
-
+}
     private void createAccountingEntry(DeliveryNote delivery, BigDecimal totalCogs, boolean isOutbound) {
         if (totalCogs.compareTo(BigDecimal.ZERO) <= 0) return;
 
         if (delivery.getWarehouse().getCogsAccount() == null || delivery.getWarehouse().getInventoryAccount() == null) {
             throw new RuntimeException("COGS or Inventory account missing on Warehouse");
-        }
-
+}
         JournalEntry journal = new JournalEntry();
         journal.setPostingDate(LocalDate.now());
         journal.setReferenceType("DELIVERY_NOTE");
@@ -259,8 +241,7 @@ public class DeliveryService {
 
         journal.setLines(lines);
         journalService.save(journal);
-    }
-
+}
     @Transactional
     public DeliveryNote createReturn(Long originalDeliveryId) {
         DeliveryNote original = deliveryNoteRepository.findById(originalDeliveryId)
@@ -285,22 +266,24 @@ public class DeliveryService {
             returnDetail.setBatch(originalDetail.getBatch());
             returnDetail.setSerialNumbers(originalDetail.getSerialNumbers());
             returnDetails.add(returnDetail);
-        }
-        returnDelivery.setDetails(returnDetails);
+}        returnDelivery.setDetails(returnDetails);
 
         return deliveryNoteRepository.save(returnDelivery);
-    }
-
+}
     public java.util.List<DeliveryNote> findAll() {
         return deliveryNoteRepository.findAll();
-    }
-
+}
     public java.util.Optional<DeliveryNote> findById(Long id) {
         return deliveryNoteRepository.findById(id);
-    }
-
+}
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
         deliveryNoteRepository.deleteById(id);
+}
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<DeliveryNote> search(String query, org.springframework.data.domain.Pageable pageable) {
+        return deliveryNoteRepository.findAll(org.enterprise.sales.specification.DeliveryNoteSpecification.searchByQuery(query), pageable);
     }
 }

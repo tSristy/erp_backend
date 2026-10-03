@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/finance/dashboard")
+@RequestMapping("/api/v1/finance/dashboard")
 @RequiredArgsConstructor
 public class FinanceDashboardController {
 
@@ -19,4 +19,6 @@ public class FinanceDashboardController {
     public ResponseEntity<FinanceDashboardDTO> getMetrics() {
         return ResponseEntity.ok(financeDashboardService.getDashboardMetrics());
     }
+
+
 }

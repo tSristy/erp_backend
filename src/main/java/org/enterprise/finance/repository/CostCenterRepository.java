@@ -2,11 +2,12 @@ package org.enterprise.finance.repository;
 
 import org.enterprise.finance.entity.CostCenter;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CostCenterRepository extends JpaRepository<CostCenter, Long> {
+public interface CostCenterRepository extends JpaRepository<CostCenter, Long>, JpaSpecificationExecutor<CostCenter> {
     CostCenter findByCodeAndCompanyId(String code, Long companyId);
     List<CostCenter> findByCompanyId(Long companyId);
     long countByCompanyId(Long companyId);

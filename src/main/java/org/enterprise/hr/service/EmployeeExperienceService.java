@@ -67,4 +67,10 @@ public class EmployeeExperienceService {
         dto.setToDate(entity.getToDate());
         return dto;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.EmployeeExperience> searchEmployeeExperiences(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.hr.specification.EmployeeExperienceSpecification.searchByQuery(query), pageable);
+    }
 }

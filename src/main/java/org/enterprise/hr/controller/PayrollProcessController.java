@@ -7,12 +7,15 @@ import org.enterprise.hr.service.PayslipService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/hr/payroll-processs")
+@RequestMapping("/api/v1/hr/payroll-processs")
 @RequiredArgsConstructor
 public class PayrollProcessController {
 
@@ -20,12 +23,12 @@ public class PayrollProcessController {
     private final PayslipService payslipService;
 
     @PostMapping
-    public ResponseEntity<PayrollProcessDto> create(@RequestBody PayrollProcessDto dto) {
+    public ResponseEntity<PayrollProcessDto> create(@Valid @RequestBody PayrollProcessDto dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PayrollProcessDto> update(@PathVariable Long id, @RequestBody PayrollProcessDto dto) {
+    public ResponseEntity<PayrollProcessDto> update(@PathVariable Long id, @Valid @RequestBody PayrollProcessDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
@@ -47,12 +50,12 @@ public class PayrollProcessController {
 
     // Payslip Endpoints
     @PostMapping("/payslips")
-    public ResponseEntity<PayslipDto> createPayslip(@RequestBody PayslipDto dto) {
+    public ResponseEntity<PayslipDto> createPayslip(@Valid @RequestBody PayslipDto dto) {
         return ResponseEntity.ok(payslipService.create(dto));
     }
 
     @PutMapping("/payslips/{id}")
-    public ResponseEntity<PayslipDto> updatePayslip(@PathVariable Long id, @RequestBody PayslipDto dto) {
+    public ResponseEntity<PayslipDto> updatePayslip(@PathVariable Long id, @Valid @RequestBody PayslipDto dto) {
         return ResponseEntity.ok(payslipService.update(id, dto));
     }
 
@@ -74,7 +77,6 @@ public class PayrollProcessController {
 
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<org.enterprise.hr.dto.PayrollProcessDto> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
@@ -82,7 +84,7 @@ public class PayrollProcessController {
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchPayrollProcesss(companyId, q, pageable);
+        return service.searchPayrollProcesss(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
     }
 
 }

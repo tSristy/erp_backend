@@ -17,18 +17,15 @@ public class SalesQuotationService {
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         if (salesQuotation.getCompanyId() == null) {
             salesQuotation.setCompanyId(companyId);
-        }
-        if (salesQuotation.getDetails() != null) {
+}        if (salesQuotation.getDetails() != null) {
             for (var detail : salesQuotation.getDetails()) {
                 detail.setSalesQuotation(salesQuotation);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
-                }
-            }
-        }
-        return salesQuotationRepository.save(salesQuotation);
-    }
-
+}
+}
+}        return salesQuotationRepository.save(salesQuotation);
+}
     @Transactional
     public SalesQuotation updateStatus(Long quotationId, SalesQuotation.QuotationStatus status) {
         SalesQuotation quotation = salesQuotationRepository.findById(quotationId)
@@ -36,18 +33,21 @@ public class SalesQuotationService {
 
         quotation.setStatus(status);
         return salesQuotationRepository.save(quotation);
-    }
-
+}
     public java.util.List<SalesQuotation> findAll() {
         return salesQuotationRepository.findAll();
-    }
-
+}
     public java.util.Optional<SalesQuotation> findById(Long id) {
         return salesQuotationRepository.findById(id);
-    }
-
+}
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
         salesQuotationRepository.deleteById(id);
+}
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<SalesQuotation> search(String query, org.springframework.data.domain.Pageable pageable) {
+        return salesQuotationRepository.findAll(org.enterprise.sales.specification.SalesQuotationSpecification.searchByQuery(query), pageable);
     }
 }

@@ -30,7 +30,7 @@ public class WorkflowDefinitionController {
         return ResponseEntity.ok(mapper.toDtoList(service.findAll()));
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public ResponseEntity<Page<WorkflowDefinitionDto>> search(
             @RequestParam(required = false) String query,
             Pageable pageable) {

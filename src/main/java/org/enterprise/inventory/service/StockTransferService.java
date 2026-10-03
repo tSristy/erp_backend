@@ -282,4 +282,22 @@ public class StockTransferService extends BaseService<StockTransfer, Long> {
         journal.setLines(lines);
         journalEntryService.save(journal);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.StockTransfer> searchStockTransfers(String query, org.springframework.data.domain.Pageable pageable) {
+        return stockTransferRepository.findAll(org.enterprise.inventory.specification.StockTransferSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.StockBalance> searchStockBalances(String query, org.springframework.data.domain.Pageable pageable) {
+        return stockBalanceRepository.findAll(org.enterprise.inventory.specification.StockBalanceSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.InventoryLedger> searchInventoryLedgers(String query, org.springframework.data.domain.Pageable pageable) {
+        return inventoryLedgerRepository.findAll(org.enterprise.inventory.specification.InventoryLedgerSpecification.searchByQuery(query), pageable);
+    }
 }

@@ -2,12 +2,13 @@ package org.enterprise.sales.repository;
 
 import org.enterprise.sales.entity.SalesInvoice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long> {
+public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long>, JpaSpecificationExecutor<SalesInvoice> {
     List<SalesInvoice> findByCompanyId(Long companyId);
     
     @org.springframework.data.jpa.repository.Query("SELECT s FROM SalesInvoice s WHERE s.customer.id = :customerId AND s.status = :status AND (s.totalAmount - s.paidAmount) > 0 ORDER BY s.dueDate ASC")

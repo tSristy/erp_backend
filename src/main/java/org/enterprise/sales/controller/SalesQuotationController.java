@@ -4,10 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.enterprise.sales.entity.SalesQuotation;
 import org.enterprise.sales.service.SalesQuotationService;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 @RestController
-@RequestMapping("/api/sales-quotations")
+@RequestMapping("/api/v1/sales/quotations")
 @RequiredArgsConstructor
 public class SalesQuotationController {
 
@@ -15,10 +18,12 @@ public class SalesQuotationController {
     private final org.enterprise.sales.mapper.SalesMapper mapper;
 
     @PostMapping
-    public ResponseEntity<org.enterprise.sales.dto.SalesQuotationDto> create(@RequestBody org.enterprise.sales.dto.SalesQuotationDto dto) {
+    public ResponseEntity<org.enterprise.sales.dto.SalesQuotationDto> create(@Valid @RequestBody org.enterprise.sales.dto.SalesQuotationDto dto) {
         SalesQuotation entity = mapper.toEntity(dto);
         SalesQuotation saved = salesQuotationService.save(entity);
-        return ResponseEntity.ok(mapper.toDto(saved));
+        org.enterprise.sales.dto.SalesQuotationDto created = mapper.toDto(saved);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(created.getId()).toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PatchMapping("/{id}/status")
@@ -42,7 +47,7 @@ public class SalesQuotationController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<org.enterprise.sales.dto.SalesQuotationDto> update(@PathVariable Long id, @RequestBody org.enterprise.sales.dto.SalesQuotationDto dto) {
+    public ResponseEntity<org.enterprise.sales.dto.SalesQuotationDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.sales.dto.SalesQuotationDto dto) {
         dto.setId(id);
         SalesQuotation entity = mapper.toEntity(dto);
         return ResponseEntity.ok(mapper.toDto(salesQuotationService.save(entity)));
@@ -51,6 +56,13 @@ public class SalesQuotationController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         salesQuotationService.delete(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/search")
+    public ResponseEntity<org.springframework.data.domain.Page<org.enterprise.sales.dto.SalesQuotationDto>> search(
+            @RequestParam(required = false) String query,
+            org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(salesQuotationService.search(query, pageable).map(mapper::toDto));
     }
 }

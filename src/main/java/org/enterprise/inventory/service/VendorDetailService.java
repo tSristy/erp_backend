@@ -18,4 +18,10 @@ public class VendorDetailService extends BaseService<VendorDetail, Long> {
     public List<VendorDetail> findByCompanyId(Long companyId) {
         return repository.findByCompanyId(companyId);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.VendorDetail> searchVendorDetails(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.inventory.specification.VendorDetailSpecification.searchByQuery(query), pageable);
+    }
 }

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.enterprise.inventory.enums.ProductType;
 import org.enterprise.inventory.enums.CostingMethod;
@@ -16,7 +17,7 @@ import org.enterprise.inventory.enums.CostingMethod;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/products", "/inventory/products"})
+@RequestMapping("/api/v1/inventory/products")
 @RequiredArgsConstructor
 public class ProductController {
 
@@ -32,7 +33,7 @@ public class ProductController {
         return service.findAll();
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public Page<Product> search(
             @RequestParam(required = false) Long companyId,
             @RequestParam(required = false) String q,
@@ -43,7 +44,7 @@ public class ProductController {
 
         Sort sort = direction.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        return service.searchProducts(companyId, q, pageable);
+        return service.searchProducts(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
     }
     
     @GetMapping("/{id}")

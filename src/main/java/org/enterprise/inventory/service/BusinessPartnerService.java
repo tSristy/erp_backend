@@ -24,4 +24,10 @@ public class BusinessPartnerService extends BaseService<BusinessPartner, Long> {
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         return repository.findByCompanyIdAndRole(companyId, role);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.BusinessPartner> searchBusinessPartners(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.inventory.specification.BusinessPartnerSpecification.searchByQuery(query), pageable);
+    }
 }

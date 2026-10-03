@@ -125,4 +125,10 @@ public class AccountService {
             throw new IllegalArgumentException("Account code must be a numeric value");
         }
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.Account> searchAccounts(String query, org.springframework.data.domain.Pageable pageable) {
+        return accountRepository.findAll(org.enterprise.finance.specification.AccountSpecification.searchByQuery(query), pageable);
+    }
 }

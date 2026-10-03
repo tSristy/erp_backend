@@ -7,13 +7,16 @@ import org.enterprise.pos.restaurant.entity.KitchenOrderTicket;
 import org.enterprise.pos.restaurant.entity.RestaurantOrderDetail;
 import org.enterprise.pos.restaurant.service.KitchenOrderTicketService;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/pos/restaurant/kots")
+@RequestMapping("/api/v1/pos/restaurant/kots")
 @RequiredArgsConstructor
 public class KitchenOrderTicketController {
 
@@ -59,7 +62,6 @@ public class KitchenOrderTicketController {
 
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<org.enterprise.pos.restaurant.entity.KitchenOrderTicket> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
@@ -67,7 +69,7 @@ public class KitchenOrderTicketController {
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return kotService.searchKitchenOrderTicketDtos(companyId, q, pageable);
+        return kotService.searchKitchenOrderTicketDtos(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
     }
 
 }

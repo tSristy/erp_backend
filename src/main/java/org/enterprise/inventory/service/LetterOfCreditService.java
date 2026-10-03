@@ -38,4 +38,10 @@ public class LetterOfCreditService {
         lc.setStatus(status);
         return letterOfCreditRepository.save(lc);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.LetterOfCredit> searchLetterOfCredits(String query, org.springframework.data.domain.Pageable pageable) {
+        return letterOfCreditRepository.findAll(org.enterprise.inventory.specification.LetterOfCreditSpecification.searchByQuery(query), pageable);
+    }
 }

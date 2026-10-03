@@ -23,18 +23,15 @@ public class SalesOrderService {
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         if (salesOrder.getCompanyId() == null) {
             salesOrder.setCompanyId(companyId);
-        }
-        if (salesOrder.getDetails() != null) {
+}        if (salesOrder.getDetails() != null) {
             for (var detail : salesOrder.getDetails()) {
                 detail.setSalesOrder(salesOrder);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
-                }
-            }
-        }
-        return salesOrderRepository.save(salesOrder);
-    }
-
+}
+}
+}        return salesOrderRepository.save(salesOrder);
+}
     @Transactional
     public SalesOrder confirmOrder(Long salesOrderId) {
         SalesOrder order = salesOrderRepository.findById(salesOrderId)
@@ -42,12 +39,10 @@ public class SalesOrderService {
 
         if (order.getStatus() != SalesOrder.SalesOrderStatus.DRAFT) {
             throw new RuntimeException("Only DRAFT orders can be confirmed");
-        }
-
+}
         order.setStatus(SalesOrder.SalesOrderStatus.CONFIRMED);
         return salesOrderRepository.save(order);
-    }
-
+}
     @Transactional
     public SalesOrder createReturn(Long originalOrderId) {
         SalesOrder original = salesOrderRepository.findById(originalOrderId)
@@ -78,25 +73,27 @@ public class SalesOrderService {
                 totalAmount = totalAmount.add(lineTotal);
                 
                 returnDetails.add(returnDetail);
-            }
-        }
-        
+}
+}        
         returnOrder.setDetails(returnDetails);
         returnOrder.setTotalAmount(totalAmount);
 
         return salesOrderRepository.save(returnOrder);
-    }
-
+}
     public java.util.List<SalesOrder> findAll() {
         return salesOrderRepository.findAll();
-    }
-
+}
     public java.util.Optional<SalesOrder> findById(Long id) {
         return salesOrderRepository.findById(id);
-    }
-
+}
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
         salesOrderRepository.deleteById(id);
+}
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<SalesOrder> search(String query, org.springframework.data.domain.Pageable pageable) {
+        return salesOrderRepository.findAll(org.enterprise.sales.specification.SalesOrderSpecification.searchByQuery(query), pageable);
     }
 }

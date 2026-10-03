@@ -130,4 +130,40 @@ public class PayrollService {
 
         return payrollProcessRepository.save(process);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.Employee> searchEmployees(String query, org.springframework.data.domain.Pageable pageable) {
+        return employeeRepository.findAll(org.enterprise.hr.specification.EmployeeSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.EmployeeSalary> searchEmployeeSalarys(String query, org.springframework.data.domain.Pageable pageable) {
+        return employeeSalaryRepository.findAll(org.enterprise.hr.specification.EmployeeSalarySpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.SalaryComponent> searchSalaryComponents(String query, org.springframework.data.domain.Pageable pageable) {
+        return salaryComponentRepository.findAll(org.enterprise.hr.specification.SalaryComponentSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.PayrollProcess> searchPayrollProcesss(String query, org.springframework.data.domain.Pageable pageable) {
+        return payrollProcessRepository.findAll(org.enterprise.hr.specification.PayrollProcessSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.Payslip> searchPayslips(String query, org.springframework.data.domain.Pageable pageable) {
+        return payslipRepository.findAll(org.enterprise.hr.specification.PayslipSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.PayslipComponent> searchPayslipComponents(String query, org.springframework.data.domain.Pageable pageable) {
+        return payslipComponentRepository.findAll(org.enterprise.hr.specification.PayslipComponentSpecification.searchByQuery(query), pageable);
+    }
 }

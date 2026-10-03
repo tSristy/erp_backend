@@ -2,10 +2,11 @@ package org.enterprise.finance.repository;
 
 import org.enterprise.finance.entity.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface AccountRepository extends JpaRepository<Account, Long> {
+public interface AccountRepository extends JpaRepository<Account, Long>, JpaSpecificationExecutor<Account> {
     Account findByCode(String code);
     Account findByCodeAndCompanyId(String code, Long companyId);
     long countByCompanyId(Long companyId);

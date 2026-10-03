@@ -128,4 +128,16 @@ public class EmployeeLoanService {
         return repository.findAll(pageable).map(this::mapEntityToDto);
     }
 
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.Employee> searchEmployees(String query, org.springframework.data.domain.Pageable pageable) {
+        return employeeRepository.findAll(org.enterprise.hr.specification.EmployeeSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.LoanInstallment> searchLoanInstallments(String query, org.springframework.data.domain.Pageable pageable) {
+        return loanInstallmentRepository.findAll(org.enterprise.hr.specification.LoanInstallmentSpecification.searchByQuery(query), pageable);
+    }
 }

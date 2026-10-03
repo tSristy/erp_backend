@@ -81,4 +81,10 @@ public class StatementSetupService {
         }
         return entity;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.StatementSetup> searchStatementSetups(String query, org.springframework.data.domain.Pageable pageable) {
+        return statementSetupRepository.findAll(org.enterprise.finance.specification.StatementSetupSpecification.searchByQuery(query), pageable);
+    }
 }

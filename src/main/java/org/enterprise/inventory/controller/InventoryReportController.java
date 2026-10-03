@@ -2,13 +2,16 @@ package org.enterprise.inventory.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/inventory/reports", "/inventory/reports"})
+@RequestMapping("/api/v1/inventory/reports")
 @RequiredArgsConstructor
 public class InventoryReportController {
 

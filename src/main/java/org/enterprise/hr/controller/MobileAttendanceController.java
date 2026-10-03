@@ -5,24 +5,27 @@ import org.enterprise.hr.service.MobileAttendanceService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/hr/mobile-attendances")
+@RequestMapping("/api/v1/hr/mobile-attendances")
 @RequiredArgsConstructor
 public class MobileAttendanceController {
 
     private final MobileAttendanceService service;
 
     @PostMapping
-    public ResponseEntity<MobileAttendanceDto> create(@RequestBody MobileAttendanceDto dto) {
+    public ResponseEntity<MobileAttendanceDto> create(@Valid @RequestBody MobileAttendanceDto dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MobileAttendanceDto> update(@PathVariable Long id, @RequestBody MobileAttendanceDto dto) {
+    public ResponseEntity<MobileAttendanceDto> update(@PathVariable Long id, @Valid @RequestBody MobileAttendanceDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
@@ -44,7 +47,6 @@ public class MobileAttendanceController {
 
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<org.enterprise.hr.dto.MobileAttendanceDto> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
@@ -52,7 +54,7 @@ public class MobileAttendanceController {
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchMobileAttendances(companyId, q, pageable);
+        return service.searchMobileAttendances(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
     }
 
 }

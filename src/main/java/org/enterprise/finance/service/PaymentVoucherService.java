@@ -188,4 +188,10 @@ public class PaymentVoucherService {
         }
         paymentVoucherRepository.delete(voucher);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.PaymentVoucher> searchPaymentVouchers(String query, org.springframework.data.domain.Pageable pageable) {
+        return paymentVoucherRepository.findAll(org.enterprise.finance.specification.PaymentVoucherSpecification.searchByQuery(query), pageable);
+    }
 }

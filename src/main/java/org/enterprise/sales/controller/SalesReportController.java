@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/sales/reports")
+@RequestMapping("/api/v1/sales/reports")
 @RequiredArgsConstructor
 public class SalesReportController {
 

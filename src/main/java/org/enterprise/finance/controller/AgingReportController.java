@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/finance/aging")
+@RequestMapping("/api/v1/finance/aging")
 @RequiredArgsConstructor
 public class AgingReportController {
 
@@ -26,4 +26,6 @@ public class AgingReportController {
     public ResponseEntity<List<AgingReportLineDto>> getVendorAging() {
         return ResponseEntity.ok(agingReportService.getVendorAging());
     }
+
+
 }

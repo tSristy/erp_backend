@@ -9,12 +9,15 @@ import org.enterprise.hr.service.EmployeeExperienceService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/hr/employees")
+@RequestMapping("/api/v1/hr/employees")
 @RequiredArgsConstructor
 public class EmployeeController {
 
@@ -46,12 +49,12 @@ public class EmployeeController {
 
     // Education Endpoints
     @PostMapping("/educations")
-    public ResponseEntity<EmployeeEducationDto> createEducation(@RequestBody EmployeeEducationDto dto) {
+    public ResponseEntity<EmployeeEducationDto> createEducation(@Valid @RequestBody EmployeeEducationDto dto) {
         return ResponseEntity.ok(educationService.create(dto));
     }
 
     @PutMapping("/educations/{id}")
-    public ResponseEntity<EmployeeEducationDto> updateEducation(@PathVariable Long id, @RequestBody EmployeeEducationDto dto) {
+    public ResponseEntity<EmployeeEducationDto> updateEducation(@PathVariable Long id, @Valid @RequestBody EmployeeEducationDto dto) {
         return ResponseEntity.ok(educationService.update(id, dto));
     }
 
@@ -73,12 +76,12 @@ public class EmployeeController {
 
     // Experience Endpoints
     @PostMapping("/experiences")
-    public ResponseEntity<EmployeeExperienceDto> createExperience(@RequestBody EmployeeExperienceDto dto) {
+    public ResponseEntity<EmployeeExperienceDto> createExperience(@Valid @RequestBody EmployeeExperienceDto dto) {
         return ResponseEntity.ok(experienceService.create(dto));
     }
 
     @PutMapping("/experiences/{id}")
-    public ResponseEntity<EmployeeExperienceDto> updateExperience(@PathVariable Long id, @RequestBody EmployeeExperienceDto dto) {
+    public ResponseEntity<EmployeeExperienceDto> updateExperience(@PathVariable Long id, @Valid @RequestBody EmployeeExperienceDto dto) {
         return ResponseEntity.ok(experienceService.update(id, dto));
     }
 
@@ -100,7 +103,6 @@ public class EmployeeController {
 
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<org.enterprise.hr.dto.EmployeeDto> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
@@ -108,7 +110,7 @@ public class EmployeeController {
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchEmployees(companyId, q, pageable);
+        return service.searchEmployees(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
     }
 
 }

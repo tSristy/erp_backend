@@ -85,4 +85,10 @@ public class LoanService {
         Loan loan = getLoanById(id);
         loanRepository.delete(loan);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.Loan> searchLoanRecords(String query, org.springframework.data.domain.Pageable pageable) {
+        return loanRepository.findAll(org.enterprise.finance.specification.LoanSpecification.searchByQuery(query), pageable);
+    }
 }

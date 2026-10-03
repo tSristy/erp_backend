@@ -96,4 +96,10 @@ public class PayslipService {
         
         return dto;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.Payslip> searchPayslips(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.hr.specification.PayslipSpecification.searchByQuery(query), pageable);
+    }
 }

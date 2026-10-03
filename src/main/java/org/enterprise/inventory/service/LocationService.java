@@ -31,4 +31,10 @@ public class LocationService extends BaseService<Location, Long> {
     public java.util.List<Location> getRootLocationsByWarehouseId(Long warehouseId) {
         return locationRepository.findByWarehouseIdAndParentIsNull(warehouseId);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Location> searchLocations(String query, org.springframework.data.domain.Pageable pageable) {
+        return locationRepository.findAll(org.enterprise.inventory.specification.LocationSpecification.searchByQuery(query), pageable);
+    }
 }

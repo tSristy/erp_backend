@@ -34,4 +34,28 @@ public class FinanceDashboardService {
 
         return dto;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.Account> searchAccounts(String query, org.springframework.data.domain.Pageable pageable) {
+        return accountRepository.findAll(org.enterprise.finance.specification.AccountSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.CostCenter> searchCostCenters(String query, org.springframework.data.domain.Pageable pageable) {
+        return costCenterRepository.findAll(org.enterprise.finance.specification.CostCenterSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.ProfitCenter> searchProfitCenters(String query, org.springframework.data.domain.Pageable pageable) {
+        return profitCenterRepository.findAll(org.enterprise.finance.specification.ProfitCenterSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.JournalEntry> searchJournalEntrys(String query, org.springframework.data.domain.Pageable pageable) {
+        return journalEntryRepository.findAll(org.enterprise.finance.specification.JournalEntrySpecification.searchByQuery(query), pageable);
+    }
 }

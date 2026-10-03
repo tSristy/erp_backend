@@ -148,4 +148,16 @@ public class LandedCostService {
         journal.setLines(lines);
         journalEntryService.save(journal);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.LandedCostVoucher> searchLandedCostVouchers(String query, org.springframework.data.domain.Pageable pageable) {
+        return landedCostVoucherRepository.findAll(org.enterprise.inventory.specification.LandedCostVoucherSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.InventoryCostLayer> searchInventoryCostLayers(String query, org.springframework.data.domain.Pageable pageable) {
+        return inventoryCostLayerRepository.findAll(org.enterprise.inventory.specification.InventoryCostLayerSpecification.searchByQuery(query), pageable);
+    }
 }

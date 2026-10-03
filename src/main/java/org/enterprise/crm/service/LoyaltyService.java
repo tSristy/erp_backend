@@ -53,4 +53,9 @@ public class LoyaltyService {
         
         log.info("Awarded {} points to customer {} for transaction {}", pointsToAward, customerId, posTransactionNo);
     }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<LoyaltyProfile> searchLoyaltyProfiles(String query, org.springframework.data.domain.Pageable pageable) {
+        return profileRepository.findAll(org.enterprise.crm.specification.LoyaltyProfileSpecification.searchByQuery(query), pageable);
+    }
 }

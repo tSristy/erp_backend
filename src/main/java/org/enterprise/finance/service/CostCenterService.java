@@ -64,4 +64,10 @@ public class CostCenterService {
         BeanUtils.copyProperties(dto, entity);
         return entity;
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.CostCenter> searchCostCenters(String query, org.springframework.data.domain.Pageable pageable) {
+        return costCenterRepository.findAll(org.enterprise.finance.specification.CostCenterSpecification.searchByQuery(query), pageable);
+    }
 }

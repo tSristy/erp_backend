@@ -270,4 +270,34 @@ public class EmployeeService {
         return employeeRepository.findAll(pageable).map(this::mapEntityToDto);
     }
 
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.organization.entity.Company> searchCompanys(String query, org.springframework.data.domain.Pageable pageable) {
+        return companyRepository.findAll(org.enterprise.organization.specification.CompanySpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.organization.entity.Branch> searchBranchs(String query, org.springframework.data.domain.Pageable pageable) {
+        return branchRepository.findAll(org.enterprise.organization.specification.BranchSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.Department> searchDepartments(String query, org.springframework.data.domain.Pageable pageable) {
+        return departmentRepository.findAll(org.enterprise.hr.specification.DepartmentSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.Designation> searchDesignations(String query, org.springframework.data.domain.Pageable pageable) {
+        return designationRepository.findAll(org.enterprise.hr.specification.DesignationSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.hr.entity.Shift> searchShifts(String query, org.springframework.data.domain.Pageable pageable) {
+        return shiftRepository.findAll(org.enterprise.hr.specification.ShiftSpecification.searchByQuery(query), pageable);
+    }
 }

@@ -84,4 +84,10 @@ public class InternalOrderService {
         InternalOrder internalOrder = getInternalOrderById(id);
         internalOrderRepository.delete(internalOrder);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.InternalOrder> searchInternalOrderRecords(String query, org.springframework.data.domain.Pageable pageable) {
+        return internalOrderRepository.findAll(org.enterprise.finance.specification.InternalOrderSpecification.searchByQuery(query), pageable);
+    }
 }

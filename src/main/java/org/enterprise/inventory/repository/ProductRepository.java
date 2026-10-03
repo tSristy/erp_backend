@@ -2,10 +2,11 @@ package org.enterprise.inventory.repository;
 
 import org.enterprise.inventory.entity.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 
-public interface ProductRepository extends JpaRepository<Product, Long> {
+public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     Optional<Product> findBySkuAndCompanyId(String sku, Long companyId);
     java.util.List<Product> findByProductType(org.enterprise.inventory.enums.ProductType type);

@@ -5,19 +5,22 @@ import org.enterprise.inventory.dto.PurchaseOrderRequest;
 import org.enterprise.inventory.entity.PurchaseOrder;
 import org.enterprise.inventory.service.PurchaseOrderService;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/inventory/purchase-orders")
+@RequestMapping("/api/v1/inventory/purchase-orders")
 @RequiredArgsConstructor
 public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
 
     @PostMapping
-    public ResponseEntity<PurchaseOrder> createPurchaseOrder(@RequestBody PurchaseOrderRequest request) {
+    public ResponseEntity<PurchaseOrder> createPurchaseOrder(@Valid @RequestBody PurchaseOrderRequest request) {
         return ResponseEntity.ok(purchaseOrderService.createPurchaseOrder(request));
     }
     
@@ -34,7 +37,7 @@ public class PurchaseOrderController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<PurchaseOrder> updatePurchaseOrder(@PathVariable Long id, @RequestBody PurchaseOrder po) {
+    public ResponseEntity<PurchaseOrder> updatePurchaseOrder(@PathVariable Long id, @Valid @RequestBody PurchaseOrder po) {
         po.setId(id);
         return ResponseEntity.ok(purchaseOrderService.save(po));
     }
@@ -42,7 +45,7 @@ public class PurchaseOrderController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePurchaseOrder(@PathVariable Long id) {
         purchaseOrderService.delete(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
     
     @PostMapping("/{id}/approve")
@@ -62,5 +65,18 @@ public class PurchaseOrderController {
     @GetMapping("/by-lc/{lcId}")
     public ResponseEntity<List<PurchaseOrder>> getPurchaseOrdersByLetterOfCreditId(@PathVariable Long lcId) {
         return ResponseEntity.ok(purchaseOrderService.getPurchaseOrdersByLetterOfCreditId(lcId));
+    }
+
+
+    @org.springframework.web.bind.annotation.GetMapping("/search")
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.PurchaseOrder> search(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
+        org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
+        return purchaseOrderService.searchPurchaseOrders(q, pageable);
     }
 }

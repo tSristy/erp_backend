@@ -28,7 +28,7 @@ public class AreaController {
         return ResponseEntity.ok(mapper.toDtoListArea(service.findAll()));
     }
 
-    @GetMapping("/search")
+    @org.springframework.web.bind.annotation.GetMapping("/search")
     public ResponseEntity<Page<AreaDto>> search(
             @RequestParam(required = false) String query,
             Pageable pageable) {

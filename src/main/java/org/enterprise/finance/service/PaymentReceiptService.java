@@ -188,4 +188,16 @@ public class PaymentReceiptService {
         }
         paymentReceiptRepository.delete(receipt);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.finance.entity.PaymentReceipt> searchPaymentReceipts(String query, org.springframework.data.domain.Pageable pageable) {
+        return paymentReceiptRepository.findAll(org.enterprise.finance.specification.PaymentReceiptSpecification.searchByQuery(query), pageable);
+    }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.sales.entity.SalesInvoice> searchSalesInvoices(String query, org.springframework.data.domain.Pageable pageable) {
+        return salesInvoiceRepository.findAll(org.enterprise.sales.specification.SalesInvoiceSpecification.searchByQuery(query), pageable);
+    }
 }

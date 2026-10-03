@@ -18,4 +18,10 @@ public class BatchService extends BaseService<Batch, Long> {
     public List<Batch> findByCompanyId(Long companyId) {
         return repository.findByCompanyId(companyId);
     }
+
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Batch> searchBatchs(String query, org.springframework.data.domain.Pageable pageable) {
+        return repository.findAll(org.enterprise.inventory.specification.BatchSpecification.searchByQuery(query), pageable);
+    }
 }

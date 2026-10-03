@@ -2,6 +2,7 @@ package org.enterprise.finance.repository;
 
 import org.enterprise.finance.entity.AccountBalance;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
@@ -10,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface AccountBalanceRepository
-        extends JpaRepository<AccountBalance, Long> {
+        extends JpaRepository<AccountBalance, Long>, JpaSpecificationExecutor<AccountBalance> {
 
     @Query("SELECT a FROM AccountBalance a WHERE a.account.id = :accountId AND a.fiscalPeriod.id = :periodId AND (a.branch.id = :branchId OR (a.branch IS NULL AND :branchId IS NULL))")
     Optional<AccountBalance> findByAccountAndPeriodAndBranch(

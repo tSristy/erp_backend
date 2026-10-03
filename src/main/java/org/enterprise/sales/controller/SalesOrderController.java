@@ -4,10 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.enterprise.sales.entity.SalesOrder;
 import org.enterprise.sales.service.SalesOrderService;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 
 @RestController
-@RequestMapping("/api/sales-orders")
+@RequestMapping("/api/v1/sales/orders")
 @RequiredArgsConstructor
 public class SalesOrderController {
 
@@ -15,10 +18,12 @@ public class SalesOrderController {
     private final org.enterprise.sales.mapper.SalesMapper mapper;
 
     @PostMapping
-    public ResponseEntity<org.enterprise.sales.dto.SalesOrderDto> create(@RequestBody org.enterprise.sales.dto.SalesOrderDto dto) {
+    public ResponseEntity<org.enterprise.sales.dto.SalesOrderDto> create(@Valid @RequestBody org.enterprise.sales.dto.SalesOrderDto dto) {
         SalesOrder entity = mapper.toEntity(dto);
         SalesOrder saved = salesOrderService.save(entity);
-        return ResponseEntity.ok(mapper.toDto(saved));
+        org.enterprise.sales.dto.SalesOrderDto created = mapper.toDto(saved);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(created.getId()).toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PostMapping("/{id}/confirm")
@@ -45,7 +50,7 @@ public class SalesOrderController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<org.enterprise.sales.dto.SalesOrderDto> update(@PathVariable Long id, @RequestBody org.enterprise.sales.dto.SalesOrderDto dto) {
+    public ResponseEntity<org.enterprise.sales.dto.SalesOrderDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.sales.dto.SalesOrderDto dto) {
         dto.setId(id);
         SalesOrder entity = mapper.toEntity(dto);
         return ResponseEntity.ok(mapper.toDto(salesOrderService.save(entity)));
@@ -54,6 +59,13 @@ public class SalesOrderController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         salesOrderService.delete(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/search")
+    public ResponseEntity<org.springframework.data.domain.Page<org.enterprise.sales.dto.SalesOrderDto>> search(
+            @RequestParam(required = false) String query,
+            org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(salesOrderService.search(query, pageable).map(mapper::toDto));
     }
 }

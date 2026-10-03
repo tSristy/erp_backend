@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/finance/reports")
+@RequestMapping("/api/v1/finance/reports")
 @RequiredArgsConstructor
 public class FinancialReportController {
 
@@ -55,4 +55,6 @@ public class FinancialReportController {
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
         return financialReportService.getDimensionLedger(dimensionType, dimensionCode, startDate, endDate);
     }
+
+
 }
