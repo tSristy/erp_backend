@@ -1,39 +1,67 @@
 package org.enterprise.organization.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.organization.dto.ZoneDto;
 import org.enterprise.organization.entity.Zone;
+import org.enterprise.organization.mapper.OrganizationMapper;
 import org.enterprise.organization.service.ZoneService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/organization/zones")
+@RequestMapping("/api/v1/organization/zones")
 @RequiredArgsConstructor
 public class ZoneController {
 
     private final ZoneService service;
+    private final OrganizationMapper mapper;
 
-    @PostMapping
-    public ResponseEntity<ZoneDto> create(@RequestBody ZoneDto dto) {
-        return ResponseEntity.ok(service.create(dto));
+    @GetMapping
+    public ResponseEntity<List<ZoneDto>> findAll() {
+        return ResponseEntity.ok(mapper.toDtoListZone(service.findAll()));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ZoneDto> update(@PathVariable Long id, @RequestBody ZoneDto dto) {
-        return ResponseEntity.ok(service.update(id, dto));
+    @GetMapping("/search")
+    public ResponseEntity<Page<ZoneDto>> search(
+            @RequestParam(required = false) String query,
+            Pageable pageable) {
+        return ResponseEntity.ok(service.search(query, pageable).map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ZoneDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getById(id));
+    public ResponseEntity<ZoneDto> findById(@PathVariable Long id) {
+        return service.findById(id)
+                .map(mapper::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping
-    public ResponseEntity<Page<ZoneDto>> search(Pageable pageable) {
-        return ResponseEntity.ok(service.search(pageable));
+    @PostMapping
+    public ResponseEntity<ZoneDto> create(@Valid @RequestBody ZoneDto dto) {
+        Zone entity = mapper.toEntity(dto);
+        ZoneDto createdDto = mapper.toDto(service.save(entity));
+        
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdDto.getId())
+                .toUri();
+                
+        return ResponseEntity.created(location).body(createdDto);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ZoneDto> update(@PathVariable Long id, @Valid @RequestBody ZoneDto dto) {
+        dto.setId(id);
+        Zone entity = mapper.toEntity(dto);
+        return ResponseEntity.ok(mapper.toDto(service.save(entity)));
     }
 
     @DeleteMapping("/{id}")
@@ -41,18 +69,4 @@ public class ZoneController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
-
-    @org.springframework.web.bind.annotation.GetMapping("/search")
-    public org.springframework.data.domain.Page<Zone> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
-        org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchZones(companyId, q, pageable);
-    }
-
 }

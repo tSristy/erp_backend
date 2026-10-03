@@ -1,39 +1,67 @@
 package org.enterprise.organization.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.organization.dto.BranchDto;
 import org.enterprise.organization.entity.Branch;
+import org.enterprise.organization.mapper.OrganizationMapper;
 import org.enterprise.organization.service.BranchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/organization/branches")
+@RequestMapping("/api/v1/organization/branches")
 @RequiredArgsConstructor
 public class BranchController {
 
     private final BranchService service;
+    private final OrganizationMapper mapper;
 
-    @PostMapping
-    public ResponseEntity<BranchDto> create(@RequestBody BranchDto dto) {
-        return ResponseEntity.ok(service.create(dto));
+    @GetMapping
+    public ResponseEntity<List<BranchDto>> findAll() {
+        return ResponseEntity.ok(mapper.toDtoListBranch(service.findAll()));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<BranchDto> update(@PathVariable Long id, @RequestBody BranchDto dto) {
-        return ResponseEntity.ok(service.update(id, dto));
+    @GetMapping("/search")
+    public ResponseEntity<Page<BranchDto>> search(
+            @RequestParam(required = false) String query,
+            Pageable pageable) {
+        return ResponseEntity.ok(service.search(query, pageable).map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BranchDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getById(id));
+    public ResponseEntity<BranchDto> findById(@PathVariable Long id) {
+        return service.findById(id)
+                .map(mapper::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping
-    public ResponseEntity<Page<BranchDto>> search(Pageable pageable) {
-        return ResponseEntity.ok(service.search(pageable));
+    @PostMapping
+    public ResponseEntity<BranchDto> create(@Valid @RequestBody BranchDto dto) {
+        Branch entity = mapper.toEntity(dto);
+        BranchDto createdDto = mapper.toDto(service.save(entity));
+        
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdDto.getId())
+                .toUri();
+                
+        return ResponseEntity.created(location).body(createdDto);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BranchDto> update(@PathVariable Long id, @Valid @RequestBody BranchDto dto) {
+        dto.setId(id);
+        Branch entity = mapper.toEntity(dto);
+        return ResponseEntity.ok(mapper.toDto(service.save(entity)));
     }
 
     @DeleteMapping("/{id}")
@@ -41,18 +69,4 @@ public class BranchController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
-
-    @org.springframework.web.bind.annotation.GetMapping("/search")
-    public org.springframework.data.domain.Page<Branch> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
-        org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchBranchs(companyId, q, pageable);
-    }
-
 }

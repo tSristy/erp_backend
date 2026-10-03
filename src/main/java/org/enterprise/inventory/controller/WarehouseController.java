@@ -1,5 +1,6 @@
 package org.enterprise.inventory.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.inventory.entity.Warehouse;
 import org.enterprise.inventory.service.WarehouseService;
@@ -7,11 +8,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/inventory/warehouses")
+@RequestMapping("/api/v1/inventory/warehouses")
 @RequiredArgsConstructor
 public class WarehouseController {
 
@@ -39,13 +42,21 @@ public class WarehouseController {
     }
 
     @PostMapping
-    public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> create(@RequestBody org.enterprise.inventory.dto.WarehouseDto dto) {
+    public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> create(@Valid @RequestBody org.enterprise.inventory.dto.WarehouseDto dto) {
         Warehouse entity = mapper.toEntity(dto);
-        return ResponseEntity.ok(mapper.toDto(warehouseService.save(entity)));
+        org.enterprise.inventory.dto.WarehouseDto createdDto = mapper.toDto(warehouseService.save(entity));
+        
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdDto.getId())
+                .toUri();
+                
+        return ResponseEntity.created(location).body(createdDto);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> update(@PathVariable Long id, @RequestBody org.enterprise.inventory.dto.WarehouseDto dto) {
+    public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.inventory.dto.WarehouseDto dto) {
         dto.setId(id);
         Warehouse entity = mapper.toEntity(dto);
         return ResponseEntity.ok(mapper.toDto(warehouseService.save(entity)));
@@ -54,6 +65,6 @@ public class WarehouseController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         warehouseService.delete(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

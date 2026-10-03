@@ -1,9 +1,9 @@
 package org.enterprise.workflow.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.workflow.dto.WorkflowActionRequest;
 import org.enterprise.workflow.dto.WorkflowStartRequest;
-import org.enterprise.workflow.dto.WorkflowDefinitionDto;
 
 import org.enterprise.workflow.service.WorkflowService;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/workflows")
+@RequestMapping("/api/v1/workflow/actions")
 @RequiredArgsConstructor
 public class WorkflowController {
 
@@ -24,7 +24,7 @@ public class WorkflowController {
     @PostMapping("/start")
     @PreAuthorize("hasAuthority('WORKFLOW_START')")
     public ResponseEntity<?> start(
-            @RequestBody WorkflowStartRequest request
+            @Valid @RequestBody WorkflowStartRequest request
     ) {
 
         return ResponseEntity.ok(
@@ -39,7 +39,7 @@ public class WorkflowController {
     @PostMapping("/approve")
     @PreAuthorize("hasAuthority('WORKFLOW_APPROVE')")
     public ResponseEntity<?> approve(
-            @RequestBody WorkflowActionRequest request
+            @Valid @RequestBody WorkflowActionRequest request
     ) {
 
         workflowService.approve(request);
@@ -54,7 +54,7 @@ public class WorkflowController {
     @PostMapping("/reject")
     @PreAuthorize("hasAuthority('WORKFLOW_REJECT')")
     public ResponseEntity<?> reject(
-            @RequestBody WorkflowActionRequest request
+            @Valid @RequestBody WorkflowActionRequest request
     ) {
 
         workflowService.reject(request);
@@ -74,18 +74,4 @@ public class WorkflowController {
                 workflowService.myPendingTasks()
         );
     }
-
-    @org.springframework.web.bind.annotation.GetMapping("/search")
-    public org.springframework.data.domain.Page<WorkflowDefinitionDto> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
-        org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return workflowService.searchWorkflows(companyId, q, pageable);
-    }
-
 }

@@ -1,39 +1,67 @@
 package org.enterprise.organization.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.organization.dto.TerritoryDto;
 import org.enterprise.organization.entity.Territory;
+import org.enterprise.organization.mapper.OrganizationMapper;
 import org.enterprise.organization.service.TerritoryService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/organization/territories")
+@RequestMapping("/api/v1/organization/territories")
 @RequiredArgsConstructor
 public class TerritoryController {
 
     private final TerritoryService service;
+    private final OrganizationMapper mapper;
 
-    @PostMapping
-    public ResponseEntity<TerritoryDto> create(@RequestBody TerritoryDto dto) {
-        return ResponseEntity.ok(service.create(dto));
+    @GetMapping
+    public ResponseEntity<List<TerritoryDto>> findAll() {
+        return ResponseEntity.ok(mapper.toDtoListTerritory(service.findAll()));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<TerritoryDto> update(@PathVariable Long id, @RequestBody TerritoryDto dto) {
-        return ResponseEntity.ok(service.update(id, dto));
+    @GetMapping("/search")
+    public ResponseEntity<Page<TerritoryDto>> search(
+            @RequestParam(required = false) String query,
+            Pageable pageable) {
+        return ResponseEntity.ok(service.search(query, pageable).map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TerritoryDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getById(id));
+    public ResponseEntity<TerritoryDto> findById(@PathVariable Long id) {
+        return service.findById(id)
+                .map(mapper::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping
-    public ResponseEntity<Page<TerritoryDto>> search(Pageable pageable) {
-        return ResponseEntity.ok(service.search(pageable));
+    @PostMapping
+    public ResponseEntity<TerritoryDto> create(@Valid @RequestBody TerritoryDto dto) {
+        Territory entity = mapper.toEntity(dto);
+        TerritoryDto createdDto = mapper.toDto(service.save(entity));
+        
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdDto.getId())
+                .toUri();
+                
+        return ResponseEntity.created(location).body(createdDto);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TerritoryDto> update(@PathVariable Long id, @Valid @RequestBody TerritoryDto dto) {
+        dto.setId(id);
+        Territory entity = mapper.toEntity(dto);
+        return ResponseEntity.ok(mapper.toDto(service.save(entity)));
     }
 
     @DeleteMapping("/{id}")
@@ -41,18 +69,4 @@ public class TerritoryController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
-
-    @org.springframework.web.bind.annotation.GetMapping("/search")
-    public org.springframework.data.domain.Page<Territory> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
-        org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchTerritorys(companyId, q, pageable);
-    }
-
 }

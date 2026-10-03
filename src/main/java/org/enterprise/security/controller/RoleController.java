@@ -1,5 +1,6 @@
 package org.enterprise.security.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.security.dto.RoleDto;
 import org.enterprise.security.dto.RoleRequest;
@@ -7,11 +8,13 @@ import org.enterprise.security.service.RoleService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/identity-access/roles")
+@RequestMapping("/api/v1/security/roles")
 @RequiredArgsConstructor
 public class RoleController {
 
@@ -37,13 +40,19 @@ public class RoleController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_WRITE')")
-    public ResponseEntity<RoleDto> createRole(@RequestBody RoleRequest request) {
-        return ResponseEntity.ok(roleService.createRole(request));
+    public ResponseEntity<RoleDto> createRole(@Valid @RequestBody RoleRequest request) {
+        RoleDto created = roleService.createRole(request);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(created.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_WRITE')")
-    public ResponseEntity<RoleDto> updateRole(@PathVariable Long id, @RequestBody RoleRequest request) {
+    public ResponseEntity<RoleDto> updateRole(@PathVariable Long id, @Valid @RequestBody RoleRequest request) {
         return ResponseEntity.ok(roleService.updateRole(id, request));
     }
 
@@ -51,6 +60,6 @@ public class RoleController {
     @PreAuthorize("hasAuthority('ROLE_WRITE')")
     public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
         roleService.deleteRole(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

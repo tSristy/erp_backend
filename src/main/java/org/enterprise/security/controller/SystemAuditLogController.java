@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/iam/systemaudit")
+@RequestMapping("/api/v1/security/system-audit")
 @RequiredArgsConstructor
 public class SystemAuditLogController {
 

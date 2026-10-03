@@ -1,81 +1,26 @@
 package org.enterprise.organization.service;
 
-import lombok.RequiredArgsConstructor;
-import org.enterprise.organization.dto.ZoneDto;
+import org.enterprise.inventory.service.BaseService;
 import org.enterprise.organization.entity.Zone;
 import org.enterprise.organization.repository.ZoneRepository;
+import org.enterprise.organization.specification.ZoneSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
-@Transactional
-public class ZoneService {
+public class ZoneService extends BaseService<Zone, Long> {
 
     private final ZoneRepository repository;
 
-    public ZoneDto create(ZoneDto dto) {
-        Zone entity = new Zone();
-        mapDtoToEntity(dto, entity);
-        entity = repository.save(entity);
-        return mapEntityToDto(entity);
-    }
-
-    public ZoneDto update(Long id, ZoneDto dto) {
-        Zone entity = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Zone not found"));
-        mapDtoToEntity(dto, entity);
-        entity = repository.save(entity);
-        return mapEntityToDto(entity);
+    public ZoneService(ZoneRepository repository) {
+        super(repository);
+        this.repository = repository;
     }
 
     @Transactional(readOnly = true)
-    public ZoneDto getById(Long id) {
-        Zone entity = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Zone not found"));
-        return mapEntityToDto(entity);
+    public Page<Zone> search(String query, Pageable pageable) {
+        return repository.findAll(ZoneSpecification.searchByQuery(query), pageable);
     }
-
-    @Transactional(readOnly = true)
-    public Page<ZoneDto> search(Pageable pageable) {
-        return repository.findAll(pageable).map(this::mapEntityToDto);
-    }
-
-    public void delete(Long id) {
-        repository.deleteById(id);
-    }
-
-    private void mapDtoToEntity(ZoneDto dto, Zone entity) {
-        entity.setCode(dto.getCode());
-        entity.setName(dto.getName());
-        if (dto.getActive() != null) entity.setActive(dto.getActive());
-
-        if (dto.getRegionalManagerId() != null) {
-            org.enterprise.hr.entity.Employee manager = new org.enterprise.hr.entity.Employee();
-            manager.setId(dto.getRegionalManagerId());
-            entity.setRegionalManager(manager);
-        } else {
-            entity.setRegionalManager(null);
-        }
-    }
-
-    private ZoneDto mapEntityToDto(Zone entity) {
-        ZoneDto dto = new ZoneDto();
-        dto.setId(entity.getId());
-        dto.setCode(entity.getCode());
-        dto.setName(entity.getName());
-        dto.setActive(entity.getActive());
-
-        if (entity.getRegionalManager() != null) {
-            dto.setRegionalManagerId(entity.getRegionalManager().getId());
-        }
-        return dto;
-    }
-
-    public org.springframework.data.domain.Page<Zone> searchZones(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
-        return repository.findAll(pageable);
-    }
-
 }

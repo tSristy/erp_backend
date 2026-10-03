@@ -1,15 +1,18 @@
 package org.enterprise.security.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.security.dto.MenuDTO;
 import org.enterprise.security.service.MenuService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/menus")
+@RequestMapping("/api/v1/security/menus")
 @RequiredArgsConstructor
 public class MenuController {
 
@@ -30,12 +33,18 @@ public class MenuController {
     }
 
     @PostMapping
-    public ResponseEntity<MenuDTO> createMenu(@RequestBody MenuDTO dto) {
-        return ResponseEntity.ok(menuService.save(dto));
+    public ResponseEntity<MenuDTO> createMenu(@Valid @RequestBody MenuDTO dto) {
+        MenuDTO created = menuService.save(dto);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(created.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MenuDTO> updateMenu(@PathVariable Long id, @RequestBody MenuDTO dto) {
+    public ResponseEntity<MenuDTO> updateMenu(@PathVariable Long id, @Valid @RequestBody MenuDTO dto) {
         dto.setId(id);
         return ResponseEntity.ok(menuService.save(dto));
     }
@@ -43,6 +52,6 @@ public class MenuController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMenu(@PathVariable Long id) {
         menuService.delete(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }
