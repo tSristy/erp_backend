@@ -24,6 +24,7 @@ public class ProductController {
     private final ProductService service;
 
     @PostMapping
+    @PreAuthorize("hasRole('INVENTORY_WRITE')")
     public Product create(@RequestBody Product entity) {
         return service.save(entity);
     }
@@ -54,6 +55,7 @@ public class ProductController {
     }
     
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('INVENTORY_WRITE')")
     public Product update(@PathVariable Long id, @RequestBody Product entity) {
         entity.setId(id);
         return service.save(entity);
@@ -70,6 +72,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('INVENTORY_WRITE')")
     public void delete(@PathVariable Long id) {
         service.delete(id);
     }
