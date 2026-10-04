@@ -121,5 +121,6 @@ public class WorkflowMapperImpl implements WorkflowMapper {
             return null;
         }
         return entityList.stream().map(this::toDto).collect(Collectors.toList());
+
     }
 }
