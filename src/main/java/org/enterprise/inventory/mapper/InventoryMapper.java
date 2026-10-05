@@ -29,7 +29,9 @@ public interface InventoryMapper {
     Location toEntity(LocationDto dto);
     
     @Mapping(target = "warehouseId", source = "warehouse.id")
+    @Mapping(target = "warehouseName", source = "warehouse.name")
     @Mapping(target = "parentId", source = "parent.id")
+    @Mapping(target = "parentName", source = "parent.name")
     LocationDto toDto(Location entity);
 
     List<WarehouseDto> toDtoListWarehouse(List<Warehouse> entityList);

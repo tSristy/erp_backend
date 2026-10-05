@@ -132,6 +132,7 @@ public class OrganizationMapperImpl implements OrganizationMapper {
         BranchDto branchDto = new BranchDto();
         if (entity.getCompany() != null) {
             branchDto.setCompanyId(entity.getCompany().getId());
+            branchDto.setCompanyName(entity.getCompany().getName());
         }
         branchDto.setId(entity.getId());
         branchDto.setCode(entity.getCode());

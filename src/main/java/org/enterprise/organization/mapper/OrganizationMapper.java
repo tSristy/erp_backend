@@ -17,6 +17,7 @@ public interface OrganizationMapper {
     Branch toEntity(BranchDto dto);
 
     @Mapping(target = "companyId", source = "company.id")
+    @Mapping(target = "companyName", source = "company.name")
     BranchDto toDto(Branch entity);
 
     List<BranchDto> toDtoListBranch(List<Branch> entityList);

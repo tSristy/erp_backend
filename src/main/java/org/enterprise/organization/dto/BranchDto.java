@@ -19,4 +19,5 @@ public class BranchDto {
     private Boolean active;
     private Boolean headOffice;
     private Long companyId;
+    private String companyName;
 }

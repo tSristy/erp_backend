@@ -11,4 +11,5 @@ public interface LocationRepository extends JpaRepository<Location, Long>, JpaSp
     List<Location> findByWarehouseId(Long warehouseId);
     List<Location> findByParentId(Long parentId);
     List<Location> findByWarehouseIdAndParentIsNull(Long warehouseId);
+    java.util.Optional<Location> findTopByCodeStartingWithOrderByIdDesc(String prefix);
 }

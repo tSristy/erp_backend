@@ -139,9 +139,11 @@ public class InventoryMapperImpl implements InventoryMapper {
 
         if (entity.getWarehouse() != null) {
             locationDto.setWarehouseId(entity.getWarehouse().getId());
+            locationDto.setWarehouseName(entity.getWarehouse().getName());
         }
         if (entity.getParent() != null) {
             locationDto.setParentId(entity.getParent().getId());
+            locationDto.setParentName(entity.getParent().getName());
         }
 
         locationDto.setId(entity.getId());

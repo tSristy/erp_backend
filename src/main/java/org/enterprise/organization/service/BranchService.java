@@ -23,4 +23,25 @@ public class BranchService extends BaseService<Branch, Long> {
     public Page<Branch> search(String query, Pageable pageable) {
         return repository.findAll(BranchSpecification.searchByQuery(query), pageable);
     }
+
+    @Override
+    @Transactional
+    public Branch save(Branch entity) {
+        if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
+            repository.findTopByCodeStartingWithOrderByIdDesc("BR-")
+                .ifPresentOrElse(
+                    lastBranch -> {
+                        String lastCode = lastBranch.getCode();
+                        try {
+                            int seq = Integer.parseInt(lastCode.replace("BR-", ""));
+                            entity.setCode(String.format("BR-%03d", seq + 1));
+                        } catch (Exception e) {
+                            entity.setCode("BR-001");
+                        }
+                    },
+                    () -> entity.setCode("BR-001")
+                );
+        }
+        return super.save(entity);
+    }
 }

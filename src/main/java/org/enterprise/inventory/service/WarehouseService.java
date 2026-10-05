@@ -28,4 +28,25 @@ public class WarehouseService extends BaseService<Warehouse, Long> {
     public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Warehouse> searchWarehouses(String query, org.springframework.data.domain.Pageable pageable) {
         return warehouseRepository.findAll(org.enterprise.inventory.specification.WarehouseSpecification.searchByQuery(query), pageable);
     }
+
+    @Override
+    @Transactional
+    public Warehouse save(Warehouse entity) {
+        if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
+            warehouseRepository.findTopByCodeStartingWithOrderByIdDesc("WH-")
+                .ifPresentOrElse(
+                    lastWarehouse -> {
+                        String lastCode = lastWarehouse.getCode();
+                        try {
+                            int seq = Integer.parseInt(lastCode.replace("WH-", ""));
+                            entity.setCode(String.format("WH-%04d", seq + 1));
+                        } catch (Exception e) {
+                            entity.setCode("WH-0001");
+                        }
+                    },
+                    () -> entity.setCode("WH-0001")
+                );
+        }
+        return super.save(entity);
+    }
 }

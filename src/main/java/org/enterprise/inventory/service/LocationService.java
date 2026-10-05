@@ -37,4 +37,25 @@ public class LocationService extends BaseService<Location, Long> {
     public org.springframework.data.domain.Page<org.enterprise.inventory.entity.Location> searchLocations(String query, org.springframework.data.domain.Pageable pageable) {
         return locationRepository.findAll(org.enterprise.inventory.specification.LocationSpecification.searchByQuery(query), pageable);
     }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public Location save(Location entity) {
+        if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
+            locationRepository.findTopByCodeStartingWithOrderByIdDesc("LOC-")
+                .ifPresentOrElse(
+                    lastLocation -> {
+                        String lastCode = lastLocation.getCode();
+                        try {
+                            int seq = Integer.parseInt(lastCode.replace("LOC-", ""));
+                            entity.setCode(String.format("LOC-%03d", seq + 1));
+                        } catch (Exception e) {
+                            entity.setCode("LOC-001");
+                        }
+                    },
+                    () -> entity.setCode("LOC-001")
+                );
+        }
+        return super.save(entity);
+    }
 }
