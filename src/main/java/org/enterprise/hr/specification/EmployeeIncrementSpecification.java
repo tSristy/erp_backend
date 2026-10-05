@@ -19,7 +19,7 @@ public class EmployeeIncrementSpecification {
             List<Predicate> predicates = new ArrayList<>();
             
             try {
-                predicates.add(cb.like(cb.lower(root.get("id").as(String.class)), likePattern));
+            // Id search removed because PostgreSQL doesn't support lower(bigint)
             } catch (Exception e) {
             }
             try {

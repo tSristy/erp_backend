@@ -4,6 +4,8 @@ import org.enterprise.finance.entity.Account;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.util.StringUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,38 +13,15 @@ public class AccountSpecification {
 
     public static Specification<Account> searchByQuery(String query) {
         return (root, cq, cb) -> {
-            if (query == null || query.trim().isEmpty()) {
-                return cb.conjunction();
+            var predicates = cb.conjunction();
+            if (StringUtils.hasText(query)) {
+                String likePattern = "%" + query.toLowerCase() + "%";
+                predicates = cb.or(
+                        cb.like(cb.lower(root.get("name")), likePattern),
+                        cb.like(cb.lower(root.get("code")), likePattern)
+                );
             }
-            
-            String likePattern = "%" + query.trim().toLowerCase() + "%";
-            List<Predicate> predicates = new ArrayList<>();
-            
-            try {
-                predicates.add(cb.like(cb.lower(root.get("id").as(String.class)), likePattern));
-            } catch (Exception e) {
-                // Ignore
-            }
-            try {
-                predicates.add(cb.like(cb.lower(root.get("code")), likePattern));
-            } catch (Exception e) {
-                // Ignore
-            }
-            try {
-                predicates.add(cb.like(cb.lower(root.get("name")), likePattern));
-            } catch (Exception e) {
-                // Ignore
-            }
-            try {
-                predicates.add(cb.like(cb.lower(root.get("description")), likePattern));
-            } catch (Exception e) {
-                // Ignore
-            }
-            
-            if (predicates.isEmpty()) {
-                return cb.conjunction();
-            }
-            return cb.or(predicates.toArray(new Predicate[0]));
+            return predicates;
         };
     }
 }
