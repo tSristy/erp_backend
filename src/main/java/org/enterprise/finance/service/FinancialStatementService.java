@@ -127,16 +127,19 @@ public class FinancialStatementService {
             return total;
         }
 
-        for (StatementSetupAccount mapping :
-                row.getAccounts()) {
+        for (StatementSetupAccount mapping : row.getAccounts()) {
+            BigDecimal balance = balanceRepository.getAccountBalance(
+                    mapping.getAccount().getId(),
+                    periodId
+            );
 
-            BigDecimal balance =
-                    balanceRepository.getAccountBalance(
-                            mapping.getAccount().getId(),
-                            periodId
-                    );
+            if (balance != null) {
+                total = total.add(balance);
+            }
+        }
 
-            total = total.add(balance);
+        if (row.getBalanceType() == org.enterprise.finance.enums.BalanceType.CREDIT) {
+            return total.negate();
         }
 
         return total;

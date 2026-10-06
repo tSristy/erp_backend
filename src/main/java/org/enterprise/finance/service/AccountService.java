@@ -111,11 +111,11 @@ public class AccountService {
             int codeValue = Integer.parseInt(code);
             int min, max;
             switch (type) {
-                case ASSET: min = 10000; max = 19999; break;
-                case LIABILITY: min = 20000; max = 29999; break;
-                case EQUITY: min = 30000; max = 39999; break;
-                case INCOME: min = 40000; max = 49999; break;
-                case EXPENSE: min = 50000; max = 59999; break;
+                case ASSET: min = 1000; max = 1999; break;
+                case LIABILITY: min = 2000; max = 2999; break;
+                case EQUITY: min = 3000; max = 3999; break;
+                case INCOME: min = 4000; max = 4999; break;
+                case EXPENSE: min = 5000; max = 5999; break;
                 default: throw new IllegalArgumentException("Unsupported AccountType: " + type);
             }
             if (codeValue < min || codeValue > max) {

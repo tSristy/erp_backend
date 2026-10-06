@@ -13,5 +13,8 @@ public class StatementSetupDTO {
     private org.enterprise.finance.enums.CalculationType calculationType;
     private String formula;
     private org.enterprise.finance.enums.BalanceType balanceType;
+    private Boolean bold;
+    private Boolean visible;
+    private Boolean bottomLine;
     private java.util.List<StatementSetupAccountDTO> accounts;
 }
