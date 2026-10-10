@@ -21,7 +21,8 @@ public class RoutingOperation extends AuditableEntity {
     private Integer sequence;
 
     @Column(nullable = false)
-    private String operationName;
+    @Enumerated(EnumType.STRING)
+    private org.enterprise.production.enums.OperationType operationName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_center_id")
