@@ -53,11 +53,21 @@ public class PurchaseInvoiceService {
         
         if (invoice.getDetails() != null) {
             invoice.getDetails().forEach(detail -> {
+                detail.setId(null);
                 detail.setPurchaseInvoice(invoice);
                 detail.setCompanyId(companyId);
             });
         }
         return purchaseInvoiceRepository.save(invoice);
+    }
+
+    @Transactional
+    public void deleteInvoice(Long id) {
+        PurchaseInvoice invoice = getInvoiceById(id);
+        if (invoice.getStatus() == PurchaseInvoice.InvoiceStatus.POSTED || invoice.getStatus() == PurchaseInvoice.InvoiceStatus.PAID) {
+            throw new RuntimeException("Cannot delete POSTED or PAID invoice");
+        }
+        purchaseInvoiceRepository.delete(invoice);
     }
 
     @Transactional

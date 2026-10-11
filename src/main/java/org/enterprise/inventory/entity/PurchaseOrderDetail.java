@@ -19,10 +19,12 @@ public class PurchaseOrderDetail extends AuditableEntity {
     private PurchaseOrder purchaseOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ProductVariant variant;
 
     private BigDecimal orderedQty = BigDecimal.ZERO;

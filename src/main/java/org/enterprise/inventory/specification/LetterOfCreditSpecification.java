@@ -18,12 +18,15 @@ public class LetterOfCreditSpecification {
             String likePattern = "%" + query.trim().toLowerCase() + "%";
             List<Predicate> predicates = new ArrayList<>();
             
-            // Id search removed because PostgreSQL doesn't support lower(bigint)
-            try { predicates.add(cb.like(cb.lower(root.get("code")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("name")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("description")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("transactionNo")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("documentNo")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("lcNumber")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("advisingBank")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("portOfLoading")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("portOfDischarge")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("currency")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("remarks")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.join("issuingBank", jakarta.persistence.criteria.JoinType.LEFT).get("bankName")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.join("issuingBank", jakarta.persistence.criteria.JoinType.LEFT).get("accountName")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.join("issuingBank", jakarta.persistence.criteria.JoinType.LEFT).get("accountNumber")), likePattern)); } catch (Exception e) {}
             
             if (predicates.isEmpty()) {
                 return cb.conjunction();

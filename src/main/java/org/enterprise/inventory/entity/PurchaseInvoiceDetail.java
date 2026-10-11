@@ -19,10 +19,12 @@ public class PurchaseInvoiceDetail extends AuditableEntity {
     private PurchaseInvoice purchaseInvoice;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ProductVariant variant;
 
     @Column(precision = 18, scale = 2)

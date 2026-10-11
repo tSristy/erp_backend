@@ -33,6 +33,12 @@ public class LandedCostController {
         return ResponseEntity.ok(landedCostService.createVoucher(voucher));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteVoucher(@PathVariable Long id) {
+        landedCostService.deleteVoucher(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/post")
     public ResponseEntity<LandedCostVoucher> postVoucher(@PathVariable Long id) {
         return ResponseEntity.ok(landedCostService.postVoucher(id));

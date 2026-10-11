@@ -30,6 +30,7 @@ public class ProductVariant extends AuditableEntity {
 
     private Boolean active = true;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;

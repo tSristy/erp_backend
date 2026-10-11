@@ -24,6 +24,7 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
     private final BusinessPartnerRepository businessPartnerRepository;
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final CostHeadRepository costHeadRepository;
     private final LetterOfCreditRepository letterOfCreditRepository;
     private final WorkflowService workflowService;
@@ -33,6 +34,7 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
                                 BusinessPartnerRepository businessPartnerRepository,
                                 WarehouseRepository warehouseRepository,
                                 ProductRepository productRepository,
+                                ProductVariantRepository productVariantRepository,
                                 CostHeadRepository costHeadRepository,
                                 LetterOfCreditRepository letterOfCreditRepository,
                                 WorkflowService workflowService,
@@ -42,6 +44,7 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
         this.businessPartnerRepository = businessPartnerRepository;
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
+        this.productVariantRepository = productVariantRepository;
         this.costHeadRepository = costHeadRepository;
         this.letterOfCreditRepository = letterOfCreditRepository;
         this.workflowService = workflowService;
@@ -119,6 +122,11 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
                 Product product = productRepository.findById(detailReq.getProductId())
                         .orElseThrow(() -> new RuntimeException("Product not found"));
                 detail.setProduct(product);
+                if (detailReq.getVariantId() != null) {
+                    detail.setVariant(productVariantRepository.findById(detailReq.getVariantId()).orElse(null));
+                } else {
+                    detail.setVariant(null);
+                }
                 detail.setOrderedQty(detailReq.getQty());
                 detail.setUnitPrice(detailReq.getUnitPrice());
                 
@@ -170,6 +178,95 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
         }
 
         return po;
+    }
+
+    @Transactional
+    public PurchaseOrder updatePurchaseOrder(Long id, PurchaseOrderRequest request) {
+        PurchaseOrder po = findById(id)
+                .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
+
+        if (po.getStatus() != PurchaseOrderStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT purchase orders can be updated");
+        }
+
+        if (request.getPoDate() != null) po.setPoDate(request.getPoDate());
+        if (request.getExpectedDeliveryDate() != null) po.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+        if (request.getRemarks() != null) po.setRemarks(request.getRemarks());
+        if (request.getCurrency() != null) po.setCurrency(request.getCurrency());
+        if (request.getExchangeRate() != null) po.setExchangeRate(request.getExchangeRate());
+
+        if (request.getOrderType() != null) {
+            po.setOrderType(PurchaseOrder.OrderType.valueOf(request.getOrderType()));
+        }
+
+        if (request.getVendorId() != null) {
+            po.setVendor(businessPartnerRepository.findById(request.getVendorId())
+                    .orElseThrow(() -> new RuntimeException("Vendor not found")));
+        } else {
+            po.setVendor(null);
+        }
+
+        if (request.getWarehouseId() != null) {
+            po.setWarehouse(warehouseRepository.findById(request.getWarehouseId())
+                    .orElseThrow(() -> new RuntimeException("Warehouse not found")));
+        } else {
+            po.setWarehouse(null);
+        }
+
+        if (request.getLetterOfCreditId() != null) {
+            po.setLetterOfCredit(letterOfCreditRepository.findById(request.getLetterOfCreditId())
+                    .orElse(null));
+        } else {
+            po.setLetterOfCredit(null);
+        }
+
+        if (request.getDetails() != null) {
+            po.getDetails().clear();
+            BigDecimal subTotal = BigDecimal.ZERO;
+
+            for (PurchaseOrderDetailRequest detailReq : request.getDetails()) {
+                PurchaseOrderDetail detail = new PurchaseOrderDetail();
+                detail.setPurchaseOrder(po);
+
+                Product product = productRepository.findById(detailReq.getProductId())
+                        .orElseThrow(() -> new RuntimeException("Product not found"));
+                detail.setProduct(product);
+                if (detailReq.getVariantId() != null) {
+                    detail.setVariant(productVariantRepository.findById(detailReq.getVariantId()).orElse(null));
+                } else {
+                    detail.setVariant(null);
+                }
+                detail.setOrderedQty(detailReq.getQty());
+                detail.setUnitPrice(detailReq.getUnitPrice());
+
+                BigDecimal lineTotal = detail.getOrderedQty().multiply(detail.getUnitPrice());
+                detail.setTotalPrice(lineTotal);
+                subTotal = subTotal.add(lineTotal);
+
+                List<PurchaseOrderDetailCost> costs = new ArrayList<>();
+                if (detailReq.getCosts() != null) {
+                    for (PurchaseOrderDetailCostRequest costReq : detailReq.getCosts()) {
+                        PurchaseOrderDetailCost cost = new PurchaseOrderDetailCost();
+                        cost.setPurchaseOrderDetail(detail);
+                        cost.setCostHead(costHeadRepository.findById(costReq.getCostHeadId())
+                                .orElseThrow(() -> new RuntimeException("CostHead not found")));
+                        cost.setAmount(costReq.getAmount());
+                        cost.setIncludedInInventoryCost(costReq.getIncludedInInventoryCost());
+                        costs.add(cost);
+                    }
+                }
+                detail.setCosts(costs);
+                po.getDetails().add(detail);
+            }
+
+            po.setTaxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO);
+            po.setDiscountAmount(request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO);
+
+            BigDecimal total = subTotal.add(po.getTaxAmount()).subtract(po.getDiscountAmount());
+            po.setTotalAmount(total);
+        }
+
+        return this.save(po);
     }
 
     @Transactional

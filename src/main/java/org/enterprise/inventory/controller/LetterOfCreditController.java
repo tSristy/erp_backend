@@ -33,6 +33,12 @@ public class LetterOfCreditController {
         return ResponseEntity.ok(letterOfCreditService.createLC(lc));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteLC(@PathVariable Long id) {
+        letterOfCreditService.deleteLC(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<LetterOfCredit> updateStatus(@PathVariable Long id, @RequestParam LetterOfCredit.LcStatus status) {
         return ResponseEntity.ok(letterOfCreditService.updateStatus(id, status));

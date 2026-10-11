@@ -22,9 +22,11 @@ public class PurchaseOrder extends AuditableEntity {
     private LocalDate poDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private BusinessPartner vendor;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Warehouse warehouse;
 
     private Long workflowInstanceId;
@@ -52,6 +54,7 @@ public class PurchaseOrder extends AuditableEntity {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "letter_of_credit_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private LetterOfCredit letterOfCredit;
 
     @OneToMany(mappedBy = "purchaseOrder",

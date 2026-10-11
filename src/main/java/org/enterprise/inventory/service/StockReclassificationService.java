@@ -42,6 +42,22 @@ public class StockReclassificationService extends BaseService<StockReclassificat
         if (stockReclassification.getCompanyId() == null) {
             stockReclassification.setCompanyId(companyId);
         }
+
+        if (stockReclassification.getReclassNo() == null || stockReclassification.getReclassNo().trim().isEmpty()) {
+            stockReclassificationRepository.findTopByReclassNoStartingWithOrderByIdDesc("RC-")
+                .ifPresentOrElse(
+                    lastReclass -> {
+                        String lastNo = lastReclass.getReclassNo();
+                        try {
+                            long seq = Long.parseLong(lastNo.replace("RC-", ""));
+                            stockReclassification.setReclassNo(String.format("RC-%010d", seq + 1));
+                        } catch (Exception e) {
+                            stockReclassification.setReclassNo("RC-0000000001");
+                        }
+                    },
+                    () -> stockReclassification.setReclassNo("RC-0000000001")
+                );
+        }
         
         if (stockReclassification.getDetails() != null) {
             for (StockReclassificationDetail detail : stockReclassification.getDetails()) {

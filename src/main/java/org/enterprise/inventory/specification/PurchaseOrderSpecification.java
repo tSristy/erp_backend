@@ -1,5 +1,6 @@
 package org.enterprise.inventory.specification;
 
+import jakarta.persistence.criteria.JoinType;
 import org.enterprise.inventory.entity.PurchaseOrder;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -18,12 +19,11 @@ public class PurchaseOrderSpecification {
             String likePattern = "%" + query.trim().toLowerCase() + "%";
             List<Predicate> predicates = new ArrayList<>();
             
-            // Id search removed because PostgreSQL doesn't support lower(bigint)
-            try { predicates.add(cb.like(cb.lower(root.get("code")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("name")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("description")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("transactionNo")), likePattern)); } catch (Exception e) {}
-            try { predicates.add(cb.like(cb.lower(root.get("documentNo")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("poNo")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.get("remarks")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.join("vendor", JoinType.LEFT).get("name")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.join("warehouse", JoinType.LEFT).get("name")), likePattern)); } catch (Exception e) {}
+            try { predicates.add(cb.like(cb.lower(root.join("letterOfCredit", JoinType.LEFT).get("lcNumber")), likePattern)); } catch (Exception e) {}
             
             if (predicates.isEmpty()) {
                 return cb.conjunction();

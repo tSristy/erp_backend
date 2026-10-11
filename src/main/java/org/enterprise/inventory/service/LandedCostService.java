@@ -59,6 +59,15 @@ public class LandedCostService {
     }
 
     @Transactional
+    public void deleteVoucher(Long id) {
+        LandedCostVoucher voucher = getVoucherById(id);
+        if (voucher.getStatus() == LandedCostVoucher.LandedCostStatus.POSTED) {
+            throw new RuntimeException("Cannot delete POSTED voucher");
+        }
+        landedCostVoucherRepository.delete(voucher);
+    }
+
+    @Transactional
     public LandedCostVoucher postVoucher(Long id) {
         LandedCostVoucher voucher = getVoucherById(id);
         if (voucher.getStatus() == LandedCostVoucher.LandedCostStatus.POSTED) {

@@ -54,6 +54,22 @@ public class StockTransferService extends BaseService<StockTransfer, Long> {
             stockTransfer.setCompanyId(companyId);
         }
 
+        if (stockTransfer.getTransferNo() == null || stockTransfer.getTransferNo().trim().isEmpty()) {
+            stockTransferRepository.findTopByTransferNoStartingWithOrderByIdDesc("ST-")
+                .ifPresentOrElse(
+                    lastTransfer -> {
+                        String lastNo = lastTransfer.getTransferNo();
+                        try {
+                            long seq = Long.parseLong(lastNo.replace("ST-", ""));
+                            stockTransfer.setTransferNo(String.format("ST-%010d", seq + 1));
+                        } catch (Exception e) {
+                            stockTransfer.setTransferNo("ST-0000000001");
+                        }
+                    },
+                    () -> stockTransfer.setTransferNo("ST-0000000001")
+                );
+        }
+
         if (stockTransfer.getDetails() != null) {
             for (StockTransferDetail detail : stockTransfer.getDetails()) {
                 if (detail.getCompanyId() == null) {

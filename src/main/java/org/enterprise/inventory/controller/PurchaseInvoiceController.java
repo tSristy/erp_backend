@@ -38,6 +38,12 @@ public class PurchaseInvoiceController {
         return ResponseEntity.ok(purchaseInvoiceService.createInvoice(invoice));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
+        purchaseInvoiceService.deleteInvoice(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<PurchaseInvoice> updateStatus(@PathVariable Long id, @RequestParam PurchaseInvoice.InvoiceStatus status) {
         return ResponseEntity.ok(purchaseInvoiceService.updateInvoiceStatus(id, status));

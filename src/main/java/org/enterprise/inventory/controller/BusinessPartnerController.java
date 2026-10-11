@@ -66,6 +66,21 @@ public class BusinessPartnerController {
                 .orElseThrow(() -> new RuntimeException("Business Partner not found"));
     }
 
+    @DeleteMapping("/code/{code}")
+    public org.springframework.http.ResponseEntity<Void> deleteByCode(@PathVariable String code) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        BusinessPartner bp = service.findByCode(code, companyId)
+                .orElseThrow(() -> new RuntimeException("Business Partner not found"));
+        service.delete(bp.getId());
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public org.springframework.http.ResponseEntity<Void> deleteById(@PathVariable Long id) {
+        service.delete(id);
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/code/{code}")
     public BusinessPartner update(@PathVariable String code, @RequestBody BusinessPartner bp) {
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();

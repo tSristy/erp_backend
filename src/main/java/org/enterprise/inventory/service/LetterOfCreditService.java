@@ -33,6 +33,12 @@ public class LetterOfCreditService {
     }
 
     @Transactional
+    public void deleteLC(Long id) {
+        LetterOfCredit lc = getLCById(id);
+        letterOfCreditRepository.delete(lc);
+    }
+
+    @Transactional
     public LetterOfCredit updateStatus(Long id, LetterOfCredit.LcStatus status) {
         LetterOfCredit lc = getLCById(id);
         lc.setStatus(status);

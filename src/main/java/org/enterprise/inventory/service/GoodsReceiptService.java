@@ -29,6 +29,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
     private final BusinessPartnerRepository businessPartnerRepository;
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final StockBalanceRepository stockBalanceRepository;
     private final JournalEntryService journalEntryService;
@@ -41,6 +42,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             BusinessPartnerRepository businessPartnerRepository,
             WarehouseRepository warehouseRepository,
             ProductRepository productRepository,
+            ProductVariantRepository productVariantRepository,
             InventoryLedgerRepository inventoryLedgerRepository,
             StockBalanceRepository stockBalanceRepository,
             JournalEntryService journalEntryService,
@@ -52,6 +54,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         this.businessPartnerRepository = businessPartnerRepository;
         this.warehouseRepository = warehouseRepository;
         this.productRepository = productRepository;
+        this.productVariantRepository = productVariantRepository;
         this.inventoryLedgerRepository = inventoryLedgerRepository;
         this.stockBalanceRepository = stockBalanceRepository;
         this.journalEntryService = journalEntryService;
@@ -126,6 +129,14 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                     .orElseThrow(() -> new RuntimeException("Product not found"));
 
             detail.setProduct(product);
+            if (dto.getVariantId() != null) {
+                detail.setVariant(productVariantRepository.findById(dto.getVariantId()).orElse(null));
+            } else if (goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
+                goodsReceipt.getPurchaseOrder().getDetails().stream()
+                        .filter(poDetail -> poDetail.getProduct() != null && poDetail.getProduct().getId().equals(product.getId()) && poDetail.getVariant() != null)
+                        .findFirst()
+                        .ifPresent(poDetail -> detail.setVariant(poDetail.getVariant()));
+            }
             detail.setQuantity(dto.getQuantity());
             detail.setUnitCost(dto.getUnitCost());
 
@@ -192,6 +203,14 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                     .orElseThrow(() -> new RuntimeException("Product not found"));
 
             detail.setProduct(product);
+            if (dto.getVariantId() != null) {
+                detail.setVariant(productVariantRepository.findById(dto.getVariantId()).orElse(null));
+            } else if (goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
+                goodsReceipt.getPurchaseOrder().getDetails().stream()
+                        .filter(poDetail -> poDetail.getProduct() != null && poDetail.getProduct().getId().equals(product.getId()) && poDetail.getVariant() != null)
+                        .findFirst()
+                        .ifPresent(poDetail -> detail.setVariant(poDetail.getVariant()));
+            }
             detail.setQuantity(dto.getQuantity());
             detail.setUnitCost(dto.getUnitCost());
 
@@ -480,6 +499,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             returnDetail.setGoodsReceipt(returnReceipt);
             returnDetail.setPurchaseOrderDetail(originalDetail.getPurchaseOrderDetail());
             returnDetail.setProduct(originalDetail.getProduct());
+            returnDetail.setVariant(originalDetail.getVariant());
             returnDetail.setQuantity(originalDetail.getQuantity());
             returnDetail.setUnitCost(originalDetail.getUnitCost());
             returnDetail.setLineTotal(originalDetail.getLineTotal());

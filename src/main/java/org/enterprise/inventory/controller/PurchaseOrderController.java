@@ -37,9 +37,8 @@ public class PurchaseOrderController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<PurchaseOrder> updatePurchaseOrder(@PathVariable Long id, @Valid @RequestBody PurchaseOrder po) {
-        po.setId(id);
-        return ResponseEntity.ok(purchaseOrderService.save(po));
+    public ResponseEntity<PurchaseOrder> updatePurchaseOrder(@PathVariable Long id, @Valid @RequestBody PurchaseOrderRequest request) {
+        return ResponseEntity.ok(purchaseOrderService.updatePurchaseOrder(id, request));
     }
     
     @DeleteMapping("/{id}")

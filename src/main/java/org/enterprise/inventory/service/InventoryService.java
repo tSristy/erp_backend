@@ -187,7 +187,18 @@ public class InventoryService {
                         warehouseId,
                         locationId, null
                 )
-                .orElseThrow(() -> new RuntimeException("Stock not found"));
+                .orElse(null);
+
+        if (balance == null) {
+            return new StockBalanceResponse(
+                    itemId,
+                    warehouseId,
+                    locationId,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO
+            );
+        }
 
         if (!balance.getCompanyId().equals(TenantContext.getCompanyId())) {
             throw new RuntimeException("Unauthorized access to stock balance");
