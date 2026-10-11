@@ -27,6 +27,7 @@ import org.enterprise.inventory.entity.*;
 import org.enterprise.inventory.enums.ProductType;
 import org.enterprise.inventory.enums.*;
 import org.enterprise.production.entity.*;
+import org.enterprise.production.enums.OperationType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -228,8 +229,8 @@ public class MasterDataSeeder implements CommandLineRunner {
 
         Routing r1 = new Routing(); r1.setCompanyId(companyId); r1.setCode("RT01"); r1.setName("Standard Assembly"); em.persist(r1);
         
-        RoutingOperation ro1 = new RoutingOperation(); ro1.setCompanyId(companyId); ro1.setRouting(r1); ro1.setSequence(10); ro1.setWorkCenter(wc1); ro1.setOperationName("Assemble"); ro1.setDurationMinutes(60); em.persist(ro1);
-        RoutingOperation ro2 = new RoutingOperation(); ro2.setCompanyId(companyId); ro2.setRouting(r1); ro2.setSequence(20); ro2.setWorkCenter(wc2); ro2.setOperationName("Package"); ro2.setDurationMinutes(30); em.persist(ro2);
+        RoutingOperation ro1 = new RoutingOperation(); ro1.setCompanyId(companyId); ro1.setRouting(r1); ro1.setSequence(10); ro1.setWorkCenter(wc1); ro1.setOperationName(OperationType.ASSEMBLY); ro1.setDurationMinutes(60); em.persist(ro1);
+        RoutingOperation ro2 = new RoutingOperation(); ro2.setCompanyId(companyId); ro2.setRouting(r1); ro2.setSequence(20); ro2.setWorkCenter(wc2); ro2.setOperationName(OperationType.PACKAGING); ro2.setDurationMinutes(30); em.persist(ro2);
 
         
         // --- Appended from DataSeeder ---
