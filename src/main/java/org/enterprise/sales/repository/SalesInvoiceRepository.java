@@ -69,12 +69,12 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 
     @org.springframework.data.jpa.repository.Query("SELECT new org.enterprise.sales.dto.SalespersonReportDto(" +
-            "s.createdBy, COUNT(s.id), SUM(s.totalAmount)) " +
-            "FROM SalesInvoice s " +
+            "COALESCE(sp.id, s.createdBy), sp.fullName, COUNT(s.id), SUM(s.totalAmount)) " +
+            "FROM SalesInvoice s LEFT JOIN s.salesPerson sp " +
             "WHERE s.companyId = :companyId AND s.status IN :statuses " +
             "AND (cast(:startDate as date) IS NULL OR s.invoiceDate >= :startDate) " +
             "AND (cast(:endDate as date) IS NULL OR s.invoiceDate <= :endDate) " +
-            "GROUP BY s.createdBy ORDER BY SUM(s.totalAmount) DESC")
+            "GROUP BY COALESCE(sp.id, s.createdBy), sp.fullName ORDER BY SUM(s.totalAmount) DESC")
     List<org.enterprise.sales.dto.SalespersonReportDto> getSalespersonReport(
             @org.springframework.data.repository.query.Param("companyId") Long companyId,
             @org.springframework.data.repository.query.Param("statuses") List<SalesInvoice.InvoiceStatus> statuses,

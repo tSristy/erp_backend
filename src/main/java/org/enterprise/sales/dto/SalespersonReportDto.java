@@ -10,7 +10,15 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SalespersonReportDto {
-    private Long salespersonId; // This represents createdBy user ID
+    private Long salespersonId; // Represents assigned employee ID or createdBy user ID
+    private String salespersonName;
     private Long invoiceCount;
     private BigDecimal totalRevenue;
+
+    public SalespersonReportDto(Long salespersonId, Long invoiceCount, BigDecimal totalRevenue) {
+        this.salespersonId = salespersonId;
+        this.salespersonName = null;
+        this.invoiceCount = invoiceCount;
+        this.totalRevenue = totalRevenue;
+    }
 }

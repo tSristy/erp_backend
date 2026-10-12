@@ -55,6 +55,33 @@ public class FiscalYearService {
     }
 
     @Transactional
+    public FiscalYearDTO update(Long id, FiscalYearDTO dto) {
+        Long companyId = TenantContext.getCompanyId();
+        FiscalYear existing = fiscalYearRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Fiscal year not found with id: " + id));
+
+        existing.setYearCode(dto.getYearCode());
+        existing.setStartDate(dto.getStartDate());
+        existing.setEndDate(dto.getEndDate());
+        existing.setActive(dto.getActive());
+        existing.setClosed(dto.getClosed());
+
+        if (dto.getLines() != null) {
+            existing.getLines().clear();
+            for (org.enterprise.finance.dto.FiscalPeriodDTO lineDto : dto.getLines()) {
+                org.enterprise.finance.entity.FiscalPeriod period = new org.enterprise.finance.entity.FiscalPeriod();
+                BeanUtils.copyProperties(lineDto, period, "id", "fiscalYear");
+                period.setCompanyId(companyId);
+                period.setFiscalYear(existing);
+                existing.getLines().add(period);
+            }
+        }
+
+        FiscalYear saved = fiscalYearRepository.save(existing);
+        return convertToDTO(saved);
+    }
+
+    @Transactional
     public void deleteById(Long id) {
         fiscalYearRepository.deleteById(id);
     }

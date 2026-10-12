@@ -39,7 +39,7 @@ public class FiscalYearController {
     @PutMapping("/{id}")
     public ResponseEntity<FiscalYearDTO> update(@PathVariable Long id, @Valid @RequestBody FiscalYearDTO dto) {
         dto.setId(id);
-        return ResponseEntity.ok(fiscalYearService.save(dto));
+        return ResponseEntity.ok(fiscalYearService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")

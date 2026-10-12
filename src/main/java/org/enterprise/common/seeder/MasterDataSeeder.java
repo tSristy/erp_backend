@@ -641,6 +641,7 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(finance, "Payment Receipts", "finance/payment-receipt", "Download", 9, cid);
         createMenu(finance, "Payment Vouchers", "finance/payment-voucher", "Upload", 10, cid);
         createMenu(finance, "Journal Vouchers", "finance/journal-voucher", "Upload", 11, cid);
+        createMenu(finance, "Fiscal Years", "finance/fiscal-years", "Calendar", 12, cid);
         createMenu(finance, "Reports", "finance/reports", "BarChart2", 14, cid);
         createReportMenu(finance, "GL Ledger", "finance/reports/gl-ledger", "BookOpen", 15, cid);
         createReportMenu(finance, "Customer Ledger", "finance/reports/customer-ledger", "UserCircle", 16, cid);

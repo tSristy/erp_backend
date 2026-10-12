@@ -24,6 +24,10 @@ public class PatchRunner implements CommandLineRunner {
             createMenu(module, "Areas", "organizations/area", "MapPin", 7, companyId);
             createMenu(module, "Territories", "organizations/territory", "Navigation", 8, companyId);
         });
+
+        moduleRepository.findByCodeAndCompanyId("FINANCE", companyId).ifPresent(module -> {
+            createMenu(module, "Fiscal Years", "finance/fiscal-years", "Calendar", 12, companyId);
+        });
         
         System.out.println("PATCH RUNNER: Successfully inserted missing menus.");
     }

@@ -22,4 +22,6 @@ public interface EmployeeRepository
     boolean existsByEmployeeCode(String employeeCode);
 
     List<Employee> findByActiveTrue();
+
+    Optional<Employee> findFirstByEmail(String email);
 }
