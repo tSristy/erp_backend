@@ -46,4 +46,11 @@ public class DeliveryNote extends AuditableEntity {
     public enum DeliveryType {
         OUTBOUND, INBOUND_RETURN
     }
+
+    public enum SalesChannel {
+        B2B, B2C, RETAIL, ECOMMERCE
+    }
+
+    @Enumerated(EnumType.STRING)
+    private SalesChannel salesChannel = SalesChannel.B2C;
 }

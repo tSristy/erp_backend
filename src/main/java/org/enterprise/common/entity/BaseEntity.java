@@ -21,12 +21,26 @@ public abstract class BaseEntity {
 
     @PrePersist
     public void prePersist() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+        onPrePersist();
+    }
+
+    protected void onPrePersist() {
+        // Subclasses can hook into persist without duplicate JPA annotations
     }
 
     @PreUpdate
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
+        onPreUpdate();
+    }
+
+    protected void onPreUpdate() {
+        // Subclasses can hook into update without duplicate JPA annotations
     }
 }

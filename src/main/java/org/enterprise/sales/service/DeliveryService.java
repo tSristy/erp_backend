@@ -38,14 +38,60 @@ public class DeliveryService {
     private final JournalEntryService journalService;
     private final CostingService costingService;
     private final org.enterprise.inventory.service.BatchSerialTrackingService batchSerialTrackingService;
+    private final org.enterprise.inventory.repository.ProductRepository productRepository;
+    private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
+    private final org.enterprise.inventory.repository.BusinessPartnerRepository businessPartnerRepository;
+    private final org.enterprise.inventory.repository.WarehouseRepository warehouseRepository;
+    private final org.enterprise.sales.repository.SalesOrderRepository salesOrderRepository;
+
+    public synchronized String generateNextDeliveryNo(Long companyId) {
+        long nextNum = deliveryNoteRepository.findTopByOrderByIdDesc()
+                .map(dn -> dn.getId() + 1)
+                .orElse(1L);
+        String candidate = String.format("DN-%05d", nextNum);
+        while (deliveryNoteRepository.existsByDeliveryNo(candidate)) {
+            nextNum++;
+            candidate = String.format("DN-%05d", nextNum);
+        }
+        return candidate;
+    }
 
     @Transactional
     public DeliveryNote save(DeliveryNote deliveryNote) {
         Long companyId = TenantContext.getCompanyId();
         if (companyId == null) {
             throw new RuntimeException("No active company context");
-}
+        }
         deliveryNote.setCompanyId(companyId);
+
+        if (deliveryNote.getDeliveryNo() == null || deliveryNote.getDeliveryNo().trim().isEmpty() || deliveryNote.getDeliveryNo().matches("\\d+")) {
+            deliveryNote.setDeliveryNo(generateNextDeliveryNo(companyId));
+        }
+
+        if (deliveryNote.getSalesOrder() != null && deliveryNote.getSalesOrder().getId() != null) {
+            salesOrderRepository.findById(deliveryNote.getSalesOrder().getId()).ifPresent(so -> {
+                deliveryNote.setSalesOrder(so);
+                if (deliveryNote.getCustomer() == null && so.getCustomer() != null) {
+                    deliveryNote.setCustomer(so.getCustomer());
+                }
+                if (deliveryNote.getWarehouse() == null && so.getWarehouse() != null) {
+                    deliveryNote.setWarehouse(so.getWarehouse());
+                }
+                if (deliveryNote.getSalesChannel() == null && so.getSalesChannel() != null) {
+                    try {
+                        deliveryNote.setSalesChannel(DeliveryNote.SalesChannel.valueOf(so.getSalesChannel().name()));
+                    } catch (Exception ignored) {}
+                }
+            });
+        }
+        if (deliveryNote.getCustomer() != null && deliveryNote.getCustomer().getId() != null) {
+            businessPartnerRepository.findById(deliveryNote.getCustomer().getId())
+                    .ifPresent(deliveryNote::setCustomer);
+        }
+        if (deliveryNote.getWarehouse() != null && deliveryNote.getWarehouse().getId() != null) {
+            warehouseRepository.findById(deliveryNote.getWarehouse().getId())
+                    .ifPresent(deliveryNote::setWarehouse);
+        }
         
         if (deliveryNote.getDetails() != null) {
             for (var detail : deliveryNote.getDetails()) {
@@ -53,6 +99,24 @@ public class DeliveryService {
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
 }
+                if (detail.getProduct() != null && detail.getProduct().getId() != null) {
+                    productRepository.findById(detail.getProduct().getId()).ifPresent(detail::setProduct);
+                }
+                Long varId = (detail.getVariant() != null && detail.getVariant().getId() != null)
+                        ? detail.getVariant().getId() : null;
+                if (varId != null) {
+                    productVariantRepository.findById(varId)
+                            .ifPresentOrElse(detail::setVariant, () -> detail.setVariant(null));
+                } else if (deliveryNote.getSalesOrder() != null && deliveryNote.getSalesOrder().getDetails() != null) {
+                    for (var sod : deliveryNote.getSalesOrder().getDetails()) {
+                        if (detail.getSalesOrderDetail() != null && sod.getId() != null && sod.getId().equals(detail.getSalesOrderDetail().getId())) {
+                            detail.setVariant(sod.getVariant());
+                            break;
+                        }
+                    }
+                } else {
+                    detail.setVariant(null);
+                }
 }
 }        
         return deliveryNoteRepository.save(deliveryNote);
@@ -81,6 +145,7 @@ public class DeliveryService {
                     newDetail.setDeliveryNote(delivery);
                     newDetail.setSalesOrderDetail(detail.getSalesOrderDetail());
                     newDetail.setProduct(detail.getProduct());
+                    newDetail.setVariant(detail.getVariant());
                     newDetail.setQuantity(qtyToTake);
                     newDetail.setBatch(sb.getBatch());
                     // Serial numbers are ignored for auto-split since they need manual tracking
@@ -261,6 +326,7 @@ public class DeliveryService {
             returnDetail.setDeliveryNote(returnDelivery);
             returnDetail.setSalesOrderDetail(originalDetail.getSalesOrderDetail());
             returnDetail.setProduct(originalDetail.getProduct());
+            returnDetail.setVariant(originalDetail.getVariant());
             returnDetail.setQuantity(originalDetail.getQuantity());
             returnDetail.setUnitCost(originalDetail.getUnitCost());
             returnDetail.setBatch(originalDetail.getBatch());
@@ -272,14 +338,20 @@ public class DeliveryService {
 }
     public java.util.List<DeliveryNote> findAll() {
         return deliveryNoteRepository.findAll();
-}
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<DeliveryNote> findAll(org.springframework.data.domain.Pageable pageable) {
+        return deliveryNoteRepository.findAll(pageable);
+    }
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public java.util.Optional<DeliveryNote> findById(Long id) {
         return deliveryNoteRepository.findById(id);
-}
+    }
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
         deliveryNoteRepository.deleteById(id);
-}
+    }
 
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)

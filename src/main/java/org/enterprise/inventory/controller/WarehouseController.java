@@ -59,7 +59,7 @@ public class WarehouseController {
     public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.inventory.dto.WarehouseDto dto) {
         dto.setId(id);
         Warehouse entity = mapper.toEntity(dto);
-        return ResponseEntity.ok(mapper.toDto(warehouseService.save(entity)));
+        return ResponseEntity.ok(mapper.toDto(warehouseService.update(id, entity)));
     }
 
     @DeleteMapping("/{id}")

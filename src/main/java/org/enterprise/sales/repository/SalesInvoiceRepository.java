@@ -9,6 +9,21 @@ import java.util.List;
 
 @Repository
 public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long>, JpaSpecificationExecutor<SalesInvoice> {
+    boolean existsByInvoiceNo(String invoiceNo);
+    java.util.Optional<SalesInvoice> findTopByOrderByIdDesc();
+
+    @Override
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "deliveryNote"})
+    org.springframework.data.domain.Page<SalesInvoice> findAll(org.springframework.data.jpa.domain.Specification<SalesInvoice> spec, org.springframework.data.domain.Pageable pageable);
+
+    @Override
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "deliveryNote"})
+    org.springframework.data.domain.Page<SalesInvoice> findAll(org.springframework.data.domain.Pageable pageable);
+
+    @Override
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "deliveryNote"})
+    List<SalesInvoice> findAll();
+
     List<SalesInvoice> findByCompanyId(Long companyId);
     
     @org.springframework.data.jpa.repository.Query("SELECT s FROM SalesInvoice s WHERE s.customer.id = :customerId AND s.status = :status AND (s.totalAmount - s.paidAmount) > 0 ORDER BY s.dueDate ASC")

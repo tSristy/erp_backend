@@ -56,9 +56,11 @@ public class SalesMapperImpl implements SalesMapper {
         
         if (entity.getCustomer() != null) {
             dto.setCustomerId(entity.getCustomer().getId());
+            dto.setCustomerName(entity.getCustomer().getName());
         }
         if (entity.getWarehouse() != null) {
             dto.setWarehouseId(entity.getWarehouse().getId());
+            dto.setWarehouseName(entity.getWarehouse().getName());
         }
         
         if (entity.getDetails() != null) {
@@ -89,6 +91,12 @@ public class SalesMapperImpl implements SalesMapper {
             product.setId(dto.getProductId());
             entity.setProduct(product);
         }
+
+        if (dto.getVariantId() != null) {
+            org.enterprise.inventory.entity.ProductVariant variant = new org.enterprise.inventory.entity.ProductVariant();
+            variant.setId(dto.getVariantId());
+            entity.setVariant(variant);
+        }
         
         if (dto.getDiscounts() != null) {
             List<SalesQuotationDetailDiscount> list = new ArrayList<>();
@@ -111,6 +119,11 @@ public class SalesMapperImpl implements SalesMapper {
         }
         if (entity.getProduct() != null) {
             dto.setProductId(entity.getProduct().getId());
+            dto.setProductName(entity.getProduct().getName());
+        }
+        if (entity.getVariant() != null) {
+            dto.setVariantId(entity.getVariant().getId());
+            dto.setVariantSku(entity.getVariant().getSku());
         }
         
         if (entity.getDiscounts() != null) {
@@ -199,9 +212,19 @@ public class SalesMapperImpl implements SalesMapper {
         SalesOrderDto dto = new SalesOrderDto();
         BeanUtils.copyProperties(entity, dto, "details", "discounts");
         
-        if (entity.getCustomer() != null) dto.setCustomerId(entity.getCustomer().getId());
-        if (entity.getWarehouse() != null) dto.setWarehouseId(entity.getWarehouse().getId());
+        if (entity.getCustomer() != null) {
+            dto.setCustomerId(entity.getCustomer().getId());
+            dto.setCustomerName(entity.getCustomer().getName());
+        }
+        if (entity.getWarehouse() != null) {
+            dto.setWarehouseId(entity.getWarehouse().getId());
+            dto.setWarehouseName(entity.getWarehouse().getName());
+        }
         if (entity.getReferenceOrder() != null) dto.setReferenceOrderId(entity.getReferenceOrder().getId());
+        if (entity.getSalesQuotation() != null) {
+            dto.setSalesQuotationId(entity.getSalesQuotation().getId());
+            dto.setSalesQuotationNo(entity.getSalesQuotation().getQuotationNo());
+        }
         
         if (entity.getDetails() != null) {
             List<SalesOrderDetailDto> list = new ArrayList<>();
@@ -228,6 +251,12 @@ public class SalesMapperImpl implements SalesMapper {
             product.setId(dto.getProductId());
             entity.setProduct(product);
         }
+
+        if (dto.getVariantId() != null) {
+            org.enterprise.inventory.entity.ProductVariant variant = new org.enterprise.inventory.entity.ProductVariant();
+            variant.setId(dto.getVariantId());
+            entity.setVariant(variant);
+        }
         
         if (dto.getDiscounts() != null) {
             List<SalesOrderDetailDiscount> list = new ArrayList<>();
@@ -244,7 +273,14 @@ public class SalesMapperImpl implements SalesMapper {
         BeanUtils.copyProperties(entity, dto, "discounts");
         
         if (entity.getSalesOrder() != null) dto.setSalesOrderId(entity.getSalesOrder().getId());
-        if (entity.getProduct() != null) dto.setProductId(entity.getProduct().getId());
+        if (entity.getProduct() != null) {
+            dto.setProductId(entity.getProduct().getId());
+            dto.setProductName(entity.getProduct().getName());
+        }
+        if (entity.getVariant() != null) {
+            dto.setVariantId(entity.getVariant().getId());
+            dto.setVariantSku(entity.getVariant().getSku());
+        }
         
         if (entity.getDiscounts() != null) {
             List<SalesOrderDetailDiscountDto> list = new ArrayList<>();
@@ -307,6 +343,10 @@ public class SalesMapperImpl implements SalesMapper {
             entity.setWarehouse(warehouse);
         }
         
+        if (dto.getSalesChannel() != null) {
+            entity.setSalesChannel(dto.getSalesChannel());
+        }
+        
         if (dto.getDetails() != null) {
             List<DeliveryNoteDetail> list = new ArrayList<>();
             for (DeliveryNoteDetailDto item : dto.getDetails()) list.add(toEntity(item));
@@ -320,10 +360,33 @@ public class SalesMapperImpl implements SalesMapper {
         if (entity == null) return null;
         DeliveryNoteDto dto = new DeliveryNoteDto();
         BeanUtils.copyProperties(entity, dto, "details");
+        dto.setSalesChannel(entity.getSalesChannel());
         
-        if (entity.getSalesOrder() != null) dto.setSalesOrderId(entity.getSalesOrder().getId());
-        if (entity.getCustomer() != null) dto.setCustomerId(entity.getCustomer().getId());
-        if (entity.getWarehouse() != null) dto.setWarehouseId(entity.getWarehouse().getId());
+        if (entity.getSalesOrder() != null) {
+            dto.setSalesOrderId(entity.getSalesOrder().getId());
+            dto.setSalesOrderNo(entity.getSalesOrder().getOrderNo());
+            if (dto.getSalesChannel() == null && entity.getSalesOrder().getSalesChannel() != null) {
+                try {
+                    dto.setSalesChannel(DeliveryNote.SalesChannel.valueOf(entity.getSalesOrder().getSalesChannel().name()));
+                } catch (Exception ignored) {}
+            }
+            if (dto.getCustomerId() == null && entity.getSalesOrder().getCustomer() != null) {
+                dto.setCustomerId(entity.getSalesOrder().getCustomer().getId());
+                dto.setCustomerName(entity.getSalesOrder().getCustomer().getName());
+            }
+            if (dto.getWarehouseId() == null && entity.getSalesOrder().getWarehouse() != null) {
+                dto.setWarehouseId(entity.getSalesOrder().getWarehouse().getId());
+                dto.setWarehouseName(entity.getSalesOrder().getWarehouse().getName());
+            }
+        }
+        if (entity.getCustomer() != null) {
+            dto.setCustomerId(entity.getCustomer().getId());
+            dto.setCustomerName(entity.getCustomer().getName());
+        }
+        if (entity.getWarehouse() != null) {
+            dto.setWarehouseId(entity.getWarehouse().getId());
+            dto.setWarehouseName(entity.getWarehouse().getName());
+        }
         
         if (entity.getDetails() != null) {
             List<DeliveryNoteDetailDto> list = new ArrayList<>();
@@ -350,6 +413,11 @@ public class SalesMapperImpl implements SalesMapper {
             product.setId(dto.getProductId());
             entity.setProduct(product);
         }
+        if (dto.getVariantId() != null) {
+            org.enterprise.inventory.entity.ProductVariant variant = new org.enterprise.inventory.entity.ProductVariant();
+            variant.setId(dto.getVariantId());
+            entity.setVariant(variant);
+        }
         if (dto.getBatchId() != null) {
             Batch batch = new Batch();
             batch.setId(dto.getBatchId());
@@ -366,8 +434,21 @@ public class SalesMapperImpl implements SalesMapper {
         
         if (entity.getDeliveryNote() != null) dto.setDeliveryNoteId(entity.getDeliveryNote().getId());
         if (entity.getSalesOrderDetail() != null) dto.setSalesOrderDetailId(entity.getSalesOrderDetail().getId());
-        if (entity.getProduct() != null) dto.setProductId(entity.getProduct().getId());
-        if (entity.getBatch() != null) dto.setBatchId(entity.getBatch().getId());
+        if (entity.getProduct() != null) {
+            dto.setProductId(entity.getProduct().getId());
+            dto.setProductName(entity.getProduct().getName());
+        }
+        if (entity.getVariant() != null) {
+            dto.setVariantId(entity.getVariant().getId());
+            dto.setVariantSku(entity.getVariant().getSku());
+        } else if (entity.getSalesOrderDetail() != null && entity.getSalesOrderDetail().getVariant() != null) {
+            dto.setVariantId(entity.getSalesOrderDetail().getVariant().getId());
+            dto.setVariantSku(entity.getSalesOrderDetail().getVariant().getSku());
+        }
+        if (entity.getBatch() != null) {
+            dto.setBatchId(entity.getBatch().getId());
+            dto.setBatchNumber(entity.getBatch().getBatchNo());
+        }
         return dto;
     }
 
@@ -393,6 +474,9 @@ public class SalesMapperImpl implements SalesMapper {
             warehouse.setId(dto.getWarehouseId());
             entity.setWarehouse(warehouse);
         }
+        if (dto.getSalesChannel() != null) {
+            entity.setSalesChannel(dto.getSalesChannel());
+        }
         
         if (dto.getDetails() != null) {
             List<SalesInvoiceDetail> list = new ArrayList<>();
@@ -412,10 +496,28 @@ public class SalesMapperImpl implements SalesMapper {
         if (entity == null) return null;
         SalesInvoiceDto dto = new SalesInvoiceDto();
         BeanUtils.copyProperties(entity, dto, "details", "discounts");
+        dto.setSalesChannel(entity.getSalesChannel());
         
-        if (entity.getDeliveryNote() != null) dto.setDeliveryNoteId(entity.getDeliveryNote().getId());
-        if (entity.getCustomer() != null) dto.setCustomerId(entity.getCustomer().getId());
-        if (entity.getWarehouse() != null) dto.setWarehouseId(entity.getWarehouse().getId());
+        if (entity.getDeliveryNote() != null) {
+            dto.setDeliveryNoteId(entity.getDeliveryNote().getId());
+            dto.setDeliveryNoteNo(entity.getDeliveryNote().getDeliveryNo());
+            if (dto.getCustomerId() == null && entity.getDeliveryNote().getCustomer() != null) {
+                dto.setCustomerId(entity.getDeliveryNote().getCustomer().getId());
+                dto.setCustomerName(entity.getDeliveryNote().getCustomer().getName());
+            }
+            if (dto.getWarehouseId() == null && entity.getDeliveryNote().getWarehouse() != null) {
+                dto.setWarehouseId(entity.getDeliveryNote().getWarehouse().getId());
+                dto.setWarehouseName(entity.getDeliveryNote().getWarehouse().getName());
+            }
+        }
+        if (entity.getCustomer() != null) {
+            dto.setCustomerId(entity.getCustomer().getId());
+            dto.setCustomerName(entity.getCustomer().getName());
+        }
+        if (entity.getWarehouse() != null) {
+            dto.setWarehouseId(entity.getWarehouse().getId());
+            dto.setWarehouseName(entity.getWarehouse().getName());
+        }
         
         if (entity.getDetails() != null) {
             List<SalesInvoiceDetailDto> list = new ArrayList<>();
@@ -447,6 +549,11 @@ public class SalesMapperImpl implements SalesMapper {
             product.setId(dto.getProductId());
             entity.setProduct(product);
         }
+        if (dto.getVariantId() != null) {
+            org.enterprise.inventory.entity.ProductVariant variant = new org.enterprise.inventory.entity.ProductVariant();
+            variant.setId(dto.getVariantId());
+            entity.setVariant(variant);
+        }
         
         if (dto.getDiscounts() != null) {
             List<SalesInvoiceDetailDiscount> list = new ArrayList<>();
@@ -464,7 +571,14 @@ public class SalesMapperImpl implements SalesMapper {
         
         if (entity.getSalesInvoice() != null) dto.setSalesInvoiceId(entity.getSalesInvoice().getId());
         if (entity.getDeliveryNoteDetail() != null) dto.setDeliveryNoteDetailId(entity.getDeliveryNoteDetail().getId());
-        if (entity.getProduct() != null) dto.setProductId(entity.getProduct().getId());
+        if (entity.getProduct() != null) {
+            dto.setProductId(entity.getProduct().getId());
+            dto.setProductName(entity.getProduct().getName());
+        }
+        if (entity.getVariant() != null) {
+            dto.setVariantId(entity.getVariant().getId());
+            dto.setVariantSku(entity.getVariant().getSku());
+        }
         
         if (entity.getDiscounts() != null) {
             List<SalesInvoiceDetailDiscountDto> list = new ArrayList<>();

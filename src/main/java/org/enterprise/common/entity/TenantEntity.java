@@ -24,8 +24,9 @@ public abstract class TenantEntity extends BaseEntity {
     @Column(name = "company_id", nullable = false, updatable = false)
     private Long companyId;
 
-    @jakarta.persistence.PrePersist
-    public void setTenantPrePersist() {
+    @Override
+    protected void onPrePersist() {
+        super.onPrePersist();
         if (companyId == null) {
             companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         }

@@ -13,8 +13,11 @@ public class SalesQuotationDto extends AuditableDto {
     private LocalDate quotationDate;
     private LocalDate validUntil;
     private QuotationStatus status;
+    private org.enterprise.sales.entity.SalesQuotation.SalesChannel salesChannel;
     private Long customerId;
+    private String customerName;
     private Long warehouseId;
+    private String warehouseName;
     private BigDecimal subTotal;
     private BigDecimal discountTotal;
     private BigDecimal totalAmount;

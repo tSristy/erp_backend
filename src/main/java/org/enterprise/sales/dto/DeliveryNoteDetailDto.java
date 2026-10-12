@@ -9,8 +9,44 @@ public class DeliveryNoteDetailDto extends AuditableDto {
     private Long deliveryNoteId;
     private Long salesOrderDetailId;
     private Long productId;
+    private String productName;
+    private Long variantId;
+    private String variantSku;
     private BigDecimal quantity;
     private BigDecimal unitCost;
     private Long batchId;
+    private String batchNumber;
     private java.util.List<String> serialNumbers;
+
+    @com.fasterxml.jackson.annotation.JsonAlias({"variant_id", "variant"})
+    public void setVariant(Object variant) {
+        if (variant instanceof Number) {
+            this.variantId = ((Number) variant).longValue();
+        } else if (variant instanceof java.util.Map) {
+            Object idVal = ((java.util.Map<?, ?>) variant).get("id");
+            if (idVal instanceof Number) {
+                this.variantId = ((Number) idVal).longValue();
+            } else if (idVal != null) {
+                try {
+                    this.variantId = Long.parseLong(idVal.toString());
+                } catch (NumberFormatException ignored) {}
+            }
+        } else if (variant != null) {
+            try {
+                this.variantId = Long.parseLong(variant.toString());
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    public Object getVariant() {
+        if (this.variantId == null) {
+            return null;
+        }
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        map.put("id", this.variantId);
+        if (this.variantSku != null) {
+            map.put("sku", this.variantSku);
+        }
+        return map;
+    }
 }

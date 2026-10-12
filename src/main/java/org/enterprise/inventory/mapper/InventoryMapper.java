@@ -15,6 +15,7 @@ public interface InventoryMapper {
     @Mapping(target = "salesRevenueAccount.id", source = "salesRevenueAccountId")
     @Mapping(target = "salesReturnAccount.id", source = "salesReturnAccountId")
     @Mapping(target = "salesDiscountAccount.id", source = "salesDiscountAccountId")
+    @Mapping(target = "wipAccount.id", source = "wipAccountId")
     Warehouse toEntity(WarehouseDto dto);
     
     @Mapping(target = "inventoryAccountId", source = "inventoryAccount.id")
@@ -22,6 +23,7 @@ public interface InventoryMapper {
     @Mapping(target = "salesRevenueAccountId", source = "salesRevenueAccount.id")
     @Mapping(target = "salesReturnAccountId", source = "salesReturnAccount.id")
     @Mapping(target = "salesDiscountAccountId", source = "salesDiscountAccount.id")
+    @Mapping(target = "wipAccountId", source = "wipAccount.id")
     WarehouseDto toDto(Warehouse entity);
 
     @Mapping(target = "warehouse.id", source = "warehouseId")

@@ -53,6 +53,10 @@ public class SalesOrder extends AuditableEntity {
     private SalesOrder referenceOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sales_quotation_id")
+    private SalesQuotation salesQuotation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private org.enterprise.hr.entity.Employee salesPerson;
 
     @ManyToOne(fetch = FetchType.LAZY)

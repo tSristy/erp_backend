@@ -40,6 +40,10 @@ public class PurchaseInvoiceService {
 
     @Transactional
     public PurchaseInvoice createInvoice(PurchaseInvoice invoice) {
+        if (invoice.getInvoiceNo() == null || invoice.getInvoiceNo().trim().isEmpty()) {
+            invoice.setInvoiceNo("INV-" + System.currentTimeMillis());
+        }
+
         if (invoice.getGoodsReceipt() != null) {
             boolean alreadyInvoiced = purchaseInvoiceRepository.existsByGoodsReceiptIdAndStatusNot(
                     invoice.getGoodsReceipt().getId(), PurchaseInvoice.InvoiceStatus.CANCELLED);

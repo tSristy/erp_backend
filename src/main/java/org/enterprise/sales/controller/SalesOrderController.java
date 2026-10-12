@@ -17,6 +17,12 @@ public class SalesOrderController {
     private final SalesOrderService salesOrderService;
     private final org.enterprise.sales.mapper.SalesMapper mapper;
 
+    @GetMapping("/next-no")
+    public ResponseEntity<java.util.Map<String, String>> getNextOrderNo() {
+        String nextNo = salesOrderService.generateNextOrderNo(org.enterprise.common.util.TenantContext.getCompanyId());
+        return ResponseEntity.ok(java.util.Collections.singletonMap("orderNo", nextNo));
+    }
+
     @PostMapping
     public ResponseEntity<org.enterprise.sales.dto.SalesOrderDto> create(@Valid @RequestBody org.enterprise.sales.dto.SalesOrderDto dto) {
         SalesOrder entity = mapper.toEntity(dto);
@@ -37,14 +43,21 @@ public class SalesOrderController {
     }
 
     @GetMapping
-    public ResponseEntity<java.util.List<org.enterprise.sales.dto.SalesOrderDto>> getAll() {
-        return ResponseEntity.ok(mapper.toDtoListSalesOrder(salesOrderService.findAll()));
+    public ResponseEntity<?> getAll(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String q,
+            @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
+        String searchTerm = org.springframework.util.StringUtils.hasText(query) ? query : (org.springframework.util.StringUtils.hasText(search) ? search : q);
+        if (org.springframework.util.StringUtils.hasText(searchTerm)) {
+            return ResponseEntity.ok(salesOrderService.search(searchTerm, pageable).map(mapper::toDto));
+        }
+        return ResponseEntity.ok(salesOrderService.findAll(pageable).map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<org.enterprise.sales.dto.SalesOrderDto> getById(@PathVariable Long id) {
-        return salesOrderService.findById(id)
-                .map(mapper::toDto)
+        return salesOrderService.findDtoById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -53,7 +66,7 @@ public class SalesOrderController {
     public ResponseEntity<org.enterprise.sales.dto.SalesOrderDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.sales.dto.SalesOrderDto dto) {
         dto.setId(id);
         SalesOrder entity = mapper.toEntity(dto);
-        return ResponseEntity.ok(mapper.toDto(salesOrderService.save(entity)));
+        return ResponseEntity.ok(mapper.toDto(salesOrderService.update(id, entity)));
     }
 
     @DeleteMapping("/{id}")

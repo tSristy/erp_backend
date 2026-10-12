@@ -15,8 +15,12 @@ public class SalesInvoiceDto extends AuditableDto {
     private LocalDate dueDate;
     private InvoiceStatus status;
     private Long deliveryNoteId;
+    private String deliveryNoteNo;
     private Long customerId;
+    private String customerName;
     private Long warehouseId;
+    private String warehouseName;
+    private org.enterprise.sales.entity.SalesInvoice.SalesChannel salesChannel;
     private BigDecimal subTotal;
     private BigDecimal discountTotal;
     private BigDecimal totalAmount;

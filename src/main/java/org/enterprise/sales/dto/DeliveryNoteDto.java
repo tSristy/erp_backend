@@ -13,8 +13,12 @@ public class DeliveryNoteDto extends AuditableDto {
     private LocalDate deliveryDate;
     private DeliveryStatus status;
     private Long salesOrderId;
+    private String salesOrderNo;
     private Long customerId;
+    private String customerName;
     private Long warehouseId;
+    private String warehouseName;
     private DeliveryType deliveryType;
+    private org.enterprise.sales.entity.DeliveryNote.SalesChannel salesChannel;
     private List<DeliveryNoteDetailDto> details;
 }

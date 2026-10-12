@@ -18,6 +18,12 @@ public class DeliveryController {
     private final DeliveryService deliveryService;
     private final org.enterprise.sales.mapper.SalesMapper mapper;
 
+    @GetMapping("/next-no")
+    public ResponseEntity<java.util.Map<String, String>> getNextDeliveryNo() {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        return ResponseEntity.ok(java.util.Map.of("deliveryNo", deliveryService.generateNextDeliveryNo(companyId)));
+    }
+
     @PostMapping
     public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> create(@Valid @RequestBody org.enterprise.sales.dto.DeliveryNoteDto dto) {
         DeliveryNote entity = mapper.toEntity(dto);
@@ -38,8 +44,16 @@ public class DeliveryController {
     }
 
     @GetMapping
-    public ResponseEntity<java.util.List<org.enterprise.sales.dto.DeliveryNoteDto>> getAll() {
-        return ResponseEntity.ok(mapper.toDtoListDeliveryNote(deliveryService.findAll()));
+    public ResponseEntity<?> getAll(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String q,
+            @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
+        String searchTerm = org.springframework.util.StringUtils.hasText(query) ? query : (org.springframework.util.StringUtils.hasText(search) ? search : q);
+        if (org.springframework.util.StringUtils.hasText(searchTerm)) {
+            return ResponseEntity.ok(deliveryService.search(searchTerm, pageable).map(mapper::toDto));
+        }
+        return ResponseEntity.ok(deliveryService.findAll(pageable).map(mapper::toDto));
     }
 
     @GetMapping("/{id}")

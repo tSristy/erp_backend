@@ -23,6 +23,10 @@ public class SalesInvoiceDetail extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Product product;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private org.enterprise.inventory.entity.ProductVariant variant;
+
     @Column(precision = 18, scale = 6)
     private BigDecimal quantity = BigDecimal.ZERO;
 

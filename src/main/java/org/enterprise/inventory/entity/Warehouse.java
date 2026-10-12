@@ -41,6 +41,8 @@ public class Warehouse extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private WarehouseCategory warehouseCategory;
 
+    private Integer displayOrder;
+
     private Boolean active = true;
 
     private Boolean defaultWarehouse = false;

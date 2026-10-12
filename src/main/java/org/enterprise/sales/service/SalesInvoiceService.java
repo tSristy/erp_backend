@@ -22,21 +22,94 @@ public class SalesInvoiceService {
 
     private final SalesInvoiceRepository salesInvoiceRepository;
     private final JournalEntryService journalService;
+    private final org.enterprise.inventory.repository.BusinessPartnerRepository businessPartnerRepository;
+    private final org.enterprise.inventory.repository.WarehouseRepository warehouseRepository;
+    private final org.enterprise.sales.repository.DeliveryNoteRepository deliveryNoteRepository;
+    private final org.enterprise.inventory.repository.ProductRepository productRepository;
+    private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
+
+    public synchronized String generateNextInvoiceNo(Long companyId) {
+        long nextNum = salesInvoiceRepository.findTopByOrderByIdDesc()
+                .map(si -> si.getId() + 1)
+                .orElse(1L);
+        String candidate = String.format("INV-%05d", nextNum);
+        while (salesInvoiceRepository.existsByInvoiceNo(candidate)) {
+            nextNum++;
+            candidate = String.format("INV-%05d", nextNum);
+        }
+        return candidate;
+    }
 
     @Transactional
     public SalesInvoice save(SalesInvoice salesInvoice) {
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         if (salesInvoice.getCompanyId() == null) {
             salesInvoice.setCompanyId(companyId);
-}        if (salesInvoice.getDetails() != null) {
+        }
+
+        if (salesInvoice.getInvoiceNo() == null || salesInvoice.getInvoiceNo().trim().isEmpty() || salesInvoice.getInvoiceNo().matches("\\d+")) {
+            salesInvoice.setInvoiceNo(generateNextInvoiceNo(companyId));
+        }
+
+        if (salesInvoice.getDeliveryNote() != null && salesInvoice.getDeliveryNote().getId() != null) {
+            deliveryNoteRepository.findById(salesInvoice.getDeliveryNote().getId()).ifPresent(dn -> {
+                salesInvoice.setDeliveryNote(dn);
+                if (salesInvoice.getCustomer() == null && dn.getCustomer() != null) {
+                    salesInvoice.setCustomer(dn.getCustomer());
+                }
+                if (salesInvoice.getWarehouse() == null && dn.getWarehouse() != null) {
+                    salesInvoice.setWarehouse(dn.getWarehouse());
+                }
+                if (salesInvoice.getSalesChannel() == null && dn.getSalesChannel() != null) {
+                    try {
+                        salesInvoice.setSalesChannel(SalesInvoice.SalesChannel.valueOf(dn.getSalesChannel().name()));
+                    } catch (Exception ignored) {}
+                }
+            });
+        }
+
+        if (salesInvoice.getCustomer() != null && salesInvoice.getCustomer().getId() != null) {
+            businessPartnerRepository.findById(salesInvoice.getCustomer().getId())
+                    .ifPresent(salesInvoice::setCustomer);
+        }
+
+        if (salesInvoice.getWarehouse() != null && salesInvoice.getWarehouse().getId() != null) {
+            warehouseRepository.findById(salesInvoice.getWarehouse().getId())
+                    .ifPresent(salesInvoice::setWarehouse);
+        }
+
+        if (salesInvoice.getDetails() != null) {
             for (var detail : salesInvoice.getDetails()) {
                 detail.setSalesInvoice(salesInvoice);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
-}
-}
-}        return salesInvoiceRepository.save(salesInvoice);
-}
+                }
+                if (detail.getProduct() != null && detail.getProduct().getId() != null) {
+                    productRepository.findById(detail.getProduct().getId()).ifPresent(detail::setProduct);
+                }
+                Long varId = (detail.getVariant() != null && detail.getVariant().getId() != null)
+                        ? detail.getVariant().getId() : null;
+                if (varId != null) {
+                    productVariantRepository.findById(varId)
+                            .ifPresentOrElse(detail::setVariant, () -> detail.setVariant(null));
+                } else if (salesInvoice.getDeliveryNote() != null && salesInvoice.getDeliveryNote().getDetails() != null) {
+                    for (var dnd : salesInvoice.getDeliveryNote().getDetails()) {
+                        if (detail.getDeliveryNoteDetail() != null && detail.getDeliveryNoteDetail().getId() != null && detail.getDeliveryNoteDetail().getId().equals(dnd.getId())) {
+                            if (dnd.getVariant() != null) {
+                                detail.setVariant(dnd.getVariant());
+                            } else if (dnd.getSalesOrderDetail() != null && dnd.getSalesOrderDetail().getVariant() != null) {
+                                detail.setVariant(dnd.getSalesOrderDetail().getVariant());
+                            }
+                            break;
+                        }
+                    }
+                } else {
+                    detail.setVariant(null);
+                }
+            }
+        }
+        return salesInvoiceRepository.save(salesInvoice);
+    }
     @Transactional
     public SalesInvoice postInvoice(Long invoiceId) {
         SalesInvoice invoice = salesInvoiceRepository.findById(invoiceId)
@@ -208,10 +281,15 @@ public class SalesInvoiceService {
 }
     public java.util.List<SalesInvoice> findAll() {
         return salesInvoiceRepository.findAll();
-}
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<SalesInvoice> findAll(org.springframework.data.domain.Pageable pageable) {
+        return salesInvoiceRepository.findAll(pageable);
+    }
     public java.util.Optional<SalesInvoice> findById(Long id) {
         return salesInvoiceRepository.findById(id);
-}
+    }
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
         salesInvoiceRepository.deleteById(id);

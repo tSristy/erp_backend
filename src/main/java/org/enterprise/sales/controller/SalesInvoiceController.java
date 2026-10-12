@@ -17,6 +17,12 @@ public class SalesInvoiceController {
     private final SalesInvoiceService salesInvoiceService;
     private final org.enterprise.sales.mapper.SalesMapper mapper;
 
+    @GetMapping("/next-no")
+    public ResponseEntity<java.util.Map<String, String>> getNextInvoiceNo() {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        return ResponseEntity.ok(java.util.Map.of("invoiceNo", salesInvoiceService.generateNextInvoiceNo(companyId)));
+    }
+
     @PostMapping
     public ResponseEntity<org.enterprise.sales.dto.SalesInvoiceDto> create(@Valid @RequestBody org.enterprise.sales.dto.SalesInvoiceDto dto) {
         SalesInvoice entity = mapper.toEntity(dto);
@@ -37,8 +43,16 @@ public class SalesInvoiceController {
     }
 
     @GetMapping
-    public ResponseEntity<java.util.List<org.enterprise.sales.dto.SalesInvoiceDto>> getAll() {
-        return ResponseEntity.ok(mapper.toDtoListSalesInvoice(salesInvoiceService.findAll()));
+    public ResponseEntity<?> getAll(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String q,
+            @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
+        String searchTerm = org.springframework.util.StringUtils.hasText(query) ? query : (org.springframework.util.StringUtils.hasText(search) ? search : q);
+        if (org.springframework.util.StringUtils.hasText(searchTerm)) {
+            return ResponseEntity.ok(salesInvoiceService.search(searchTerm, pageable).map(mapper::toDto));
+        }
+        return ResponseEntity.ok(salesInvoiceService.findAll(pageable).map(mapper::toDto));
     }
 
     @GetMapping("/{id}")

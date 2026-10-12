@@ -17,21 +17,242 @@ import java.util.List;
 public class SalesOrderService {
 
     private final SalesOrderRepository salesOrderRepository;
+    private final org.enterprise.inventory.repository.BusinessPartnerRepository businessPartnerRepository;
+    private final org.enterprise.inventory.repository.WarehouseRepository warehouseRepository;
+    private final org.enterprise.inventory.repository.ProductRepository productRepository;
+    private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
+    private final org.enterprise.sales.repository.SalesQuotationRepository salesQuotationRepository;
+    private final org.enterprise.sales.mapper.SalesMapper mapper;
+
+    public synchronized String generateNextOrderNo(Long companyId) {
+        long nextNum = salesOrderRepository.findTopByOrderByIdDesc()
+                .map(so -> so.getId() + 1)
+                .orElse(1L);
+        String candidate = String.format("SO-%05d", nextNum);
+        while (salesOrderRepository.existsByOrderNo(candidate)) {
+            nextNum++;
+            candidate = String.format("SO-%05d", nextNum);
+        }
+        return candidate;
+    }
 
     @Transactional
     public SalesOrder save(SalesOrder salesOrder) {
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        Long userId = org.enterprise.common.util.TenantContext.getUserId();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
         if (salesOrder.getCompanyId() == null) {
             salesOrder.setCompanyId(companyId);
-}        if (salesOrder.getDetails() != null) {
+        }
+        if (salesOrder.getCreatedAt() == null) {
+            salesOrder.setCreatedAt(now);
+        }
+        if (salesOrder.getUpdatedAt() == null) {
+            salesOrder.setUpdatedAt(now);
+        }
+        if (salesOrder.getCreatedBy() == null) {
+            salesOrder.setCreatedBy(userId);
+        }
+        if (salesOrder.getUpdatedBy() == null) {
+            salesOrder.setUpdatedBy(userId);
+        }
+        if (salesOrder.getOrderNo() == null || salesOrder.getOrderNo().trim().isEmpty()) {
+            salesOrder.setOrderNo(generateNextOrderNo(companyId));
+        }
+        if (salesOrder.getCustomer() != null && salesOrder.getCustomer().getId() != null) {
+            businessPartnerRepository.findById(salesOrder.getCustomer().getId())
+                    .ifPresent(salesOrder::setCustomer);
+        }
+        if (salesOrder.getWarehouse() != null && salesOrder.getWarehouse().getId() != null) {
+            warehouseRepository.findById(salesOrder.getWarehouse().getId())
+                    .ifPresent(salesOrder::setWarehouse);
+        }
+        if (salesOrder.getSalesQuotation() != null && salesOrder.getSalesQuotation().getId() != null) {
+            salesQuotationRepository.findById(salesOrder.getSalesQuotation().getId())
+                    .ifPresent(salesOrder::setSalesQuotation);
+        }
+        if (salesOrder.getReferenceOrder() != null && salesOrder.getReferenceOrder().getId() != null) {
+            salesOrderRepository.findById(salesOrder.getReferenceOrder().getId())
+                    .ifPresent(salesOrder::setReferenceOrder);
+        }
+        if (salesOrder.getDiscounts() != null) {
+            for (var discount : salesOrder.getDiscounts()) {
+                discount.setSalesOrder(salesOrder);
+                if (discount.getCompanyId() == null) {
+                    discount.setCompanyId(companyId);
+                }
+                if (discount.getCreatedAt() == null) {
+                    discount.setCreatedAt(now);
+                }
+                if (discount.getUpdatedAt() == null) {
+                    discount.setUpdatedAt(now);
+                }
+                if (discount.getCreatedBy() == null) {
+                    discount.setCreatedBy(userId);
+                }
+                if (discount.getUpdatedBy() == null) {
+                    discount.setUpdatedBy(userId);
+                }
+            }
+        }
+        if (salesOrder.getDetails() != null) {
             for (var detail : salesOrder.getDetails()) {
                 detail.setSalesOrder(salesOrder);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
-}
-}
-}        return salesOrderRepository.save(salesOrder);
-}
+                }
+                if (detail.getCreatedAt() == null) {
+                    detail.setCreatedAt(now);
+                }
+                if (detail.getUpdatedAt() == null) {
+                    detail.setUpdatedAt(now);
+                }
+                if (detail.getCreatedBy() == null) {
+                    detail.setCreatedBy(userId);
+                }
+                if (detail.getUpdatedBy() == null) {
+                    detail.setUpdatedBy(userId);
+                }
+                if (detail.getProduct() != null && detail.getProduct().getId() != null) {
+                    productRepository.findById(detail.getProduct().getId()).ifPresent(detail::setProduct);
+                }
+                Long varId = (detail.getVariant() != null && detail.getVariant().getId() != null)
+                        ? detail.getVariant().getId() : null;
+                if (varId != null) {
+                    productVariantRepository.findById(varId)
+                            .ifPresentOrElse(detail::setVariant, () -> detail.setVariant(null));
+                } else {
+                    detail.setVariant(null);
+                }
+                if (detail.getDiscounts() != null) {
+                    for (var dd : detail.getDiscounts()) {
+                        dd.setSalesOrderDetail(detail);
+                    }
+                }
+            }
+        }
+        return salesOrderRepository.save(salesOrder);
+    }
+
+    @Transactional
+    public SalesOrder update(Long id, SalesOrder updated) {
+        SalesOrder existing = salesOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Sales Order not found with id: " + id));
+
+        Long userId = org.enterprise.common.util.TenantContext.getUserId();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        existing.setUpdatedAt(now);
+        if (userId != null) {
+            existing.setUpdatedBy(userId);
+        }
+
+        if (updated.getOrderNo() != null && !updated.getOrderNo().trim().isEmpty()) {
+            existing.setOrderNo(updated.getOrderNo());
+        }
+        existing.setOrderDate(updated.getOrderDate());
+        if (updated.getStatus() != null) {
+            existing.setStatus(updated.getStatus());
+        }
+        if (updated.getOrderType() != null) {
+            existing.setOrderType(updated.getOrderType());
+        }
+        if (updated.getSalesChannel() != null) {
+            existing.setSalesChannel(updated.getSalesChannel());
+        }
+        existing.setSubTotal(updated.getSubTotal());
+        existing.setDiscountTotal(updated.getDiscountTotal());
+        existing.setTotalAmount(updated.getTotalAmount());
+
+        if (updated.getCustomer() != null && updated.getCustomer().getId() != null) {
+            businessPartnerRepository.findById(updated.getCustomer().getId()).ifPresent(existing::setCustomer);
+        } else {
+            existing.setCustomer(null);
+        }
+        if (updated.getWarehouse() != null && updated.getWarehouse().getId() != null) {
+            warehouseRepository.findById(updated.getWarehouse().getId()).ifPresent(existing::setWarehouse);
+        } else {
+            existing.setWarehouse(null);
+        }
+        if (updated.getSalesQuotation() != null && updated.getSalesQuotation().getId() != null) {
+            salesQuotationRepository.findById(updated.getSalesQuotation().getId()).ifPresent(existing::setSalesQuotation);
+        } else {
+            existing.setSalesQuotation(null);
+        }
+        if (updated.getReferenceOrder() != null && updated.getReferenceOrder().getId() != null) {
+            salesOrderRepository.findById(updated.getReferenceOrder().getId()).ifPresent(existing::setReferenceOrder);
+        } else {
+            existing.setReferenceOrder(null);
+        }
+
+        // Update discounts
+        if (existing.getDiscounts() != null) {
+            existing.getDiscounts().clear();
+        } else {
+            existing.setDiscounts(new ArrayList<>());
+        }
+        if (updated.getDiscounts() != null) {
+            for (var discount : updated.getDiscounts()) {
+                discount.setSalesOrder(existing);
+                discount.setCompanyId(existing.getCompanyId());
+                if (discount.getCreatedAt() == null) {
+                    discount.setCreatedAt(now);
+                }
+                discount.setUpdatedAt(now);
+                if (discount.getCreatedBy() == null) {
+                    discount.setCreatedBy(userId);
+                }
+                if (userId != null) {
+                    discount.setUpdatedBy(userId);
+                }
+                existing.getDiscounts().add(discount);
+            }
+        }
+
+        // Update details
+        if (existing.getDetails() != null) {
+            existing.getDetails().clear();
+        } else {
+            existing.setDetails(new ArrayList<>());
+        }
+        if (updated.getDetails() != null) {
+            for (var d : updated.getDetails()) {
+                d.setSalesOrder(existing);
+                d.setCompanyId(existing.getCompanyId());
+                if (d.getCreatedAt() == null) {
+                    d.setCreatedAt(now);
+                }
+                d.setUpdatedAt(now);
+                if (d.getCreatedBy() == null) {
+                    d.setCreatedBy(userId);
+                }
+                if (userId != null) {
+                    d.setUpdatedBy(userId);
+                }
+                if (d.getProduct() != null && d.getProduct().getId() != null) {
+                    productRepository.findById(d.getProduct().getId()).ifPresent(d::setProduct);
+                }
+                Long varId = (d.getVariant() != null && d.getVariant().getId() != null)
+                        ? d.getVariant().getId() : null;
+                if (varId != null) {
+                    productVariantRepository.findById(varId)
+                            .ifPresentOrElse(d::setVariant, () -> d.setVariant(null));
+                } else {
+                    d.setVariant(null);
+                }
+                if (d.getDiscounts() != null) {
+                    for (var dd : d.getDiscounts()) {
+                        dd.setSalesOrderDetail(d);
+                    }
+                }
+                existing.getDetails().add(d);
+            }
+        }
+
+        return salesOrderRepository.save(existing);
+    }
+
     @Transactional
     public SalesOrder confirmOrder(Long salesOrderId) {
         SalesOrder order = salesOrderRepository.findById(salesOrderId)
@@ -39,10 +260,11 @@ public class SalesOrderService {
 
         if (order.getStatus() != SalesOrder.SalesOrderStatus.DRAFT) {
             throw new RuntimeException("Only DRAFT orders can be confirmed");
-}
+        }
         order.setStatus(SalesOrder.SalesOrderStatus.CONFIRMED);
         return salesOrderRepository.save(order);
-}
+    }
+
     @Transactional
     public SalesOrder createReturn(Long originalOrderId) {
         SalesOrder original = salesOrderRepository.findById(originalOrderId)
@@ -53,6 +275,7 @@ public class SalesOrderService {
         returnOrder.setReferenceOrder(original);
         returnOrder.setCustomer(original.getCustomer());
         returnOrder.setWarehouse(original.getWarehouse());
+        returnOrder.setSalesChannel(original.getSalesChannel());
         returnOrder.setStatus(SalesOrder.SalesOrderStatus.DRAFT);
         returnOrder.setOrderDate(LocalDate.now());
 
@@ -65,6 +288,7 @@ public class SalesOrderService {
                 SalesOrderDetail returnDetail = new SalesOrderDetail();
                 returnDetail.setSalesOrder(returnOrder);
                 returnDetail.setProduct(originalDetail.getProduct());
+                returnDetail.setVariant(originalDetail.getVariant());
                 returnDetail.setQuantity(returnableQty);
                 returnDetail.setUnitPrice(originalDetail.getUnitPrice());
                 
@@ -73,26 +297,58 @@ public class SalesOrderService {
                 totalAmount = totalAmount.add(lineTotal);
                 
                 returnDetails.add(returnDetail);
-}
-}        
+            }
+        }        
         returnOrder.setDetails(returnDetails);
         returnOrder.setTotalAmount(totalAmount);
 
-        return salesOrderRepository.save(returnOrder);
-}
-    public java.util.List<SalesOrder> findAll() {
+        return save(returnOrder);
+    }
+
+    public List<SalesOrder> findAll() {
         return salesOrderRepository.findAll();
-}
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<SalesOrder> findAll(org.springframework.data.domain.Pageable pageable) {
+        return salesOrderRepository.findAll(pageable);
+    }
+
     public java.util.Optional<SalesOrder> findById(Long id) {
         return salesOrderRepository.findById(id);
-}
-    @org.springframework.transaction.annotation.Transactional
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<org.enterprise.sales.dto.SalesOrderDto> findDtoById(Long id) {
+        return salesOrderRepository.findById(id).map(entity -> {
+            if (entity.getDetails() != null) {
+                for (var detail : entity.getDetails()) {
+                    if (detail.getVariant() != null) {
+                        detail.getVariant().getId();
+                        detail.getVariant().getSku();
+                    }
+                }
+            }
+            org.enterprise.sales.dto.SalesOrderDto dto = mapper.toDto(entity);
+            if (entity.getCustomer() != null) {
+                dto.setCustomerName(entity.getCustomer().getName());
+            }
+            if (entity.getWarehouse() != null) {
+                dto.setWarehouseName(entity.getWarehouse().getName());
+            }
+            if (entity.getSalesQuotation() != null) {
+                dto.setSalesQuotationNo(entity.getSalesQuotation().getQuotationNo());
+            }
+            return dto;
+        });
+    }
+
+    @Transactional
     public void delete(Long id) {
         salesOrderRepository.deleteById(id);
-}
+    }
 
-
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<SalesOrder> search(String query, org.springframework.data.domain.Pageable pageable) {
         return salesOrderRepository.findAll(org.enterprise.sales.specification.SalesOrderSpecification.searchByQuery(query), pageable);
     }

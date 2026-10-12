@@ -49,4 +49,47 @@ public class WarehouseService extends BaseService<Warehouse, Long> {
         }
         return super.save(entity);
     }
+
+    @Transactional
+    public Warehouse update(Long id, Warehouse incoming) {
+        Warehouse existing = warehouseRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Warehouse not found with id: " + id));
+
+        if (incoming.getCode() != null && !incoming.getCode().trim().isEmpty()) {
+            existing.setCode(incoming.getCode());
+        }
+        existing.setName(incoming.getName());
+        existing.setShortName(incoming.getShortName());
+        existing.setType(incoming.getType());
+        existing.setWarehouseCategory(incoming.getWarehouseCategory());
+        existing.setDisplayOrder(incoming.getDisplayOrder());
+        existing.setActive(incoming.getActive());
+        existing.setDefaultWarehouse(incoming.getDefaultWarehouse());
+        existing.setAllowNegativeStock(incoming.getAllowNegativeStock());
+        existing.setBatchManaged(incoming.getBatchManaged());
+        existing.setSerialManaged(incoming.getSerialManaged());
+        existing.setBinManaged(incoming.getBinManaged());
+        existing.setQuarantineEnabled(incoming.getQuarantineEnabled());
+        existing.setContactPerson(incoming.getContactPerson());
+        existing.setEmail(incoming.getEmail());
+        existing.setPhone(incoming.getPhone());
+        existing.setCountry(incoming.getCountry());
+        existing.setCity(incoming.getCity());
+        existing.setZipCode(incoming.getZipCode());
+        existing.setAddress(incoming.getAddress());
+        existing.setLatitude(incoming.getLatitude());
+        existing.setLongitude(incoming.getLongitude());
+        existing.setEffectiveFrom(incoming.getEffectiveFrom());
+        existing.setEffectiveTo(incoming.getEffectiveTo());
+        existing.setRemarks(incoming.getRemarks());
+        existing.setBranch(incoming.getBranch());
+        existing.setInventoryAccount(incoming.getInventoryAccount());
+        existing.setCogsAccount(incoming.getCogsAccount());
+        existing.setSalesRevenueAccount(incoming.getSalesRevenueAccount());
+        existing.setSalesReturnAccount(incoming.getSalesReturnAccount());
+        existing.setSalesDiscountAccount(incoming.getSalesDiscountAccount());
+        existing.setWipAccount(incoming.getWipAccount());
+
+        return warehouseRepository.save(existing);
+    }
 }
