@@ -16,6 +16,9 @@ public class SalesInvoiceDetailDto extends AuditableDto {
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private BigDecimal discountTotal;
+    private BigDecimal vatRate;
+    private Boolean isVatInclusive;
+    private BigDecimal vatTotal;
     private java.util.List<SalesInvoiceDetailDiscountDto> discounts;
 
     @com.fasterxml.jackson.annotation.JsonAlias({"variant_id", "variant"})

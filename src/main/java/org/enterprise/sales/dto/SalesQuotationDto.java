@@ -20,6 +20,7 @@ public class SalesQuotationDto extends AuditableDto {
     private String warehouseName;
     private BigDecimal subTotal;
     private BigDecimal discountTotal;
+    private BigDecimal vatTotal;
     private BigDecimal totalAmount;
     private List<SalesQuotationDiscountDto> discounts;
     private List<SalesQuotationDetailDto> details;

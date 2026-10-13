@@ -25,6 +25,7 @@ public class WarehouseDto extends AuditableDto {
     private String contactPerson;
     private String email;
     private String phone;
+    private String vatNumber;
     private String country;
     private String city;
     private String zipCode;

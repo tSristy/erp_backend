@@ -20,9 +20,12 @@ public class SalesInvoiceDto extends AuditableDto {
     private String customerName;
     private Long warehouseId;
     private String warehouseName;
+    private String warehouseVatNumber;
+    private String warehouseAddress;
     private org.enterprise.sales.entity.SalesInvoice.SalesChannel salesChannel;
     private BigDecimal subTotal;
     private BigDecimal discountTotal;
+    private BigDecimal vatTotal;
     private BigDecimal totalAmount;
     private BigDecimal paidAmount;
     private InvoiceType invoiceType;

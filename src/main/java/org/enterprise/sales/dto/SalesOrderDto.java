@@ -19,6 +19,7 @@ public class SalesOrderDto extends AuditableDto {
     private String warehouseName;
     private BigDecimal subTotal;
     private BigDecimal discountTotal;
+    private BigDecimal vatTotal;
     private BigDecimal totalAmount;
     private OrderType orderType;
     private Long referenceOrderId;

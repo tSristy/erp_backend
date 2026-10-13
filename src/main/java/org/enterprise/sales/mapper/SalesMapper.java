@@ -99,6 +99,8 @@ public interface SalesMapper {
     @Mapping(target = "customerName", source = "customer.name")
     @Mapping(target = "warehouseId", source = "warehouse.id")
     @Mapping(target = "warehouseName", source = "warehouse.name")
+    @Mapping(target = "warehouseVatNumber", source = "warehouse.vatNumber")
+    @Mapping(target = "warehouseAddress", source = "warehouse.address")
     SalesInvoiceDto toDto(SalesInvoice entity);
 
     @Mapping(target = "salesInvoice", ignore = true)

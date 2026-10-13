@@ -15,6 +15,9 @@ public class SalesOrderDetailDto extends AuditableDto {
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private BigDecimal discountTotal;
+    private BigDecimal vatRate;
+    private Boolean isVatInclusive;
+    private BigDecimal vatTotal;
     private java.util.List<SalesOrderDetailDiscountDto> discounts;
     private BigDecimal shippedQuantity;
     private BigDecimal returnedQuantity;

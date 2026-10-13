@@ -41,6 +41,9 @@ public class SalesInvoice extends AuditableEntity {
     private BigDecimal discountTotal = BigDecimal.ZERO;
 
     @Column(precision = 18, scale = 2)
+    private BigDecimal vatTotal = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(precision = 18, scale = 2)
