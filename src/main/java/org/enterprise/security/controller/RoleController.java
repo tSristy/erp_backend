@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.enterprise.security.dto.RoleDto;
 import org.enterprise.security.dto.RoleRequest;
 import org.enterprise.security.service.RoleService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +28,17 @@ public class RoleController {
         return ResponseEntity.ok(roleService.getAllRoles());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/search")
+    @PreAuthorize("hasAuthority('ROLE_READ') or hasAuthority('ROLE_WRITE')")
+    public ResponseEntity<Page<RoleDto>> search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
+            Pageable pageable) {
+        String searchQuery = query != null ? query : q;
+        return ResponseEntity.ok(roleService.searchRoles(searchQuery, pageable));
+    }
+
+    @GetMapping("/{id:[0-9]+}")
     @PreAuthorize("hasAuthority('ROLE_READ') or hasAuthority('ROLE_WRITE')")
     public ResponseEntity<RoleDto> getRoleById(@PathVariable Long id) {
         return ResponseEntity.ok(roleService.getRoleById(id));

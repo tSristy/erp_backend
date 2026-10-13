@@ -1,6 +1,8 @@
 package org.enterprise.security.repository;
 
 import org.enterprise.security.entity.Role;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,4 +36,28 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     // 🔍 Check existence (used in seeder)
     boolean existsByCodeAndCompanyId(String code, Long companyId);
+
+    @Query(value = """
+        SELECT r FROM Role r
+        WHERE (:companyId IS NULL OR r.companyId IS NULL OR r.companyId = :companyId)
+        AND (
+            :query IS NULL OR :query = '' OR
+            LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) OR
+            LOWER(r.code) LIKE LOWER(CONCAT('%', :query, '%'))
+        )
+    """,
+    countQuery = """
+        SELECT COUNT(r) FROM Role r
+        WHERE (:companyId IS NULL OR r.companyId IS NULL OR r.companyId = :companyId)
+        AND (
+            :query IS NULL OR :query = '' OR
+            LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) OR
+            LOWER(r.code) LIKE LOWER(CONCAT('%', :query, '%'))
+        )
+    """)
+    Page<Role> search(
+            @Param("companyId") Long companyId,
+            @Param("query") String query,
+            Pageable pageable
+    );
 }

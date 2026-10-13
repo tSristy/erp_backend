@@ -9,6 +9,8 @@ public class AreaDto {
     private String code;
     private String name;
     private Long areaManagerId;
+    private String areaManagerName;
     private Long zoneId;
+    private String zoneName;
     private Boolean active;
 }

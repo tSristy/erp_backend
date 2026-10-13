@@ -7,6 +7,8 @@ import org.enterprise.security.entity.Menu;
 import org.enterprise.security.entity.Module;
 import org.enterprise.security.repository.MenuRepository;
 import org.enterprise.security.repository.ModuleRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,12 @@ public class MenuService {
 
     private final MenuRepository menuRepository;
     private final ModuleRepository moduleRepository;
+
+    @Transactional(readOnly = true)
+    public Page<MenuDTO> search(String moduleCode, String query, Pageable pageable) {
+        Long companyId = TenantContext.getCompanyId();
+        return menuRepository.search(companyId, moduleCode, query, pageable).map(this::toDto);
+    }
 
     @Transactional(readOnly = true)
     public List<MenuDTO> findAll(String moduleCode) {

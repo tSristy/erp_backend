@@ -5,6 +5,8 @@ import org.enterprise.common.util.TenantContext;
 import org.enterprise.security.dto.ModuleDto;
 import org.enterprise.security.entity.Module;
 import org.enterprise.security.repository.ModuleRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,12 @@ import java.util.stream.Collectors;
 public class ModuleService {
 
     private final ModuleRepository moduleRepository;
+
+    @Transactional(readOnly = true)
+    public Page<ModuleDto> search(String query, Pageable pageable) {
+        Long companyId = TenantContext.getCompanyId();
+        return moduleRepository.search(companyId, query, pageable).map(this::toDto);
+    }
 
     @Transactional(readOnly = true)
     public List<ModuleDto> findAll() {

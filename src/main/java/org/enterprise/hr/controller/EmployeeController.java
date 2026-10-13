@@ -32,19 +32,46 @@ public class EmployeeController {
         return ResponseEntity.ok(service.create(dto));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<EmployeeDto> getById(
-            @PathVariable Long id) {
-
-        return ResponseEntity.ok(service.getById(id));
+    @GetMapping("/search")
+    public ResponseEntity<Page<EmployeeDto>> search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String keyword,
+            Pageable pageable) {
+        String searchParam = (query != null && !query.trim().isEmpty()) ? query
+                : ((q != null && !q.trim().isEmpty()) ? q : keyword);
+        return ResponseEntity.ok(service.search(searchParam, pageable));
     }
 
     @GetMapping
-    public ResponseEntity<Page<EmployeeDto>> search(
+    public ResponseEntity<Page<EmployeeDto>> getAllOrSearch(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
             @RequestParam(required = false) String keyword,
             Pageable pageable) {
+        String searchParam = (query != null && !query.trim().isEmpty()) ? query
+                : ((q != null && !q.trim().isEmpty()) ? q : keyword);
+        return ResponseEntity.ok(service.search(searchParam, pageable));
+    }
 
-        return ResponseEntity.ok(service.search(keyword, pageable));
+    @GetMapping("/{id:[0-9]+}")
+    public ResponseEntity<EmployeeDto> getById(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(service.getById(id));
+    }
+
+    @PutMapping("/{id:[0-9]+}")
+    public ResponseEntity<EmployeeDto> update(
+            @PathVariable Long id,
+            @RequestBody EmployeeDto dto) {
+        return ResponseEntity.ok(service.update(id, dto));
+    }
+
+    @DeleteMapping("/{id:[0-9]+}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     // Education Endpoints
@@ -100,17 +127,4 @@ public class EmployeeController {
         experienceService.delete(id);
         return ResponseEntity.noContent().build();
     }
-
-    @org.springframework.web.bind.annotation.GetMapping("/search")
-    public org.springframework.data.domain.Page<org.enterprise.hr.dto.EmployeeDto> search(
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
-        org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchEmployees(org.enterprise.common.util.TenantContext.getCompanyId(), q, pageable);
-    }
-
 }

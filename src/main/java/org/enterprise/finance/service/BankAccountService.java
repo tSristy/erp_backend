@@ -3,6 +3,7 @@ package org.enterprise.finance.service;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.common.util.TenantContext;
 import org.enterprise.finance.entity.BankAccount;
+import org.enterprise.finance.repository.AccountRepository;
 import org.enterprise.finance.repository.BankAccountRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import java.util.List;
 public class BankAccountService {
 
     private final BankAccountRepository bankAccountRepository;
+    private final AccountRepository accountRepository;
 
     public List<BankAccount> getAllBankAccounts() {
         return bankAccountRepository.findAll();
@@ -32,6 +34,11 @@ public class BankAccountService {
         }
         
         bankAccount.setCompanyId(companyId);
+        if (bankAccount.getAccount() != null && bankAccount.getAccount().getId() != null) {
+            bankAccount.setAccount(accountRepository.findById(bankAccount.getAccount().getId()).orElse(null));
+        } else {
+            bankAccount.setAccount(null);
+        }
         return bankAccountRepository.save(bankAccount);
     }
 
@@ -39,13 +46,18 @@ public class BankAccountService {
     public BankAccount updateBankAccount(Long id, BankAccount details) {
         BankAccount existing = getBankAccountById(id);
         
+        existing.setAccountName(details.getAccountName());
         existing.setBankName(details.getBankName());
         existing.setBranchName(details.getBranchName());
         existing.setAccountNumber(details.getAccountNumber());
         existing.setRoutingNumber(details.getRoutingNumber());
         existing.setCurrencyCode(details.getCurrencyCode());
         existing.setActive(details.getActive());
-        existing.setAccount(details.getAccount());
+        if (details.getAccount() != null && details.getAccount().getId() != null) {
+            existing.setAccount(accountRepository.findById(details.getAccount().getId()).orElse(null));
+        } else {
+            existing.setAccount(null);
+        }
 
         return bankAccountRepository.save(existing);
     }

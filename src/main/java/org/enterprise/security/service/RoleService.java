@@ -11,6 +11,8 @@ import org.enterprise.security.entity.RolePermission;
 import org.enterprise.security.repository.PermissionRepository;
 import org.enterprise.security.repository.RolePermissionRepository;
 import org.enterprise.security.repository.RoleRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,12 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+
+    @Transactional(readOnly = true)
+    public Page<RoleDto> searchRoles(String query, Pageable pageable) {
+        Long companyId = TenantContext.get().getCompanyId();
+        return roleRepository.search(companyId, query, pageable).map(this::mapToDto);
+    }
 
     public List<RoleDto> getAllRoles() {
         Long companyId = TenantContext.get().getCompanyId();

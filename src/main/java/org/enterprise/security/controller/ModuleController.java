@@ -6,6 +6,8 @@ import org.enterprise.security.dto.ModuleDto;
 import org.enterprise.security.dto.MenuDTO;
 import org.enterprise.security.service.ModuleService;
 import org.enterprise.security.service.MenuService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -26,7 +28,16 @@ public class ModuleController {
         return ResponseEntity.ok(moduleService.findAll());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/search")
+    public ResponseEntity<Page<ModuleDto>> search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
+            Pageable pageable) {
+        String searchQuery = query != null ? query : q;
+        return ResponseEntity.ok(moduleService.search(searchQuery, pageable));
+    }
+
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<ModuleDto> getModuleById(@PathVariable Long id) {
         ModuleDto dto = moduleService.findById(id);
         if (dto != null) {

@@ -92,12 +92,10 @@ public class EmployeeService {
         if (keyword == null || keyword.isBlank()) {
             page = employeeRepository.findAll(pageable);
         } else {
-            page = employeeRepository
-                    .findByEmployeeCodeContainingIgnoreCaseOrFullNameContainingIgnoreCase(
-                            keyword,
-                            keyword,
-                            pageable
-                    );
+            page = employeeRepository.findAll(
+                    org.enterprise.hr.specification.EmployeeSpecification.searchByQuery(keyword),
+                    pageable
+            );
         }
 
         return page.map(this::mapEntityToDto);
@@ -266,8 +264,9 @@ public class EmployeeService {
         return dto;
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public org.springframework.data.domain.Page<org.enterprise.hr.dto.EmployeeDto> searchEmployees(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
-        return employeeRepository.findAll(pageable).map(this::mapEntityToDto);
+        return search(searchTerm, pageable);
     }
 
 

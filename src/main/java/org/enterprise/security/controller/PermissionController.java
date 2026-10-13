@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.security.dto.PermissionDto;
 import org.enterprise.security.service.PermissionService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +27,17 @@ public class PermissionController {
         return ResponseEntity.ok(permissionService.findAll());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/search")
+    @PreAuthorize("hasAuthority('ROLE_READ') or hasAuthority('ROLE_WRITE')")
+    public ResponseEntity<Page<PermissionDto>> search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
+            Pageable pageable) {
+        String searchQuery = query != null ? query : q;
+        return ResponseEntity.ok(permissionService.search(searchQuery, pageable));
+    }
+
+    @GetMapping("/{id:[0-9]+}")
     @PreAuthorize("hasAuthority('ROLE_READ') or hasAuthority('ROLE_WRITE')")
     public ResponseEntity<PermissionDto> getPermissionById(@PathVariable Long id) {
         PermissionDto dto = permissionService.findById(id);

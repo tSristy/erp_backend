@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.enterprise.security.dto.MenuDTO;
 import org.enterprise.security.service.MenuService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -23,7 +25,17 @@ public class MenuController {
         return ResponseEntity.ok(menuService.findAll(moduleCode));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/search")
+    public ResponseEntity<Page<MenuDTO>> search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String moduleCode,
+            Pageable pageable) {
+        String searchQuery = query != null ? query : q;
+        return ResponseEntity.ok(menuService.search(moduleCode, searchQuery, pageable));
+    }
+
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<MenuDTO> getMenuById(@PathVariable Long id) {
         MenuDTO dto = menuService.findById(id);
         if (dto != null) {

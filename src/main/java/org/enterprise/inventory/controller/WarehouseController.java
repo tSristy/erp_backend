@@ -2,7 +2,9 @@ package org.enterprise.inventory.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.enterprise.inventory.dto.WarehouseDto;
 import org.enterprise.inventory.entity.Warehouse;
+import org.enterprise.inventory.mapper.InventoryMapper;
 import org.enterprise.inventory.service.WarehouseService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,27 +16,29 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/inventory/warehouses")
+@RequestMapping({"/api/v1/inventory/warehouses", "/api/v1/organization/warehouses"})
 @RequiredArgsConstructor
 public class WarehouseController {
 
     private final WarehouseService warehouseService;
-    private final org.enterprise.inventory.mapper.InventoryMapper mapper;
+    private final InventoryMapper mapper;
 
     @GetMapping
-    public ResponseEntity<List<org.enterprise.inventory.dto.WarehouseDto>> findAll() {
+    public ResponseEntity<List<WarehouseDto>> findAll() {
         return ResponseEntity.ok(mapper.toDtoListWarehouse(warehouseService.findAll()));
     }
 
-    @org.springframework.web.bind.annotation.GetMapping("/search")
-    public ResponseEntity<Page<org.enterprise.inventory.dto.WarehouseDto>> search(
+    @GetMapping("/search")
+    public ResponseEntity<Page<WarehouseDto>> search(
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
             Pageable pageable) {
-        return ResponseEntity.ok(warehouseService.search(query, pageable).map(mapper::toDto));
+        String searchQuery = (query != null && !query.trim().isEmpty()) ? query : q;
+        return ResponseEntity.ok(warehouseService.search(searchQuery, pageable).map(mapper::toDto));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> findById(@PathVariable Long id) {
+    @GetMapping("/{id:[0-9]+}")
+    public ResponseEntity<WarehouseDto> findById(@PathVariable Long id) {
         return warehouseService.findById(id)
                 .map(mapper::toDto)
                 .map(ResponseEntity::ok)
@@ -42,9 +46,9 @@ public class WarehouseController {
     }
 
     @PostMapping
-    public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> create(@Valid @RequestBody org.enterprise.inventory.dto.WarehouseDto dto) {
+    public ResponseEntity<WarehouseDto> create(@Valid @RequestBody WarehouseDto dto) {
         Warehouse entity = mapper.toEntity(dto);
-        org.enterprise.inventory.dto.WarehouseDto createdDto = mapper.toDto(warehouseService.save(entity));
+        WarehouseDto createdDto = mapper.toDto(warehouseService.create(entity));
         
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -55,18 +59,35 @@ public class WarehouseController {
         return ResponseEntity.created(location).body(createdDto);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<org.enterprise.inventory.dto.WarehouseDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.inventory.dto.WarehouseDto dto) {
+    @PutMapping("/{id:[0-9]+}")
+    public ResponseEntity<WarehouseDto> update(@PathVariable Long id, @Valid @RequestBody WarehouseDto dto) {
         dto.setId(id);
         Warehouse entity = mapper.toEntity(dto);
         return ResponseEntity.ok(mapper.toDto(warehouseService.update(id, entity)));
     }
 
-    @DeleteMapping("/{id}")
+    @PutMapping
+    public ResponseEntity<WarehouseDto> updateWithoutPathId(@Valid @RequestBody WarehouseDto dto) {
+        if (dto.getId() == null) {
+            throw new IllegalArgumentException("Warehouse ID is required for update");
+        }
+        Warehouse entity = mapper.toEntity(dto);
+        return ResponseEntity.ok(mapper.toDto(warehouseService.update(dto.getId(), entity)));
+    }
+
+    @DeleteMapping("/{id:[0-9]+}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         warehouseService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-
+    @DeleteMapping
+    public ResponseEntity<Void> deleteByParamOrBody(@RequestParam(required = false) Long id, @RequestBody(required = false) WarehouseDto dto) {
+        Long targetId = id != null ? id : (dto != null ? dto.getId() : null);
+        if (targetId == null) {
+            throw new IllegalArgumentException("Warehouse ID is required for delete");
+        }
+        warehouseService.delete(targetId);
+        return ResponseEntity.noContent().build();
+    }
 }

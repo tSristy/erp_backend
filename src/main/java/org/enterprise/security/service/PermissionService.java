@@ -6,6 +6,8 @@ import org.enterprise.security.entity.Menu;
 import org.enterprise.security.entity.Permission;
 import org.enterprise.security.repository.MenuRepository;
 import org.enterprise.security.repository.PermissionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,11 @@ public class PermissionService {
 
     private final PermissionRepository permissionRepository;
     private final MenuRepository menuRepository;
+
+    @Transactional(readOnly = true)
+    public Page<PermissionDto> search(String query, Pageable pageable) {
+        return permissionRepository.search(query, pageable).map(this::toDto);
+    }
 
     @Transactional(readOnly = true)
     public List<PermissionDto> findAll() {

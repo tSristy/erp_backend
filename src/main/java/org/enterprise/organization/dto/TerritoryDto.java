@@ -10,6 +10,8 @@ public class TerritoryDto {
     private String name;
     private String salesType;
     private Long territoryManagerId;
+    private String territoryManagerName;
     private Boolean active;
     private Long areaId;
+    private String areaName;
 }

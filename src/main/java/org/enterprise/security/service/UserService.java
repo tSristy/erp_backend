@@ -24,6 +24,8 @@ import org.enterprise.organization.repository.BranchRepository;
 import org.enterprise.inventory.repository.WarehouseRepository;
 import org.enterprise.finance.repository.ProfitCenterRepository;
 import org.enterprise.finance.repository.CostCenterRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +52,18 @@ public class UserService {
         return userRepository.findActiveUsersByCompanyId(companyId).stream()
                 .map(this::mapToDto)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserDto> searchUsers(String query, Pageable pageable) {
+        Long companyId = TenantContext.getCompanyId();
+        Page<User> users;
+        if (companyId != null) {
+            users = userRepository.searchActiveUsersByCompanyId(companyId, query, pageable);
+        } else {
+            users = userRepository.searchActiveUsers(query, pageable);
+        }
+        return users.map(this::mapToDto);
     }
 
     public UserDto getUserById(Long id) {

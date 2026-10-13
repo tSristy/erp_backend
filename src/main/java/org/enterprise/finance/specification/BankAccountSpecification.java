@@ -19,22 +19,32 @@ public class BankAccountSpecification {
             List<Predicate> predicates = new ArrayList<>();
             
             try {
-            // Id search removed because PostgreSQL doesn't support lower(bigint)
+                predicates.add(cb.like(cb.lower(root.get("accountName")), likePattern));
             } catch (Exception e) {
                 // Ignore
             }
             try {
-                predicates.add(cb.like(cb.lower(root.get("code")), likePattern));
+                predicates.add(cb.like(cb.lower(root.get("bankName")), likePattern));
             } catch (Exception e) {
                 // Ignore
             }
             try {
-                predicates.add(cb.like(cb.lower(root.get("name")), likePattern));
+                predicates.add(cb.like(cb.lower(root.get("branchName")), likePattern));
             } catch (Exception e) {
                 // Ignore
             }
             try {
-                predicates.add(cb.like(cb.lower(root.get("description")), likePattern));
+                predicates.add(cb.like(cb.lower(root.get("accountNumber")), likePattern));
+            } catch (Exception e) {
+                // Ignore
+            }
+            try {
+                predicates.add(cb.like(cb.lower(root.get("routingNumber")), likePattern));
+            } catch (Exception e) {
+                // Ignore
+            }
+            try {
+                predicates.add(cb.like(cb.lower(root.get("currencyCode")), likePattern));
             } catch (Exception e) {
                 // Ignore
             }

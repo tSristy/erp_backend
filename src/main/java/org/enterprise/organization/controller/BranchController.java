@@ -28,14 +28,16 @@ public class BranchController {
         return ResponseEntity.ok(mapper.toDtoListBranch(service.findAll()));
     }
 
-    @org.springframework.web.bind.annotation.GetMapping("/search")
+    @GetMapping("/search")
     public ResponseEntity<Page<BranchDto>> search(
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
             Pageable pageable) {
-        return ResponseEntity.ok(service.search(query, pageable).map(mapper::toDto));
+        String searchQuery = (query != null && !query.trim().isEmpty()) ? query : q;
+        return ResponseEntity.ok(service.search(searchQuery, pageable).map(mapper::toDto));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<BranchDto> findById(@PathVariable Long id) {
         return service.findById(id)
                 .map(mapper::toDto)
@@ -57,14 +59,14 @@ public class BranchController {
         return ResponseEntity.created(location).body(createdDto);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:[0-9]+}")
     public ResponseEntity<BranchDto> update(@PathVariable Long id, @Valid @RequestBody BranchDto dto) {
         dto.setId(id);
         Branch entity = mapper.toEntity(dto);
         return ResponseEntity.ok(mapper.toDto(service.save(entity)));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:[0-9]+}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

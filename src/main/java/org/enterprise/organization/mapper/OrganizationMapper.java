@@ -27,7 +27,9 @@ public interface OrganizationMapper {
     Territory toEntity(TerritoryDto dto);
 
     @Mapping(target = "areaId", source = "area.id")
+    @Mapping(target = "areaName", source = "area.name")
     @Mapping(target = "territoryManagerId", source = "territoryManager.id")
+    @Mapping(target = "territoryManagerName", source = "territoryManager.fullName")
     TerritoryDto toDto(Territory entity);
 
     List<TerritoryDto> toDtoListTerritory(List<Territory> entityList);
@@ -36,6 +38,7 @@ public interface OrganizationMapper {
     Zone toEntity(ZoneDto dto);
 
     @Mapping(target = "regionalManagerId", source = "regionalManager.id")
+    @Mapping(target = "regionalManagerName", source = "regionalManager.fullName")
     ZoneDto toDto(Zone entity);
 
     List<ZoneDto> toDtoListZone(List<Zone> entityList);
@@ -45,7 +48,9 @@ public interface OrganizationMapper {
     Area toEntity(AreaDto dto);
 
     @Mapping(target = "zoneId", source = "zone.id")
+    @Mapping(target = "zoneName", source = "zone.name")
     @Mapping(target = "areaManagerId", source = "areaManager.id")
+    @Mapping(target = "areaManagerName", source = "areaManager.fullName")
     AreaDto toDto(Area entity);
 
     List<AreaDto> toDtoListArea(List<Area> entityList);

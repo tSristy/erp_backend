@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.enterprise.security.dto.UserDto;
 import org.enterprise.security.dto.UserRequest;
 import org.enterprise.security.service.UserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +28,17 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/search")
+    @PreAuthorize("hasAuthority('USER_READ') or hasAuthority('USER_WRITE')")
+    public ResponseEntity<Page<UserDto>> search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
+            Pageable pageable) {
+        String searchQuery = query != null ? query : q;
+        return ResponseEntity.ok(userService.searchUsers(searchQuery, pageable));
+    }
+
+    @GetMapping("/{id:[0-9]+}")
     @PreAuthorize("hasAuthority('USER_READ') or hasAuthority('USER_WRITE')")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));

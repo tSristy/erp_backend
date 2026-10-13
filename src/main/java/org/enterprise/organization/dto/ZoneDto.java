@@ -9,5 +9,6 @@ public class ZoneDto {
     private String code;
     private String name;
     private Long regionalManagerId;
+    private String regionalManagerName;
     private Boolean active;
 }

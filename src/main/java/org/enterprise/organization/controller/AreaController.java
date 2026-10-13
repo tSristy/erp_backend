@@ -28,14 +28,16 @@ public class AreaController {
         return ResponseEntity.ok(mapper.toDtoListArea(service.findAll()));
     }
 
-    @org.springframework.web.bind.annotation.GetMapping("/search")
+    @GetMapping("/search")
     public ResponseEntity<Page<AreaDto>> search(
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String q,
             Pageable pageable) {
-        return ResponseEntity.ok(service.search(query, pageable).map(mapper::toDto));
+        String searchQuery = (query != null && !query.trim().isEmpty()) ? query : q;
+        return ResponseEntity.ok(service.search(searchQuery, pageable).map(mapper::toDto));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<AreaDto> findById(@PathVariable Long id) {
         return service.findById(id)
                 .map(mapper::toDto)
@@ -46,7 +48,7 @@ public class AreaController {
     @PostMapping
     public ResponseEntity<AreaDto> create(@Valid @RequestBody AreaDto dto) {
         Area entity = mapper.toEntity(dto);
-        AreaDto createdDto = mapper.toDto(service.save(entity));
+        AreaDto createdDto = mapper.toDto(service.create(entity));
         
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -57,14 +59,14 @@ public class AreaController {
         return ResponseEntity.created(location).body(createdDto);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:[0-9]+}")
     public ResponseEntity<AreaDto> update(@PathVariable Long id, @Valid @RequestBody AreaDto dto) {
         dto.setId(id);
         Area entity = mapper.toEntity(dto);
-        return ResponseEntity.ok(mapper.toDto(service.save(entity)));
+        return ResponseEntity.ok(mapper.toDto(service.update(id, entity)));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:[0-9]+}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
