@@ -7,14 +7,14 @@ import java.util.List;
 
 import org.enterprise.inventory.entity.*;
 import org.enterprise.inventory.dto.*;
-import org.enterprise.organization.dto.BranchDto;
-import org.enterprise.organization.entity.Branch;
+
 
 @Mapper(componentModel = "spring")
 public interface InventoryMapper {
 
     // ==================== Warehouse ====================
 
+    @Mapping(target = "branch.id", source = "branchId")
     @Mapping(target = "inventoryAccount.id", source = "inventoryAccountId")
     @Mapping(target = "cogsAccount.id", source = "cogsAccountId")
     @Mapping(target = "salesRevenueAccount.id", source = "salesRevenueAccountId")
@@ -23,12 +23,20 @@ public interface InventoryMapper {
     @Mapping(target = "wipAccount.id", source = "wipAccountId")
     Warehouse toEntity(WarehouseDto dto);
 
+    @Mapping(target = "branchId", source = "branch.id")
+    @Mapping(target = "branchName", source = "branch.name")
     @Mapping(target = "inventoryAccountId", source = "inventoryAccount.id")
+    @Mapping(target = "inventoryAccountName", source = "inventoryAccount.name")
     @Mapping(target = "cogsAccountId", source = "cogsAccount.id")
+    @Mapping(target = "cogsAccountName", source = "cogsAccount.name")
     @Mapping(target = "salesRevenueAccountId", source = "salesRevenueAccount.id")
+    @Mapping(target = "salesRevenueAccountName", source = "salesRevenueAccount.name")
     @Mapping(target = "salesReturnAccountId", source = "salesReturnAccount.id")
+    @Mapping(target = "salesReturnAccountName", source = "salesReturnAccount.name")
     @Mapping(target = "salesDiscountAccountId", source = "salesDiscountAccount.id")
+    @Mapping(target = "salesDiscountAccountName", source = "salesDiscountAccount.name")
     @Mapping(target = "wipAccountId", source = "wipAccount.id")
+    @Mapping(target = "wipAccountName", source = "wipAccount.name")
     WarehouseDto toDto(Warehouse entity);
 
     List<WarehouseDto> toDtoListWarehouse(List<Warehouse> entityList);
@@ -49,14 +57,4 @@ public interface InventoryMapper {
     List<LocationDto> toDtoListLocation(List<Location> entityList);
 
 
-    // ==================== Branch ====================
-
-    @Mapping(target = "company.id", source = "companyId")
-    Branch toEntity(BranchDto dto);
-
-    @Mapping(target = "companyId", source = "company.id")
-    @Mapping(target = "companyName", source = "company.name")
-    BranchDto toDto(Branch entity);
-
-    List<BranchDto> toDtoListBranch(List<Branch> entityList);
 }
