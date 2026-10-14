@@ -61,20 +61,24 @@ public class SalesOrderService {
             salesOrder.setOrderNo(generateNextOrderNo(companyId));
         }
         if (salesOrder.getCustomer() != null && salesOrder.getCustomer().getId() != null) {
-            businessPartnerRepository.findById(salesOrder.getCustomer().getId())
-                    .ifPresent(salesOrder::setCustomer);
+            salesOrder.setCustomer(businessPartnerRepository.findById(salesOrder.getCustomer().getId()).orElse(null));
+        } else {
+            salesOrder.setCustomer(null);
         }
         if (salesOrder.getWarehouse() != null && salesOrder.getWarehouse().getId() != null) {
-            warehouseRepository.findById(salesOrder.getWarehouse().getId())
-                    .ifPresent(salesOrder::setWarehouse);
+            salesOrder.setWarehouse(warehouseRepository.findById(salesOrder.getWarehouse().getId()).orElse(null));
+        } else {
+            salesOrder.setWarehouse(null);
         }
         if (salesOrder.getSalesQuotation() != null && salesOrder.getSalesQuotation().getId() != null) {
-            salesQuotationRepository.findById(salesOrder.getSalesQuotation().getId())
-                    .ifPresent(salesOrder::setSalesQuotation);
+            salesOrder.setSalesQuotation(salesQuotationRepository.findById(salesOrder.getSalesQuotation().getId()).orElse(null));
+        } else {
+            salesOrder.setSalesQuotation(null);
         }
         if (salesOrder.getReferenceOrder() != null && salesOrder.getReferenceOrder().getId() != null) {
-            salesOrderRepository.findById(salesOrder.getReferenceOrder().getId())
-                    .ifPresent(salesOrder::setReferenceOrder);
+            salesOrder.setReferenceOrder(salesOrderRepository.findById(salesOrder.getReferenceOrder().getId()).orElse(null));
+        } else {
+            salesOrder.setReferenceOrder(null);
         }
         if (salesOrder.getDiscounts() != null) {
             for (var discount : salesOrder.getDiscounts()) {
@@ -115,13 +119,14 @@ public class SalesOrderService {
                     detail.setUpdatedBy(userId);
                 }
                 if (detail.getProduct() != null && detail.getProduct().getId() != null) {
-                    productRepository.findById(detail.getProduct().getId()).ifPresent(detail::setProduct);
+                    detail.setProduct(productRepository.findById(detail.getProduct().getId()).orElse(null));
+                } else {
+                    detail.setProduct(null);
                 }
                 Long varId = (detail.getVariant() != null && detail.getVariant().getId() != null)
                         ? detail.getVariant().getId() : null;
                 if (varId != null) {
-                    productVariantRepository.findById(varId)
-                            .ifPresentOrElse(detail::setVariant, () -> detail.setVariant(null));
+                    detail.setVariant(productVariantRepository.findById(varId).orElse(null));
                 } else {
                     detail.setVariant(null);
                 }
@@ -166,22 +171,22 @@ public class SalesOrderService {
         existing.setTotalAmount(updated.getTotalAmount());
 
         if (updated.getCustomer() != null && updated.getCustomer().getId() != null) {
-            businessPartnerRepository.findById(updated.getCustomer().getId()).ifPresent(existing::setCustomer);
+            existing.setCustomer(businessPartnerRepository.findById(updated.getCustomer().getId()).orElse(null));
         } else {
             existing.setCustomer(null);
         }
         if (updated.getWarehouse() != null && updated.getWarehouse().getId() != null) {
-            warehouseRepository.findById(updated.getWarehouse().getId()).ifPresent(existing::setWarehouse);
+            existing.setWarehouse(warehouseRepository.findById(updated.getWarehouse().getId()).orElse(null));
         } else {
             existing.setWarehouse(null);
         }
         if (updated.getSalesQuotation() != null && updated.getSalesQuotation().getId() != null) {
-            salesQuotationRepository.findById(updated.getSalesQuotation().getId()).ifPresent(existing::setSalesQuotation);
+            existing.setSalesQuotation(salesQuotationRepository.findById(updated.getSalesQuotation().getId()).orElse(null));
         } else {
             existing.setSalesQuotation(null);
         }
         if (updated.getReferenceOrder() != null && updated.getReferenceOrder().getId() != null) {
-            salesOrderRepository.findById(updated.getReferenceOrder().getId()).ifPresent(existing::setReferenceOrder);
+            existing.setReferenceOrder(salesOrderRepository.findById(updated.getReferenceOrder().getId()).orElse(null));
         } else {
             existing.setReferenceOrder(null);
         }
@@ -231,13 +236,14 @@ public class SalesOrderService {
                     d.setUpdatedBy(userId);
                 }
                 if (d.getProduct() != null && d.getProduct().getId() != null) {
-                    productRepository.findById(d.getProduct().getId()).ifPresent(d::setProduct);
+                    d.setProduct(productRepository.findById(d.getProduct().getId()).orElse(null));
+                } else {
+                    d.setProduct(null);
                 }
                 Long varId = (d.getVariant() != null && d.getVariant().getId() != null)
                         ? d.getVariant().getId() : null;
                 if (varId != null) {
-                    productVariantRepository.findById(varId)
-                            .ifPresentOrElse(d::setVariant, () -> d.setVariant(null));
+                    d.setVariant(productVariantRepository.findById(varId).orElse(null));
                 } else {
                     d.setVariant(null);
                 }

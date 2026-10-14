@@ -54,12 +54,14 @@ public class SalesQuotationService {
             salesQuotation.setQuotationNo(generateNextQuotationNo(companyId));
         }
         if (salesQuotation.getCustomer() != null && salesQuotation.getCustomer().getId() != null) {
-            businessPartnerRepository.findById(salesQuotation.getCustomer().getId())
-                    .ifPresent(salesQuotation::setCustomer);
+            salesQuotation.setCustomer(businessPartnerRepository.findById(salesQuotation.getCustomer().getId()).orElse(null));
+        } else {
+            salesQuotation.setCustomer(null);
         }
         if (salesQuotation.getWarehouse() != null && salesQuotation.getWarehouse().getId() != null) {
-            warehouseRepository.findById(salesQuotation.getWarehouse().getId())
-                    .ifPresent(salesQuotation::setWarehouse);
+            salesQuotation.setWarehouse(warehouseRepository.findById(salesQuotation.getWarehouse().getId()).orElse(null));
+        } else {
+            salesQuotation.setWarehouse(null);
         }
         if (salesQuotation.getDiscounts() != null) {
             for (var discount : salesQuotation.getDiscounts()) {
@@ -100,13 +102,14 @@ public class SalesQuotationService {
                     detail.setUpdatedBy(userId);
                 }
                 if (detail.getProduct() != null && detail.getProduct().getId() != null) {
-                    productRepository.findById(detail.getProduct().getId()).ifPresent(detail::setProduct);
+                    detail.setProduct(productRepository.findById(detail.getProduct().getId()).orElse(null));
+                } else {
+                    detail.setProduct(null);
                 }
                 Long varId = (detail.getVariant() != null && detail.getVariant().getId() != null)
                         ? detail.getVariant().getId() : null;
                 if (varId != null) {
-                    productVariantRepository.findById(varId)
-                            .ifPresentOrElse(detail::setVariant, () -> detail.setVariant(null));
+                    detail.setVariant(productVariantRepository.findById(varId).orElse(null));
                 } else {
                     detail.setVariant(null);
                 }
@@ -149,12 +152,12 @@ public class SalesQuotationService {
         existing.setTotalAmount(updated.getTotalAmount());
 
         if (updated.getCustomer() != null && updated.getCustomer().getId() != null) {
-            businessPartnerRepository.findById(updated.getCustomer().getId()).ifPresent(existing::setCustomer);
+            existing.setCustomer(businessPartnerRepository.findById(updated.getCustomer().getId()).orElse(null));
         } else {
             existing.setCustomer(null);
         }
         if (updated.getWarehouse() != null && updated.getWarehouse().getId() != null) {
-            warehouseRepository.findById(updated.getWarehouse().getId()).ifPresent(existing::setWarehouse);
+            existing.setWarehouse(warehouseRepository.findById(updated.getWarehouse().getId()).orElse(null));
         } else {
             existing.setWarehouse(null);
         }
@@ -204,13 +207,14 @@ public class SalesQuotationService {
                     d.setUpdatedBy(userId);
                 }
                 if (d.getProduct() != null && d.getProduct().getId() != null) {
-                    productRepository.findById(d.getProduct().getId()).ifPresent(d::setProduct);
+                    d.setProduct(productRepository.findById(d.getProduct().getId()).orElse(null));
+                } else {
+                    d.setProduct(null);
                 }
                 Long varId = (d.getVariant() != null && d.getVariant().getId() != null)
                         ? d.getVariant().getId() : null;
                 if (varId != null) {
-                    productVariantRepository.findById(varId)
-                            .ifPresentOrElse(d::setVariant, () -> d.setVariant(null));
+                    d.setVariant(productVariantRepository.findById(varId).orElse(null));
                 } else {
                     d.setVariant(null);
                 }

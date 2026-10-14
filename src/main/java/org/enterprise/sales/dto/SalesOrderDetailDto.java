@@ -15,9 +15,18 @@ public class SalesOrderDetailDto extends AuditableDto {
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private BigDecimal discountTotal;
+    @com.fasterxml.jackson.annotation.JsonProperty("vatRate")
+    @com.fasterxml.jackson.annotation.JsonAlias({"taxRate", "vat_rate", "tax_rate"})
     private BigDecimal vatRate;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isVatInclusive")
+    @com.fasterxml.jackson.annotation.JsonAlias({"vatInclusive", "is_vat_inclusive", "vat_inclusive"})
     private Boolean isVatInclusive;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("vatTotal")
+    @com.fasterxml.jackson.annotation.JsonAlias({"vatAmount", "taxTotal", "vat_total", "tax_total"})
     private BigDecimal vatTotal;
+
     private java.util.List<SalesOrderDetailDiscountDto> discounts;
     private BigDecimal shippedQuantity;
     private BigDecimal returnedQuantity;
