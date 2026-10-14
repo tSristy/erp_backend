@@ -39,6 +39,9 @@ public class DeliveryNote extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private DeliveryType deliveryType = DeliveryType.OUTBOUND;
 
+    @Column(columnDefinition = "TEXT")
+    private String remarks;
+
     public enum DeliveryStatus {
         DRAFT, SHIPPED, DELIVERED, CANCELLED
     }

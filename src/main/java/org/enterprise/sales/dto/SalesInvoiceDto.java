@@ -28,6 +28,7 @@ public class SalesInvoiceDto extends AuditableDto {
     private BigDecimal vatTotal;
     private BigDecimal totalAmount;
     private BigDecimal paidAmount;
+    private String remarks;
     private InvoiceType invoiceType;
     private List<SalesInvoiceDiscountDto> discounts;
     private List<SalesInvoiceDetailDto> details;

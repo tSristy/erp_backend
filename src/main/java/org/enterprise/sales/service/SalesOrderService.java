@@ -168,7 +168,9 @@ public class SalesOrderService {
         }
         existing.setSubTotal(updated.getSubTotal());
         existing.setDiscountTotal(updated.getDiscountTotal());
+        existing.setVatTotal(updated.getVatTotal());
         existing.setTotalAmount(updated.getTotalAmount());
+        existing.setRemarks(updated.getRemarks());
 
         if (updated.getCustomer() != null && updated.getCustomer().getId() != null) {
             existing.setCustomer(businessPartnerRepository.findById(updated.getCustomer().getId()).orElse(null));
@@ -284,6 +286,7 @@ public class SalesOrderService {
         returnOrder.setSalesChannel(original.getSalesChannel());
         returnOrder.setStatus(SalesOrder.SalesOrderStatus.DRAFT);
         returnOrder.setOrderDate(LocalDate.now());
+        returnOrder.setRemarks("Return for order " + (original.getOrderNo() != null ? original.getOrderNo() : original.getId()));
 
         List<SalesOrderDetail> returnDetails = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;

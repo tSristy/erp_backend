@@ -21,6 +21,7 @@ public class SalesOrderDto extends AuditableDto {
     private BigDecimal discountTotal;
     private BigDecimal vatTotal;
     private BigDecimal totalAmount;
+    private String remarks;
     private OrderType orderType;
     private Long referenceOrderId;
     private Long salesQuotationId;

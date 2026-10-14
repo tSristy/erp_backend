@@ -29,7 +29,7 @@ public class RetailTransaction extends AuditableEntity {
     @Column(length = 100)
     private String walkInCustomerName;
 
-    @Column(length = 20)
+    @Column(length = 50)
     private String walkInCustomerPhone;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -47,7 +47,22 @@ public class RetailTransaction extends AuditableEntity {
     private RetailTransaction referenceTransaction;
 
     @Column(precision = 18, scale = 2)
+    private BigDecimal subTotal = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal taxTotal = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal amountPaid = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal amountDue = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RetailTransactionDetail> details = new ArrayList<>();

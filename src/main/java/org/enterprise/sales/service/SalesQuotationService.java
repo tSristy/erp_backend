@@ -149,7 +149,9 @@ public class SalesQuotationService {
         }
         existing.setSubTotal(updated.getSubTotal());
         existing.setDiscountTotal(updated.getDiscountTotal());
+        existing.setVatTotal(updated.getVatTotal());
         existing.setTotalAmount(updated.getTotalAmount());
+        existing.setRemarks(updated.getRemarks());
 
         if (updated.getCustomer() != null && updated.getCustomer().getId() != null) {
             existing.setCustomer(businessPartnerRepository.findById(updated.getCustomer().getId()).orElse(null));

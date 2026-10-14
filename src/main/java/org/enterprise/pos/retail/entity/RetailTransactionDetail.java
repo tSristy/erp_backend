@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
 import org.enterprise.inventory.entity.Product;
+import org.enterprise.inventory.entity.ProductVariant;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -27,11 +28,27 @@ public class RetailTransactionDetail extends AuditableEntity implements PosLineI
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private ProductVariant variant;
+
+    @Column(length = 100)
+    private String serialNo;
+
+    @ElementCollection
+    @CollectionTable(name = "pos_retail_transaction_detail_serials", joinColumns = @JoinColumn(name = "detail_id"))
+    @Column(name = "serial_no")
+    private List<String> serialNumbers = new ArrayList<>();
+
     @Column(precision = 18, scale = 4, nullable = false)
     private BigDecimal quantity;
 
     @Column(precision = 18, scale = 2, nullable = false)
     private BigDecimal unitPrice;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "transactionDetail", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RetailTransactionDetailDiscount> discounts = new ArrayList<>();
@@ -42,6 +59,15 @@ public class RetailTransactionDetail extends AuditableEntity implements PosLineI
     public void addDiscount(RetailTransactionDetailDiscount discount) {
         discounts.add(discount);
         discount.setTransactionDetail(this);
+    }
+
+    public void addSerial(String serial) {
+        if (serial != null && !serial.trim().isEmpty()) {
+            serialNumbers.add(serial.trim());
+            if (this.serialNo == null || this.serialNo.trim().isEmpty()) {
+                this.serialNo = serial.trim();
+            }
+        }
     }
 
     @Override

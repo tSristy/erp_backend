@@ -250,6 +250,7 @@ public class SalesInvoiceService {
         creditMemo.setWarehouse(original.getWarehouse());
         creditMemo.setStatus(SalesInvoice.InvoiceStatus.DRAFT);
         creditMemo.setInvoiceDate(LocalDate.now());
+        creditMemo.setRemarks("Credit Memo for Invoice " + (original.getInvoiceNo() != null ? original.getInvoiceNo() : original.getId()));
 
         if (original.getDiscounts() != null) {
             List<org.enterprise.sales.entity.SalesInvoiceDiscount> copiedDiscounts = new ArrayList<>();

@@ -10,7 +10,12 @@ import java.util.Map;
 public class RegisteredProductDto {
     private Long id;
     private Long productId;
+    private String productName;
+    private String brand;
+    private Long variantId;
+    private String variantSku;
     private Long customerId;
+    private String customerName;
     private String serialNumber;
     private LocalDate purchaseDate;
     private LocalDate warrantyExpiryDate;

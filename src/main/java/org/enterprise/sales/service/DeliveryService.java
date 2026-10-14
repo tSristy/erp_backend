@@ -319,6 +319,7 @@ public class DeliveryService {
         returnDelivery.setWarehouse(original.getWarehouse());
         returnDelivery.setStatus(DeliveryNote.DeliveryStatus.DRAFT);
         returnDelivery.setDeliveryDate(LocalDate.now());
+        returnDelivery.setRemarks("Return for delivery " + (original.getDeliveryNo() != null ? original.getDeliveryNo() : original.getId()));
 
         List<DeliveryNoteDetail> returnDetails = new ArrayList<>();
         for (DeliveryNoteDetail originalDetail : original.getDetails()) {

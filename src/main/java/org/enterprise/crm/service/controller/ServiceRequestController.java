@@ -38,6 +38,18 @@ public class ServiceRequestController {
     public ResponseEntity<ServiceRequest> update(@PathVariable Long id, @RequestBody ServiceRequest request) {
         return service.findById(id).map(existing -> {
             request.setId(existing.getId());
+            if (request.getCompanyId() == null) {
+                request.setCompanyId(existing.getCompanyId());
+            }
+            if (request.getRequestNumber() == null) {
+                request.setRequestNumber(existing.getRequestNumber());
+            }
+            if (request.getCreatedAt() == null) {
+                request.setCreatedAt(existing.getCreatedAt());
+            }
+            if (request.getCreatedBy() == null) {
+                request.setCreatedBy(existing.getCreatedBy());
+            }
             return ResponseEntity.ok(service.save(request));
         }).orElse(ResponseEntity.notFound().build());
     }

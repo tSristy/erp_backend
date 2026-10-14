@@ -38,6 +38,15 @@ public class RegisteredProductController {
     public ResponseEntity<RegisteredProduct> update(@PathVariable Long id, @RequestBody RegisteredProduct product) {
         return service.findById(id).map(existing -> {
             product.setId(existing.getId());
+            if (product.getCompanyId() == null) {
+                product.setCompanyId(existing.getCompanyId());
+            }
+            if (product.getCreatedAt() == null) {
+                product.setCreatedAt(existing.getCreatedAt());
+            }
+            if (product.getCreatedBy() == null) {
+                product.setCreatedBy(existing.getCreatedBy());
+            }
             return ResponseEntity.ok(service.save(product));
         }).orElse(ResponseEntity.notFound().build());
     }
