@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/crm/service/estimates")
+@RequestMapping({"/api/v1/crm/service/estimates", "/api/v1/crm/service/service-estimates"})
 public class ServiceEstimateController {
 
     private final ServiceEstimateService service;
@@ -41,10 +41,27 @@ public class ServiceEstimateController {
     public ResponseEntity<ServiceEstimate> update(@PathVariable Long id, @RequestBody ServiceEstimate estimate) {
         return service.findById(id).map(existing -> {
             estimate.setId(existing.getId());
-            if (estimate.getDetails() != null) {
-                estimate.getDetails().forEach(d -> d.setServiceEstimate(estimate));
+            if (estimate.getCompanyId() == null) {
+                estimate.setCompanyId(existing.getCompanyId());
             }
-            return ResponseEntity.ok(service.save(estimate));
+            if (existing.getDetails() != null) {
+                existing.getDetails().clear();
+            }
+            if (estimate.getDetails() != null) {
+                for (org.enterprise.crm.service.entity.ServiceEstimateDetail d : estimate.getDetails()) {
+                    d.setServiceEstimate(existing);
+                    existing.getDetails().add(d);
+                }
+            }
+            existing.setTotalLaborAmount(estimate.getTotalLaborAmount());
+            existing.setTotalPartsAmount(estimate.getTotalPartsAmount());
+            existing.setStatus(estimate.getStatus());
+            if (estimate.getServiceRequest() != null) {
+                existing.setServiceRequest(estimate.getServiceRequest());
+            } else if (estimate.getServiceRequestId() != null) {
+                existing.setServiceRequestId(estimate.getServiceRequestId());
+            }
+            return ResponseEntity.ok(service.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -58,13 +75,19 @@ public class ServiceEstimateController {
     public org.springframework.data.domain.Page<ServiceEstimate> search(
             @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String query,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String search,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
+        String effectiveQuery = (query != null && !query.trim().isEmpty())
+                ? query
+                : (q != null && !q.trim().isEmpty()) ? q : search;
+        Long targetCompanyId = companyId != null ? companyId : org.enterprise.common.util.TenantContext.getCompanyId();
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchServiceEstimates(companyId, q, pageable);
+        return service.searchServiceEstimates(targetCompanyId, effectiveQuery, pageable);
     }
 
 }

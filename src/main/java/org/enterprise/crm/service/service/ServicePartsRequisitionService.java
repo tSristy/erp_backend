@@ -11,6 +11,10 @@ import org.enterprise.finance.service.JournalEntryService;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
 import org.enterprise.finance.enums.JournalStatus;
+import org.enterprise.crm.service.repository.ServiceOrderRepository;
+import org.enterprise.inventory.repository.ProductRepository;
+import org.enterprise.inventory.repository.ProductVariantRepository;
+import org.enterprise.inventory.repository.WarehouseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +30,26 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
     private final ServicePartsRequisitionRepository repository;
     private final InventoryService inventoryService;
     private final JournalEntryService journalEntryService;
+    private final WarehouseRepository warehouseRepository;
+    private final ServiceOrderRepository serviceOrderRepository;
+    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     public ServicePartsRequisitionService(ServicePartsRequisitionRepository repository,
                                           InventoryService inventoryService,
-                                          JournalEntryService journalEntryService) {
+                                          JournalEntryService journalEntryService,
+                                          WarehouseRepository warehouseRepository,
+                                          ServiceOrderRepository serviceOrderRepository,
+                                          ProductRepository productRepository,
+                                          ProductVariantRepository productVariantRepository) {
         super(repository);
         this.repository = repository;
         this.inventoryService = inventoryService;
         this.journalEntryService = journalEntryService;
+        this.warehouseRepository = warehouseRepository;
+        this.serviceOrderRepository = serviceOrderRepository;
+        this.productRepository = productRepository;
+        this.productVariantRepository = productVariantRepository;
     }
 
     public List<ServicePartsRequisition> findByServiceOrderId(Long serviceOrderId) {
@@ -43,6 +59,59 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
     @Override
     @Transactional
     public ServicePartsRequisition save(ServicePartsRequisition entity) {
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        if (companyId != null && entity.getCompanyId() == null) {
+            entity.setCompanyId(companyId);
+        }
+
+        Long soId = null;
+        if (entity.getServiceOrder() != null && entity.getServiceOrder().getId() != null) {
+            soId = entity.getServiceOrder().getId();
+        } else if (entity.getServiceOrderId() != null) {
+            soId = entity.getServiceOrderId();
+        }
+        if (soId != null) {
+            entity.setServiceOrder(serviceOrderRepository.findById(soId).orElse(null));
+        }
+
+        Long whId = null;
+        if (entity.getWarehouse() != null && entity.getWarehouse().getId() != null) {
+            whId = entity.getWarehouse().getId();
+        } else if (entity.getWarehouseId() != null) {
+            whId = entity.getWarehouseId();
+        }
+        if (whId != null) {
+            entity.setWarehouse(warehouseRepository.findById(whId).orElse(null));
+        }
+
+        if (entity.getDetails() != null) {
+            for (ServicePartsRequisitionDetail detail : entity.getDetails()) {
+                detail.setRequisition(entity);
+                if (companyId != null && detail.getCompanyId() == null) {
+                    detail.setCompanyId(companyId);
+                }
+
+                Long prodId = null;
+                if (detail.getProduct() != null && detail.getProduct().getId() != null) {
+                    prodId = detail.getProduct().getId();
+                } else if (detail.getProductId() != null) {
+                    prodId = detail.getProductId();
+                }
+                if (prodId != null) {
+                    detail.setProduct(productRepository.findById(prodId).orElse(null));
+                }
+
+                Long varId = null;
+                if (detail.getVariant() != null && detail.getVariant().getId() != null) {
+                    varId = detail.getVariant().getId();
+                } else if (detail.getVariantId() != null) {
+                    varId = detail.getVariantId();
+                }
+                if (varId != null) {
+                    detail.setVariant(productVariantRepository.findById(varId).orElse(null));
+                }
+            }
+        }
         ServicePartsRequisition existing = null;
         if (entity.getId() != null) {
             existing = repository.findById(entity.getId()).orElse(null);
@@ -138,7 +207,10 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
     }
 
     public org.springframework.data.domain.Page<ServicePartsRequisition> searchServicePartsRequisitions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
-        return repository.findAll(pageable);
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            return repository.searchServicePartsRequisitions(companyId, searchTerm.trim(), pageable);
+        }
+        return repository.findAllByCompanyId(companyId, pageable);
     }
 
 }

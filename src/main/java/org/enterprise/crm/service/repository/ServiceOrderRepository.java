@@ -24,10 +24,13 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Long
     @Query("SELECT so FROM ServiceOrder so " +
            "LEFT JOIN so.serviceRequest sr " +
            "WHERE (:companyId IS NULL OR so.companyId = :companyId) AND (" +
-           "LOWER(so.orderNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(sr.requestNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(so.technicianNotes) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(so.qcNotes) LIKE LOWER(CONCAT('%', :query, '%'))" +
+           "LOWER(COALESCE(so.orderNumber, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(sr.requestNumber, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(so.technicianNotes, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(so.qcNotes, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(CAST(so.status AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(CAST(so.qcStatus AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(CAST(so.id AS string)) LIKE LOWER(CONCAT('%', :query, '%'))" +
            ")")
     Page<ServiceOrder> searchServiceOrders(
             @Param("companyId") Long companyId,

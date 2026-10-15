@@ -41,10 +41,31 @@ public class ServicePartsRequisitionController {
     public ResponseEntity<ServicePartsRequisition> update(@PathVariable Long id, @RequestBody ServicePartsRequisition requisition) {
         return service.findById(id).map(existing -> {
             requisition.setId(existing.getId());
-            if (requisition.getDetails() != null) {
-                requisition.getDetails().forEach(d -> d.setRequisition(requisition));
+            if (requisition.getCompanyId() == null) {
+                requisition.setCompanyId(existing.getCompanyId());
             }
-            return ResponseEntity.ok(service.save(requisition));
+            if (existing.getDetails() != null) {
+                existing.getDetails().clear();
+            }
+            if (requisition.getDetails() != null) {
+                for (org.enterprise.crm.service.entity.ServicePartsRequisitionDetail d : requisition.getDetails()) {
+                    d.setRequisition(existing);
+                    existing.getDetails().add(d);
+                }
+            }
+            existing.setRequestedById(requisition.getRequestedById());
+            existing.setStatus(requisition.getStatus());
+            if (requisition.getServiceOrder() != null) {
+                existing.setServiceOrder(requisition.getServiceOrder());
+            } else if (requisition.getServiceOrderId() != null) {
+                existing.setServiceOrderId(requisition.getServiceOrderId());
+            }
+            if (requisition.getWarehouse() != null) {
+                existing.setWarehouse(requisition.getWarehouse());
+            } else if (requisition.getWarehouseId() != null) {
+                existing.setWarehouseId(requisition.getWarehouseId());
+            }
+            return ResponseEntity.ok(service.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -58,13 +79,19 @@ public class ServicePartsRequisitionController {
     public org.springframework.data.domain.Page<ServicePartsRequisition> search(
             @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String q,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String query,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String search,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
+        String effectiveQuery = (query != null && !query.trim().isEmpty())
+                ? query
+                : (q != null && !q.trim().isEmpty()) ? q : search;
+        Long targetCompanyId = companyId != null ? companyId : org.enterprise.common.util.TenantContext.getCompanyId();
         org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase(org.springframework.data.domain.Sort.Direction.ASC.name()) ? org.springframework.data.domain.Sort.by(sortBy).ascending() : org.springframework.data.domain.Sort.by(sortBy).descending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return service.searchServicePartsRequisitions(companyId, q, pageable);
+        return service.searchServicePartsRequisitions(targetCompanyId, effectiveQuery, pageable);
     }
 
 }
