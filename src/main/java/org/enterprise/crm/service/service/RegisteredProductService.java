@@ -2,6 +2,8 @@ package org.enterprise.crm.service.service;
 
 import org.enterprise.crm.service.entity.RegisteredProduct;
 import org.enterprise.crm.service.repository.RegisteredProductRepository;
+import org.enterprise.inventory.entity.BusinessPartner;
+import org.enterprise.inventory.entity.ProductVariant;
 import org.enterprise.inventory.service.BaseService;
 import org.enterprise.inventory.entity.Product;
 import org.enterprise.inventory.repository.ProductRepository;
