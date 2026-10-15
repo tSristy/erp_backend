@@ -41,6 +41,12 @@ public class ServiceOrderController {
     public ResponseEntity<ServiceOrder> update(@PathVariable Long id, @RequestBody ServiceOrder order) {
         return service.findById(id).map(existing -> {
             order.setId(existing.getId());
+            if (order.getOrderNumber() == null || order.getOrderNumber().trim().isEmpty()) {
+                order.setOrderNumber(existing.getOrderNumber());
+            }
+            if (order.getCompanyId() == null) {
+                order.setCompanyId(existing.getCompanyId());
+            }
             return ResponseEntity.ok(service.save(order));
         }).orElse(ResponseEntity.notFound().build());
     }

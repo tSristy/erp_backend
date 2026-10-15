@@ -100,7 +100,10 @@ public class RegisteredProductService extends BaseService<RegisteredProduct, Lon
     }
 
     public org.springframework.data.domain.Page<RegisteredProduct> searchRegisteredProducts(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
-        return repository.findAll(pageable);
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            return repository.searchRegisteredProducts(companyId, searchTerm.trim(), pageable);
+        }
+        return repository.findAllByCompanyId(companyId, pageable);
     }
 
 }

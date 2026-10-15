@@ -131,7 +131,10 @@ public class ServiceRequestService extends BaseService<ServiceRequest, Long> {
     }
 
     public org.springframework.data.domain.Page<ServiceRequest> searchServiceRequests(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
-        return repository.findAll(pageable);
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            return repository.searchServiceRequests(companyId, searchTerm.trim(), pageable);
+        }
+        return repository.findAllByCompanyId(companyId, pageable);
     }
 
 }
