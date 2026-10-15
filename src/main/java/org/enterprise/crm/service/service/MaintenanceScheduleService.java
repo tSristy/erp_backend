@@ -22,6 +22,9 @@ public class MaintenanceScheduleService extends BaseService<MaintenanceSchedule,
     }
 
     public org.springframework.data.domain.Page<MaintenanceSchedule> searchMaintenanceSchedules(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            return repository.searchMaintenanceSchedules(searchTerm.trim(), pageable);
+        }
         return repository.findAll(pageable);
     }
 

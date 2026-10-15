@@ -15,6 +15,7 @@ public class MaintenanceSchedule extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registered_product_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private RegisteredProduct registeredProduct;
 
     private LocalDate scheduledDate;
@@ -29,5 +30,26 @@ public class MaintenanceSchedule extends AuditableEntity {
 
     public enum MaintenanceStatus {
         SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+    }
+
+    @Transient
+    private Long transientRegisteredProductId;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("registeredProductId")
+    public Long getRegisteredProductId() {
+        return registeredProduct != null ? registeredProduct.getId() : transientRegisteredProductId;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("registeredProductId")
+    public void setRegisteredProductId(Long registeredProductId) {
+        this.transientRegisteredProductId = registeredProductId;
+        if (registeredProductId != null) {
+            if (this.registeredProduct == null) {
+                this.registeredProduct = new RegisteredProduct();
+            }
+            this.registeredProduct.setId(registeredProductId);
+        } else {
+            this.registeredProduct = null;
+        }
     }
 }

@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 public class RestaurantOrderDetailDto {
     private Long id;
     private Long productId;
+    private String productName;
     private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;

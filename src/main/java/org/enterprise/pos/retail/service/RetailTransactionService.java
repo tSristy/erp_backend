@@ -323,6 +323,9 @@ public class RetailTransactionService {
     }
 
     public org.springframework.data.domain.Page<RetailTransaction> searchRetailTransactions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            return retailTransactionRepository.searchRetailTransactions(searchTerm.trim(), pageable);
+        }
         return retailTransactionRepository.findAll(pageable);
     }
 

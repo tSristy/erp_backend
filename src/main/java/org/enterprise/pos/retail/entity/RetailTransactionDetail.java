@@ -22,6 +22,7 @@ public class RetailTransactionDetail extends AuditableEntity implements PosLineI
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private RetailTransaction transaction;
 
     @ManyToOne(fetch = FetchType.LAZY)

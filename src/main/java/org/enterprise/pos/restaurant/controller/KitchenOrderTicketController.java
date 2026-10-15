@@ -21,8 +21,10 @@ import java.util.stream.Collectors;
 public class KitchenOrderTicketController {
 
     private final KitchenOrderTicketService kotService;
+    private final org.enterprise.hr.repository.EmployeeRepository employeeRepository;
 
     @GetMapping("/pending")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<KitchenOrderTicketDto>> getPendingKots() {
         return ResponseEntity.ok(kotService.findAllPendingKots().stream()
                 .map(this::mapKotToDto)
@@ -41,7 +43,23 @@ public class KitchenOrderTicketController {
         dto.setKotNumber(kot.getKotNumber());
         dto.setSentTime(kot.getSentTime());
         dto.setStatus(kot.getStatus() != null ? kot.getStatus().name() : null);
-        dto.setOrderId(kot.getOrder() != null ? kot.getOrder().getId() : null);
+        if (kot.getOrder() != null) {
+            dto.setOrderId(kot.getOrder().getId());
+            dto.setOrderNo(kot.getOrder().getOrderNo());
+            dto.setTableNumber(kot.getOrder().getTableNumber());
+            dto.setOrderType(kot.getOrder().getOrderType() != null ? kot.getOrder().getOrderType().name() : null);
+            if (kot.getOrder().getWaiterId() != null) {
+                try {
+                    employeeRepository.findById(kot.getOrder().getWaiterId()).ifPresent(emp -> {
+                        String name = emp.getFullName();
+                        if (name == null || name.trim().isEmpty()) {
+                            name = emp.getFirstName() != null ? emp.getFirstName() + " " + (emp.getLastName() != null ? emp.getLastName() : "") : emp.getEmployeeCode();
+                        }
+                        dto.setWaiterName(name);
+                    });
+                } catch (Exception ignored) {}
+            }
+        }
         if (kot.getDetails() != null) {
             dto.setDetails(kot.getDetails().stream().map(this::mapDetailToDto).collect(Collectors.toList()));
         }
@@ -52,7 +70,16 @@ public class KitchenOrderTicketController {
         if (detail == null) return null;
         RestaurantOrderDetailDto dto = new RestaurantOrderDetailDto();
         dto.setId(detail.getId());
-        dto.setProductId(detail.getProduct() != null ? detail.getProduct().getId() : null);
+        Long prodId = detail.getProductId();
+        String prodName = null;
+        if (detail.getProduct() != null) {
+            try {
+                if (prodId == null) prodId = detail.getProduct().getId();
+                prodName = detail.getProduct().getName();
+            } catch (Exception ignored) {}
+        }
+        dto.setProductId(prodId);
+        dto.setProductName(prodName);
         dto.setQuantity(detail.getQuantity());
         dto.setUnitPrice(detail.getUnitPrice());
         dto.setLineTotal(detail.getLineTotal());

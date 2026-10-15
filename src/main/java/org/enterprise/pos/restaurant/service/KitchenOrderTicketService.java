@@ -18,11 +18,19 @@ public class KitchenOrderTicketService {
     private final KitchenOrderTicketRepository kotRepository;
     private final RestaurantOrderRepository orderRepository;
 
+    @Transactional(readOnly = true)
     public List<KitchenOrderTicket> findAllPendingKots() {
-        // Return all pending and preparing KOTs
-        return kotRepository.findAll().stream()
-                .filter(kot -> kot.getStatus() == KitchenOrderTicket.KotStatus.PENDING || kot.getStatus() == KitchenOrderTicket.KotStatus.PREPARING)
-                .toList();
+        List<KitchenOrderTicket> raw = kotRepository.findByStatusInWithDetails(
+                List.of(KitchenOrderTicket.KotStatus.PENDING, KitchenOrderTicket.KotStatus.PREPARING)
+        );
+        java.util.Map<String, KitchenOrderTicket> dedup = new java.util.LinkedHashMap<>();
+        for (KitchenOrderTicket kot : raw) {
+            String key = kot.getKotNumber() != null ? kot.getKotNumber() : String.valueOf(kot.getId());
+            if (!dedup.containsKey(key)) {
+                dedup.put(key, kot);
+            }
+        }
+        return new java.util.ArrayList<>(dedup.values());
     }
 
     @Transactional

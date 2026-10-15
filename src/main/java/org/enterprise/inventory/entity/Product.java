@@ -16,6 +16,7 @@ import org.enterprise.inventory.enums.ProductType;
 )
 @Getter
 @Setter
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
 public class Product extends AuditableEntity {
 
     @Column(nullable = false)
@@ -91,6 +92,51 @@ public class Product extends AuditableEntity {
     @OneToMany(mappedBy = "parentProduct", cascade = CascadeType.ALL, orphanRemoval = true)
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"parentProduct"})
     private java.util.List<ProductBundle> bundles = new java.util.ArrayList<>();
+
+    @Transient
+    private Double transientPrice;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("price")
+    public Double getPrice() {
+        if (transientPrice != null && transientPrice > 0) {
+            return transientPrice;
+        }
+        if (prices != null && !prices.isEmpty()) {
+            return prices.stream()
+                    .filter(p -> p.getPriceType() == ProductPrice.PriceType.RETAIL)
+                    .map(ProductPrice::getPrice)
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElseGet(() -> prices.stream()
+                            .map(ProductPrice::getPrice)
+                            .filter(java.util.Objects::nonNull)
+                            .findFirst()
+                            .orElse(0.0));
+        }
+        return 0.0;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("price")
+    public void setPrice(Double price) {
+        this.transientPrice = price;
+        if (price != null) {
+            if (this.prices == null) {
+                this.prices = new java.util.ArrayList<>();
+            }
+            ProductPrice retailPrice = this.prices.stream()
+                    .filter(p -> p.getPriceType() == ProductPrice.PriceType.RETAIL)
+                    .findFirst()
+                    .orElse(null);
+            if (retailPrice == null) {
+                retailPrice = new ProductPrice();
+                retailPrice.setPriceType(ProductPrice.PriceType.RETAIL);
+                retailPrice.setCurrency("BDT");
+                retailPrice.setProduct(this);
+                this.prices.add(retailPrice);
+            }
+            retailPrice.setPrice(price);
+        }
+    }
 
     public void setPrices(java.util.List<ProductPrice> prices) {
         if (prices != null) {

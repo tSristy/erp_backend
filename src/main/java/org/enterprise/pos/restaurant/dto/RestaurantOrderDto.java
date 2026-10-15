@@ -13,12 +13,15 @@ public class RestaurantOrderDto {
     private LocalDateTime orderDate;
     private String tableNumber;
     private Long waiterId;
+    private String waiterName;
     private String orderType;
     private LocalDateTime eventDateTime;
     private String type; // TransactionType
     private Long referenceOrderId;
     private Long customerId;
+    private String customerName;
     private Long warehouseId;
+    private String warehouseName;
     private String status;
     private BigDecimal totalAmount;
 

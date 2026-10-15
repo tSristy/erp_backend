@@ -17,6 +17,7 @@ public class RetailTransactionDetailDiscount extends AuditableEntity implements 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_detail_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private RetailTransactionDetail transactionDetail;
 
     private String discountName; // e.g., "Seasonal", "Loyalty", "Coupon"

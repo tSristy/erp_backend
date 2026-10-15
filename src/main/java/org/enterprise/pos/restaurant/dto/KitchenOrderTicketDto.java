@@ -12,5 +12,9 @@ public class KitchenOrderTicketDto {
     private LocalDateTime sentTime;
     private String status;
     private Long orderId;
+    private String orderNo;
+    private String tableNumber;
+    private String orderType;
+    private String waiterName;
     private List<RestaurantOrderDetailDto> details = new ArrayList<>();
 }
