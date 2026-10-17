@@ -90,6 +90,10 @@ public class RestaurantOrderService {
             Optional<RestaurantOrder> existingOpt = orderRepository.findById(order.getId());
             if (existingOpt.isPresent()) {
                 RestaurantOrder existing = existingOpt.get();
+                if (existing.getStatus() == RestaurantOrder.RestaurantOrderStatus.PAID
+                        || existing.getStatus() == RestaurantOrder.RestaurantOrderStatus.CANCELLED) {
+                    throw new IllegalStateException("Cannot modify a PAID or CANCELLED restaurant order.");
+                }
                 existing.setCustomer(order.getCustomer());
                 existing.setCustomerId(order.getCustomerId());
                 if (order.getWarehouse() != null) existing.setWarehouse(order.getWarehouse());

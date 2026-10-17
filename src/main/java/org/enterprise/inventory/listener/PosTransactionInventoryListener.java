@@ -12,12 +12,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class PosTransactionInventoryListener {
 
-    // private final InventoryService inventoryService;
+    private final org.enterprise.inventory.service.InventoryService inventoryService;
 
     /**
-     * Listens for POS transactions and deducts the inventory automatically.
+     * Listens for POS transactions and deducts/restores the inventory automatically.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void handlePosTransactionCompleted(PosTransactionCompletedEvent event) {
         log.info("Inventory Module received POS transaction completion event for: {} (Type: {}). Processing stock adjustments...", event.getTransactionNo(), event.getTransactionType());
         
@@ -25,20 +26,31 @@ public class PosTransactionInventoryListener {
         
         Long warehouseId = event.getWarehouseId();
         if (warehouseId == null) {
-            log.warn("No warehouse specified in POS transaction {}. Cannot deduct inventory or using default...", event.getTransactionNo());
+            log.warn("No warehouse specified in POS transaction {}. Skipping inventory stock adjustment.", event.getTransactionNo());
+            return;
         }
 
         for (PosTransactionCompletedEvent.LineItemDto item : event.getLineItems()) {
+            if (item.getProductId() == null || item.getQuantity() == null) continue;
+
+            org.enterprise.inventory.dto.InventoryTransactionRequest req = new org.enterprise.inventory.dto.InventoryTransactionRequest();
+            req.setItemId(item.getProductId());
+            req.setWarehouseId(warehouseId);
+            req.setDocumentType("POS_TRANSACTION");
+            req.setQuantity(item.getQuantity().abs());
+            req.setUnitCost(item.getUnitPrice() != null ? item.getUnitPrice() : java.math.BigDecimal.ZERO);
+
             if (isReturn) {
-                log.info("Stock In for Return: Product ID {} (Qty: {}) to Warehouse ID {}", item.getProductId(), item.getQuantity(), event.getWarehouseId());
-                // TODO: inventoryService.adjustStock(event.getWarehouseId(), item.getProductId(), item.getQuantity());
+                log.info("Stock In for Return: Product ID {} (Qty: {}) to Warehouse ID {}", item.getProductId(), item.getQuantity(), warehouseId);
+                req.setTransactionType("SALES_RETURN");
+                inventoryService.receiveStock(req);
             } else {
-                log.info("Stock Out for Sale: Product ID {} (Qty: {}) from Warehouse ID {}", item.getProductId(), item.getQuantity(), event.getWarehouseId());
-                // TODO: inventoryService.adjustStock(event.getWarehouseId(), item.getProductId(), item.getQuantity().negate());
-            } 
-            // Or create an InventoryTransaction entity and save it.
+                log.info("Stock Out for Sale: Product ID {} (Qty: {}) from Warehouse ID {}", item.getProductId(), item.getQuantity(), warehouseId);
+                req.setTransactionType("SALES");
+                inventoryService.issueStock(req);
+            }
         }
         
-        log.info("Inventory successfully deducted for POS Transaction: {}", event.getTransactionNo());
+        log.info("Inventory successfully adjusted for POS Transaction: {}", event.getTransactionNo());
     }
 }

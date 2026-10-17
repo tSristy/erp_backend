@@ -408,6 +408,23 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                     );
                 }
             }
+
+            if (!isInbound && detail.getBaseDocumentId() != null && detail.getBaseLineId() != null) {
+                goodsReceiptRepository.findById(detail.getBaseDocumentId()).ifPresent(originalReceipt -> {
+                    originalReceipt.getDetails().stream()
+                            .filter(d -> d.getId().equals(detail.getBaseLineId()))
+                            .findFirst()
+                            .ifPresent(origDetail -> {
+                                BigDecimal alreadyReturned = Optional.ofNullable(origDetail.getReturnedQuantity()).orElse(BigDecimal.ZERO);
+                                BigDecimal newReturned = alreadyReturned.add(detail.getQuantity());
+                                if (newReturned.compareTo(origDetail.getQuantity()) > 0) {
+                                    throw new RuntimeException("Return quantity exceeds original received quantity for product: " + detail.getProduct().getName());
+                                }
+                                origDetail.setReturnedQuantity(newReturned);
+                            });
+                    goodsReceiptRepository.save(originalReceipt);
+                });
+            }
         }
         goodsReceipt.setTotalAmount(updatedTotalAmount);
     }
@@ -479,10 +496,28 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         }
     }
 
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        GoodsReceipt goodsReceipt = goodsReceiptRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Goods Receipt not found"));
+        if (goodsReceipt.getStatus() != GoodsReceiptStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT goods receipts can be deleted. Create a Purchase Return for POSTED receipts.");
+        }
+        super.delete(id);
+    }
+
     @Transactional
     public GoodsReceipt createReturn(Long originalReceiptId) {
         GoodsReceipt original = goodsReceiptRepository.findById(originalReceiptId)
                 .orElseThrow(() -> new RuntimeException("Original receipt not found"));
+
+        if (original.getStatus() != GoodsReceiptStatus.POSTED) {
+            throw new RuntimeException("Only POSTED goods receipts can be returned");
+        }
+        if (original.getReceiptType() == GoodsReceipt.ReceiptType.OUTBOUND_RETURN) {
+            throw new RuntimeException("Cannot create a return from an existing return document");
+        }
 
         GoodsReceipt returnReceipt = new GoodsReceipt();
         returnReceipt.setReceiptType(GoodsReceipt.ReceiptType.OUTBOUND_RETURN);
@@ -495,19 +530,34 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         List<GoodsReceiptDetail> returnDetails = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (GoodsReceiptDetail originalDetail : original.getDetails()) {
+            BigDecimal alreadyReturned = Optional.ofNullable(originalDetail.getReturnedQuantity()).orElse(BigDecimal.ZERO);
+            BigDecimal returnableQty = originalDetail.getQuantity().subtract(alreadyReturned);
+            if (returnableQty.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
             GoodsReceiptDetail returnDetail = new GoodsReceiptDetail();
             returnDetail.setGoodsReceipt(returnReceipt);
             returnDetail.setPurchaseOrderDetail(originalDetail.getPurchaseOrderDetail());
+            returnDetail.setBaseDocumentId(original.getId());
+            returnDetail.setBaseLineId(originalDetail.getId());
+            returnDetail.setBaseDocumentType("GRN");
             returnDetail.setProduct(originalDetail.getProduct());
             returnDetail.setVariant(originalDetail.getVariant());
-            returnDetail.setQuantity(originalDetail.getQuantity());
+            returnDetail.setQuantity(returnableQty);
             returnDetail.setUnitCost(originalDetail.getUnitCost());
-            returnDetail.setLineTotal(originalDetail.getLineTotal());
+            BigDecimal lineTotal = returnableQty.multiply(originalDetail.getUnitCost());
+            returnDetail.setLineTotal(lineTotal);
             returnDetail.setBatch(originalDetail.getBatch());
-            returnDetail.setSerialNumbers(originalDetail.getSerialNumbers());
-            totalAmount = totalAmount.add(originalDetail.getLineTotal());
+            returnDetail.setSerialNumbers(originalDetail.getSerialNumbers() != null ? new ArrayList<>(originalDetail.getSerialNumbers()) : new ArrayList<>());
+            totalAmount = totalAmount.add(lineTotal);
             returnDetails.add(returnDetail);
         }
+
+        if (returnDetails.isEmpty()) {
+            throw new RuntimeException("All quantities on this Goods Receipt have already been returned");
+        }
+
         returnReceipt.setDetails(returnDetails);
         returnReceipt.setTotalAmount(totalAmount);
 

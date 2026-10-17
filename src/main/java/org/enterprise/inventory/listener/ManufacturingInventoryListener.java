@@ -25,12 +25,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ManufacturingInventoryListener {
 
-    private final InventoryLedgerRepository inventoryLedgerRepository;
+    private final org.enterprise.inventory.service.InventoryService inventoryService;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final BomItemRepository bomItemRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void handleManufacturingOrderCompleted(ManufacturingOrderCompletedEvent event) {
         log.info("Inventory Module received Manufacturing Order completion event for: {}. Processing stock movements...", event.getOrderNo());
 
@@ -40,6 +41,8 @@ public class ManufacturingInventoryListener {
             return;
         }
 
+        BigDecimal totalRawMaterialCost = BigDecimal.ZERO;
+
         // 1. Stock OUT for Raw Materials (BOM Items)
         List<BomItem> bomItems = bomItemRepository.findByBomId(event.getBomId());
         for (BomItem item : bomItems) {
@@ -47,31 +50,33 @@ public class ManufacturingInventoryListener {
             // Total consumed = bom quantity per FG * total FG produced
             BigDecimal consumedQty = item.getQuantity().multiply(event.getProducedQuantity());
 
-            InventoryLedger outTx = new InventoryLedger();
-            outTx.setTransactionType(InventoryTransactionType.PRODUCTION_ISSUE);
-            outTx.setDocumentType("MANUFACTURING_CONSUMPTION");
-            outTx.setProduct(rawMaterial);
-            outTx.setWarehouse(warehouse);
-            outTx.setQtyOut(consumedQty);
-            outTx.setTransactionDate(event.getCompletionDate());
-            
-            inventoryLedgerRepository.save(outTx);
-            log.info("Consumed {} of {} for order {}", consumedQty, rawMaterial.getName(), event.getOrderNo());
+            org.enterprise.inventory.dto.InventoryTransactionRequest issueReq = new org.enterprise.inventory.dto.InventoryTransactionRequest();
+            issueReq.setItemId(rawMaterial.getId());
+            issueReq.setWarehouseId(warehouse.getId());
+            issueReq.setTransactionType("PRODUCTION_ISSUE");
+            issueReq.setDocumentType("MANUFACTURING_CONSUMPTION");
+            issueReq.setQuantity(consumedQty);
+
+            BigDecimal consumedValue = inventoryService.issueStock(issueReq);
+            totalRawMaterialCost = totalRawMaterialCost.add(consumedValue);
+            log.info("Consumed {} of {} (Value: {}) for order {}", consumedQty, rawMaterial.getName(), consumedValue, event.getOrderNo());
         }
 
         // 2. Stock IN for Finished Good (FG/SFG)
         Product finishedGood = productRepository.findById(event.getFinishedGoodId()).orElse(null);
-        if (finishedGood != null) {
-            InventoryLedger inTx = new InventoryLedger();
-            inTx.setTransactionType(InventoryTransactionType.PRODUCTION_RECEIVE);
-            inTx.setDocumentType("MANUFACTURING_PRODUCTION");
-            inTx.setProduct(finishedGood);
-            inTx.setWarehouse(warehouse);
-            inTx.setQtyIn(event.getProducedQuantity());
-            inTx.setTransactionDate(event.getCompletionDate());
-            
-            inventoryLedgerRepository.save(inTx);
-            log.info("Produced {} of {} for order {}", event.getProducedQuantity(), finishedGood.getName(), event.getOrderNo());
+        if (finishedGood != null && event.getProducedQuantity() != null && event.getProducedQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal fgUnitCost = totalRawMaterialCost.divide(event.getProducedQuantity(), 6, java.math.RoundingMode.HALF_UP);
+
+            org.enterprise.inventory.dto.InventoryTransactionRequest receiveReq = new org.enterprise.inventory.dto.InventoryTransactionRequest();
+            receiveReq.setItemId(finishedGood.getId());
+            receiveReq.setWarehouseId(warehouse.getId());
+            receiveReq.setTransactionType("PRODUCTION_RECEIVE");
+            receiveReq.setDocumentType("MANUFACTURING_PRODUCTION");
+            receiveReq.setQuantity(event.getProducedQuantity());
+            receiveReq.setUnitCost(fgUnitCost);
+
+            inventoryService.receiveStock(receiveReq);
+            log.info("Produced {} of {} (Unit Cost: {}) for order {}", event.getProducedQuantity(), finishedGood.getName(), fgUnitCost, event.getOrderNo());
         }
     }
 }

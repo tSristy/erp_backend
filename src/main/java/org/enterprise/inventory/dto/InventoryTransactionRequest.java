@@ -11,6 +11,8 @@ public class InventoryTransactionRequest {
 
     private Long itemId;
 
+    private Long variantId;
+
     private Long warehouseId;
 
     private Long locationId;

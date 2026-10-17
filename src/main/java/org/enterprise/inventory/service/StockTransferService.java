@@ -49,6 +49,14 @@ public class StockTransferService extends BaseService<StockTransfer, Long> {
     @Override
     @Transactional
     public StockTransfer save(StockTransfer stockTransfer) {
+        if (stockTransfer.getId() != null) {
+            StockTransfer existing = stockTransferRepository.findById(stockTransfer.getId())
+                    .orElseThrow(() -> new RuntimeException("Stock Transfer not found"));
+            if (existing.getStatus() != StockTransfer.TransferStatus.DRAFT) {
+                throw new RuntimeException("Only DRAFT stock transfers can be updated");
+            }
+        }
+
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         if (stockTransfer.getCompanyId() == null) {
             stockTransfer.setCompanyId(companyId);
@@ -79,6 +87,17 @@ public class StockTransferService extends BaseService<StockTransfer, Long> {
             }
         }
         return super.save(stockTransfer);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        StockTransfer transfer = stockTransferRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Stock Transfer not found"));
+        if (transfer.getStatus() != StockTransfer.TransferStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT stock transfers can be deleted");
+        }
+        super.delete(id);
     }
 
     @Transactional

@@ -64,6 +64,53 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
             entity.setCompanyId(companyId);
         }
 
+        ServicePartsRequisition existing = null;
+        if (entity.getId() != null) {
+            existing = repository.findById(entity.getId())
+                    .orElseThrow(() -> new RuntimeException("Service parts requisition not found: " + entity.getId()));
+
+            if (existing.getStatus() == ServicePartsRequisition.RequisitionStatus.CANCELLED) {
+                throw new RuntimeException("Cannot modify a CANCELLED parts requisition.");
+            }
+            if (existing.getStatus() == ServicePartsRequisition.RequisitionStatus.ISSUED
+                    && entity.getStatus() != ServicePartsRequisition.RequisitionStatus.CANCELLED) {
+                throw new RuntimeException("Cannot modify an ISSUED parts requisition. Only cancellation is allowed.");
+            }
+            if (entity.getCompanyId() == null) {
+                entity.setCompanyId(existing.getCompanyId());
+            }
+        }
+
+        Map<Long, BigDecimal> existingIssuedById = new java.util.HashMap<>();
+        Map<String, BigDecimal> existingIssuedByProductKey = new java.util.HashMap<>();
+        List<ServicePartsRequisitionDetail> snapshotExistingDetails = new ArrayList<>();
+        Long existingWarehouseId = existing != null && existing.getWarehouse() != null ? existing.getWarehouse().getId() : null;
+
+        if (existing != null && existing.getDetails() != null) {
+            for (ServicePartsRequisitionDetail d : existing.getDetails()) {
+                BigDecimal issued = d.getQuantityIssued() != null ? d.getQuantityIssued() : BigDecimal.ZERO;
+                if (d.getId() != null) {
+                    existingIssuedById.put(d.getId(), issued);
+                }
+                Long pId = d.getProduct() != null ? d.getProduct().getId() : d.getProductId();
+                Long vId = d.getVariant() != null ? d.getVariant().getId() : d.getVariantId();
+                if (pId != null) {
+                    String key = pId + ":" + (vId != null ? vId : "0");
+                    existingIssuedByProductKey.merge(key, issued, BigDecimal::add);
+                }
+                ServicePartsRequisitionDetail copy = new ServicePartsRequisitionDetail();
+                copy.setId(d.getId());
+                copy.setProduct(d.getProduct());
+                copy.setVariant(d.getVariant());
+                copy.setQuantityRequested(d.getQuantityRequested());
+                copy.setQuantityIssued(issued);
+                snapshotExistingDetails.add(copy);
+            }
+        }
+
+        boolean hadIssuedStock = snapshotExistingDetails.stream()
+                .anyMatch(d -> d.getQuantityIssued() != null && d.getQuantityIssued().compareTo(BigDecimal.ZERO) > 0);
+
         Long soId = null;
         if (entity.getServiceOrder() != null && entity.getServiceOrder().getId() != null) {
             soId = entity.getServiceOrder().getId();
@@ -79,6 +126,9 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
             whId = entity.getWarehouse().getId();
         } else if (entity.getWarehouseId() != null) {
             whId = entity.getWarehouseId();
+        }
+        if (hadIssuedStock && existingWarehouseId != null && whId != null && !existingWarehouseId.equals(whId)) {
+            throw new RuntimeException("Cannot change warehouse after parts have already been issued.");
         }
         if (whId != null) {
             entity.setWarehouse(warehouseRepository.findById(whId).orElse(null));
@@ -110,62 +160,99 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
                 if (varId != null) {
                     detail.setVariant(productVariantRepository.findById(varId).orElse(null));
                 }
+
+                if (entity.getStatus() == ServicePartsRequisition.RequisitionStatus.CANCELLED) {
+                    detail.setQuantityIssued(BigDecimal.ZERO);
+                }
             }
         }
-        ServicePartsRequisition existing = null;
-        if (entity.getId() != null) {
-            existing = repository.findById(entity.getId()).orElse(null);
-        }
 
-        Map<Long, BigDecimal> existingIssued = Map.of();
-        if (existing != null && existing.getDetails() != null) {
-            existingIssued = existing.getDetails().stream()
-                    .filter(d -> d.getId() != null)
-                    .collect(Collectors.toMap(
-                            ServicePartsRequisitionDetail::getId,
-                            d -> d.getQuantityIssued() != null ? d.getQuantityIssued() : BigDecimal.ZERO
-                    ));
+        // If transitioning to CANCELLED and parts were previously issued, return stock and reverse GL
+        if (existing != null
+                && entity.getStatus() == ServicePartsRequisition.RequisitionStatus.CANCELLED
+                && hadIssuedStock) {
+            Long targetWarehouseId = existingWarehouseId != null
+                    ? existingWarehouseId
+                    : (entity.getWarehouse() != null ? entity.getWarehouse().getId() : null);
+            if (targetWarehouseId == null) {
+                throw new RuntimeException("Warehouse is required to reverse issued parts on cancellation.");
+            }
+
+            for (ServicePartsRequisitionDetail oldDetail : snapshotExistingDetails) {
+                BigDecimal issuedQty = oldDetail.getQuantityIssued() != null ? oldDetail.getQuantityIssued() : BigDecimal.ZERO;
+                if (issuedQty.compareTo(BigDecimal.ZERO) > 0 && oldDetail.getProduct() != null) {
+                    StockBalanceResponse stockBalance = inventoryService.getStockBalance(
+                            oldDetail.getProduct().getId(), targetWarehouseId, null);
+                    BigDecimal unitCost = stockBalance.getAverageCost() != null ? stockBalance.getAverageCost() : BigDecimal.ZERO;
+
+                    InventoryTransactionRequest returnReq = new InventoryTransactionRequest();
+                    returnReq.setItemId(oldDetail.getProduct().getId());
+                    returnReq.setVariantId(oldDetail.getVariant() != null ? oldDetail.getVariant().getId() : null);
+                    returnReq.setWarehouseId(targetWarehouseId);
+                    returnReq.setTransactionType("SERVICE_RETURN");
+                    returnReq.setDocumentType("PARTS_REQUISITION_CANCEL");
+                    returnReq.setDocumentId(existing.getId());
+                    returnReq.setQuantity(issuedQty);
+                    returnReq.setUnitCost(unitCost);
+                    inventoryService.receiveStock(returnReq);
+                }
+            }
+
+            journalEntryService.reverseByReference("SERVICE_PARTS_REQUISITION", existing.getId());
         }
 
         ServicePartsRequisition saved = super.save(entity);
 
         if (saved.getStatus() == ServicePartsRequisition.RequisitionStatus.ISSUED ||
             saved.getStatus() == ServicePartsRequisition.RequisitionStatus.PARTIALLY_ISSUED) {
-            
+
             JournalEntry journalEntry = new JournalEntry();
             journalEntry.setReferenceType("SERVICE_PARTS_REQUISITION");
             journalEntry.setReferenceId(saved.getId());
             journalEntry.setStatus(JournalStatus.POSTED);
             journalEntry.setLines(new ArrayList<>());
-            
+
             boolean hasJournalEntries = false;
 
             for (ServicePartsRequisitionDetail detail : saved.getDetails()) {
-                BigDecimal oldIssued = existingIssued.getOrDefault(detail.getId(), BigDecimal.ZERO);
+                Long pId = detail.getProduct() != null ? detail.getProduct().getId() : detail.getProductId();
+                Long vId = detail.getVariant() != null ? detail.getVariant().getId() : detail.getVariantId();
+                String key = (pId != null ? pId : "0") + ":" + (vId != null ? vId : "0");
+
+                BigDecimal oldIssued = detail.getId() != null && existingIssuedById.containsKey(detail.getId())
+                        ? existingIssuedById.get(detail.getId())
+                        : existingIssuedByProductKey.getOrDefault(key, BigDecimal.ZERO);
                 BigDecimal newIssued = detail.getQuantityIssued() != null ? detail.getQuantityIssued() : BigDecimal.ZERO;
                 BigDecimal delta = newIssued.subtract(oldIssued);
+
+                if (delta.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new RuntimeException("Cannot reduce already issued quantity for product. Cancel the requisition to reverse issued parts.");
+                }
 
                 if (delta.compareTo(BigDecimal.ZERO) > 0) {
                     if (saved.getWarehouse() == null) {
                         throw new RuntimeException("Warehouse must be selected to issue parts.");
                     }
 
-                    // Get cost from inventory
                     StockBalanceResponse stockBalance = inventoryService.getStockBalance(
                             detail.getProduct().getId(), saved.getWarehouse().getId(), null);
-                    
+
                     BigDecimal unitCost = stockBalance.getAverageCost() != null ? stockBalance.getAverageCost() : BigDecimal.ZERO;
-                    BigDecimal totalCost = unitCost.multiply(delta);
+                    BigDecimal fallbackCost = unitCost.multiply(delta);
 
                     // Issue stock
                     InventoryTransactionRequest req = new InventoryTransactionRequest();
                     req.setItemId(detail.getProduct().getId());
+                    req.setVariantId(detail.getVariant() != null ? detail.getVariant().getId() : null);
                     req.setWarehouseId(saved.getWarehouse().getId());
                     req.setTransactionType("SERVICE_ISSUE");
                     req.setDocumentType("PARTS_REQUISITION");
                     req.setDocumentId(saved.getId());
                     req.setQuantity(delta);
-                    inventoryService.issueStock(req);
+                    BigDecimal issuedValue = inventoryService.issueStock(req);
+                    BigDecimal totalCost = (issuedValue != null && issuedValue.compareTo(BigDecimal.ZERO) > 0)
+                            ? issuedValue
+                            : fallbackCost;
 
                     // Accounting Lines
                     if (totalCost.compareTo(BigDecimal.ZERO) > 0) {
@@ -204,6 +291,22 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
         }
 
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        ServicePartsRequisition existing = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Service parts requisition not found: " + id));
+        if (existing.getStatus() != ServicePartsRequisition.RequisitionStatus.REQUESTED) {
+            throw new RuntimeException("Only REQUESTED parts requisitions can be deleted. Current status: " + existing.getStatus());
+        }
+        boolean anyIssued = existing.getDetails() != null && existing.getDetails().stream()
+                .anyMatch(d -> d.getQuantityIssued() != null && d.getQuantityIssued().compareTo(BigDecimal.ZERO) > 0);
+        if (anyIssued) {
+            throw new RuntimeException("Cannot delete a parts requisition that has issued stock.");
+        }
+        super.delete(id);
     }
 
     public org.springframework.data.domain.Page<ServicePartsRequisition> searchServicePartsRequisitions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {

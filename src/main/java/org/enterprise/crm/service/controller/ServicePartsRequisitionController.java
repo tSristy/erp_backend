@@ -39,34 +39,11 @@ public class ServicePartsRequisitionController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ServicePartsRequisition> update(@PathVariable Long id, @RequestBody ServicePartsRequisition requisition) {
-        return service.findById(id).map(existing -> {
-            requisition.setId(existing.getId());
-            if (requisition.getCompanyId() == null) {
-                requisition.setCompanyId(existing.getCompanyId());
-            }
-            if (existing.getDetails() != null) {
-                existing.getDetails().clear();
-            }
-            if (requisition.getDetails() != null) {
-                for (org.enterprise.crm.service.entity.ServicePartsRequisitionDetail d : requisition.getDetails()) {
-                    d.setRequisition(existing);
-                    existing.getDetails().add(d);
-                }
-            }
-            existing.setRequestedById(requisition.getRequestedById());
-            existing.setStatus(requisition.getStatus());
-            if (requisition.getServiceOrder() != null) {
-                existing.setServiceOrder(requisition.getServiceOrder());
-            } else if (requisition.getServiceOrderId() != null) {
-                existing.setServiceOrderId(requisition.getServiceOrderId());
-            }
-            if (requisition.getWarehouse() != null) {
-                existing.setWarehouse(requisition.getWarehouse());
-            } else if (requisition.getWarehouseId() != null) {
-                existing.setWarehouseId(requisition.getWarehouseId());
-            }
-            return ResponseEntity.ok(service.save(existing));
-        }).orElse(ResponseEntity.notFound().build());
+        if (service.findById(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        requisition.setId(id);
+        return ResponseEntity.ok(service.save(requisition));
     }
 
     @DeleteMapping("/{id}")

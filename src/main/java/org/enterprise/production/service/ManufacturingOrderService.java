@@ -48,6 +48,9 @@ public class ManufacturingOrderService {
         boolean wasCompleted = false;
         if (dto.getId() != null) {
             ManufacturingOrder existing = repository.findById(dto.getId()).orElse(null);
+            if (existing != null && (existing.getStatus() == ManufacturingOrder.OrderStatus.COMPLETED || existing.getStatus() == ManufacturingOrder.OrderStatus.CANCELLED)) {
+                throw new RuntimeException("Cannot modify a COMPLETED or CANCELLED Manufacturing Order");
+            }
             if (existing != null && existing.getStatus() != ManufacturingOrder.OrderStatus.COMPLETED && 
                 dto.getStatus() == org.enterprise.production.entity.ManufacturingOrder.OrderStatus.COMPLETED) {
                 wasCompleted = true;
@@ -78,6 +81,11 @@ public class ManufacturingOrderService {
 
     @Transactional
     public void deleteById(Long id) {
+        ManufacturingOrder existing = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Manufacturing Order not found"));
+        if (existing.getStatus() != ManufacturingOrder.OrderStatus.PLANNED) {
+            throw new RuntimeException("Only PLANNED Manufacturing Orders can be deleted");
+        }
         repository.deleteById(id);
     }
 

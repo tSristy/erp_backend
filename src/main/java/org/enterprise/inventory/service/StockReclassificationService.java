@@ -38,6 +38,14 @@ public class StockReclassificationService extends BaseService<StockReclassificat
     @Override
     @Transactional
     public StockReclassification save(StockReclassification stockReclassification) {
+        if (stockReclassification.getId() != null) {
+            StockReclassification existing = stockReclassificationRepository.findById(stockReclassification.getId())
+                    .orElseThrow(() -> new RuntimeException("Stock Reclassification not found"));
+            if (existing.getStatus() != StockReclassification.ReclassStatus.DRAFT) {
+                throw new RuntimeException("Only DRAFT stock reclassifications can be updated");
+            }
+        }
+
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         if (stockReclassification.getCompanyId() == null) {
             stockReclassification.setCompanyId(companyId);
@@ -68,6 +76,17 @@ public class StockReclassificationService extends BaseService<StockReclassificat
             }
         }
         return super.save(stockReclassification);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        StockReclassification reclass = stockReclassificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Stock Reclassification not found"));
+        if (reclass.getStatus() != StockReclassification.ReclassStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT stock reclassifications can be deleted");
+        }
+        super.delete(id);
     }
 
     @Transactional

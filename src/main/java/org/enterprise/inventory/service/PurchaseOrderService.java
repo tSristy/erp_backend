@@ -316,7 +316,7 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
                 req.setItemId(detail.getProduct().getId());
                 req.setWarehouseId(po.getWarehouse().getId());
                 req.setLocationId(locationId);
-                req.setTransactionType("PO_RECEIPT");
+                req.setTransactionType("GRN");
                 req.setDocumentType("PURCHASE_ORDER");
                 req.setDocumentId(po.getId());
                 req.setQuantity(pendingQty);
@@ -335,6 +335,17 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
         return this.save(po);
     }
     
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        PurchaseOrder po = findById(id)
+                .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
+        if (po.getStatus() != PurchaseOrderStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT purchase orders can be deleted. Cancel the order instead.");
+        }
+        super.delete(id);
+    }
+
     @Transactional
     public PurchaseOrder cancelPurchaseOrder(Long id) {
         PurchaseOrder po = findById(id)

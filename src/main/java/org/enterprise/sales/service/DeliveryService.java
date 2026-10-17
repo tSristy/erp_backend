@@ -58,6 +58,14 @@ public class DeliveryService {
 
     @Transactional
     public DeliveryNote save(DeliveryNote deliveryNote) {
+        if (deliveryNote.getId() != null) {
+            DeliveryNote existing = deliveryNoteRepository.findById(deliveryNote.getId())
+                    .orElseThrow(() -> new RuntimeException("Delivery Note not found"));
+            if (existing.getStatus() != DeliveryNote.DeliveryStatus.DRAFT) {
+                throw new RuntimeException("Only DRAFT delivery notes can be updated");
+            }
+        }
+
         Long companyId = TenantContext.getCompanyId();
         if (companyId == null) {
             throw new RuntimeException("No active company context");
@@ -312,6 +320,13 @@ public class DeliveryService {
         DeliveryNote original = deliveryNoteRepository.findById(originalDeliveryId)
                 .orElseThrow(() -> new RuntimeException("Original delivery not found"));
 
+        if (original.getStatus() != DeliveryNote.DeliveryStatus.SHIPPED) {
+            throw new RuntimeException("Only SHIPPED delivery notes can be returned");
+        }
+        if (original.getDeliveryType() == DeliveryNote.DeliveryType.INBOUND_RETURN) {
+            throw new RuntimeException("Cannot create a return from an existing return document");
+        }
+
         DeliveryNote returnDelivery = new DeliveryNote();
         returnDelivery.setDeliveryType(DeliveryNote.DeliveryType.INBOUND_RETURN);
         returnDelivery.setSalesOrder(original.getSalesOrder());
@@ -331,12 +346,14 @@ public class DeliveryService {
             returnDetail.setQuantity(originalDetail.getQuantity());
             returnDetail.setUnitCost(originalDetail.getUnitCost());
             returnDetail.setBatch(originalDetail.getBatch());
-            returnDetail.setSerialNumbers(originalDetail.getSerialNumbers());
+            returnDetail.setSerialNumbers(originalDetail.getSerialNumbers() != null ? new ArrayList<>(originalDetail.getSerialNumbers()) : new ArrayList<>());
             returnDetails.add(returnDetail);
-}        returnDelivery.setDetails(returnDetails);
+        }
+        returnDelivery.setDetails(returnDetails);
 
         return deliveryNoteRepository.save(returnDelivery);
-}
+    }
+
     public java.util.List<DeliveryNote> findAll() {
         return deliveryNoteRepository.findAll();
     }
@@ -345,12 +362,19 @@ public class DeliveryService {
     public org.springframework.data.domain.Page<DeliveryNote> findAll(org.springframework.data.domain.Pageable pageable) {
         return deliveryNoteRepository.findAll(pageable);
     }
+
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public java.util.Optional<DeliveryNote> findById(Long id) {
         return deliveryNoteRepository.findById(id);
     }
+
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
+        DeliveryNote delivery = deliveryNoteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Delivery Note not found"));
+        if (delivery.getStatus() != DeliveryNote.DeliveryStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT delivery notes can be deleted. Create a Sales Return for SHIPPED deliveries.");
+        }
         deliveryNoteRepository.deleteById(id);
     }
 

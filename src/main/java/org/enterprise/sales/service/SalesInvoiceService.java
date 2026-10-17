@@ -42,6 +42,13 @@ public class SalesInvoiceService {
 
     @Transactional
     public SalesInvoice save(SalesInvoice salesInvoice) {
+        if (salesInvoice.getId() != null) {
+            SalesInvoice existing = salesInvoiceRepository.findById(salesInvoice.getId())
+                    .orElseThrow(() -> new RuntimeException("Sales Invoice not found"));
+            if (existing.getStatus() != null && existing.getStatus() != SalesInvoice.InvoiceStatus.DRAFT) {
+                throw new RuntimeException("Only DRAFT sales invoices can be modified");
+            }
+        }
         Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
         if (salesInvoice.getCompanyId() == null) {
             salesInvoice.setCompanyId(companyId);
@@ -146,13 +153,28 @@ public class SalesInvoiceService {
 
         if (invoice.getStatus() != SalesInvoice.InvoiceStatus.DRAFT) {
             throw new RuntimeException("Only DRAFT invoices can be posted");
-}
+        }
         boolean isInvoice = invoice.getInvoiceType() == SalesInvoice.InvoiceType.INVOICE;
         createAccountingEntry(invoice, isInvoice);
 
+        if (invoice.getDetails() != null) {
+            for (SalesInvoiceDetail detail : invoice.getDetails()) {
+                var dnd = detail.getDeliveryNoteDetail();
+                if (dnd != null && detail.getQuantity() != null) {
+                    BigDecimal currentInvoiced = dnd.getInvoicedQuantity() != null ? dnd.getInvoicedQuantity() : BigDecimal.ZERO;
+                    if (isInvoice) {
+                        dnd.setInvoicedQuantity(currentInvoiced.add(detail.getQuantity()));
+                    } else {
+                        BigDecimal updated = currentInvoiced.subtract(detail.getQuantity());
+                        dnd.setInvoicedQuantity(updated.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : updated);
+                    }
+                }
+            }
+        }
+
         invoice.setStatus(SalesInvoice.InvoiceStatus.POSTED);
         return salesInvoiceRepository.save(invoice);
-}
+    }
     private void createAccountingEntry(SalesInvoice invoice, boolean isInvoice) {
         BigDecimal totalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO;
         BigDecimal discountTotal = invoice.getDiscountTotal() != null ? invoice.getDiscountTotal() : BigDecimal.ZERO;
@@ -326,8 +348,13 @@ public class SalesInvoiceService {
     }
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
+        SalesInvoice existing = salesInvoiceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Sales Invoice not found"));
+        if (existing.getStatus() != null && existing.getStatus() != SalesInvoice.InvoiceStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT sales invoices can be deleted");
+        }
         salesInvoiceRepository.deleteById(id);
-}
+    }
 
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)

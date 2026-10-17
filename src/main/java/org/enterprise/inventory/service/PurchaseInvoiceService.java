@@ -22,6 +22,7 @@ import java.util.ArrayList;
 public class PurchaseInvoiceService {
 
     private final PurchaseInvoiceRepository purchaseInvoiceRepository;
+    private final org.enterprise.inventory.repository.GoodsReceiptRepository goodsReceiptRepository;
     private final JournalEntryService journalEntryService;
 
     public List<PurchaseInvoice> getAllInvoices() {
@@ -66,10 +67,37 @@ public class PurchaseInvoiceService {
     }
 
     @Transactional
+    public PurchaseInvoice updateInvoice(Long id, PurchaseInvoice incoming) {
+        PurchaseInvoice existing = getInvoiceById(id);
+        if (existing.getStatus() != PurchaseInvoice.InvoiceStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT purchase invoices can be updated");
+        }
+
+        Long companyId = TenantContext.getCompanyId();
+        if (incoming.getInvoiceDate() != null) existing.setInvoiceDate(incoming.getInvoiceDate());
+        if (incoming.getDueDate() != null) existing.setDueDate(incoming.getDueDate());
+        if (incoming.getVendor() != null) existing.setVendor(incoming.getVendor());
+        if (incoming.getGoodsReceipt() != null) existing.setGoodsReceipt(incoming.getGoodsReceipt());
+        if (incoming.getInvoiceType() != null) existing.setInvoiceType(incoming.getInvoiceType());
+        if (incoming.getTotalAmount() != null) existing.setTotalAmount(incoming.getTotalAmount());
+
+        if (incoming.getDetails() != null) {
+            existing.getDetails().clear();
+            incoming.getDetails().forEach(detail -> {
+                detail.setId(null);
+                detail.setPurchaseInvoice(existing);
+                detail.setCompanyId(companyId);
+                existing.getDetails().add(detail);
+            });
+        }
+        return purchaseInvoiceRepository.save(existing);
+    }
+
+    @Transactional
     public void deleteInvoice(Long id) {
         PurchaseInvoice invoice = getInvoiceById(id);
-        if (invoice.getStatus() == PurchaseInvoice.InvoiceStatus.POSTED || invoice.getStatus() == PurchaseInvoice.InvoiceStatus.PAID) {
-            throw new RuntimeException("Cannot delete POSTED or PAID invoice");
+        if (invoice.getStatus() != PurchaseInvoice.InvoiceStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT purchase invoices can be deleted");
         }
         purchaseInvoiceRepository.delete(invoice);
     }
@@ -77,16 +105,47 @@ public class PurchaseInvoiceService {
     @Transactional
     public PurchaseInvoice updateInvoiceStatus(Long id, PurchaseInvoice.InvoiceStatus status) {
         PurchaseInvoice invoice = getInvoiceById(id);
-        
-        if (invoice.getStatus() != PurchaseInvoice.InvoiceStatus.DRAFT && status == PurchaseInvoice.InvoiceStatus.POSTED) {
+        PurchaseInvoice.InvoiceStatus previousStatus = invoice.getStatus();
+
+        if (previousStatus == PurchaseInvoice.InvoiceStatus.PAID) {
+            throw new RuntimeException("Cannot change status of a PAID invoice");
+        }
+        if (previousStatus == PurchaseInvoice.InvoiceStatus.CANCELLED) {
+            throw new RuntimeException("Cannot change status of a CANCELLED invoice");
+        }
+        if (previousStatus != PurchaseInvoice.InvoiceStatus.DRAFT && status == PurchaseInvoice.InvoiceStatus.POSTED) {
             throw new RuntimeException("Only DRAFT invoices can be posted");
         }
 
         invoice.setStatus(status);
         if (status == PurchaseInvoice.InvoiceStatus.POSTED) {
+            adjustGrnInvoicedQty(invoice, true);
             createAccountingEntry(invoice);
+        } else if (status == PurchaseInvoice.InvoiceStatus.CANCELLED && previousStatus == PurchaseInvoice.InvoiceStatus.POSTED) {
+            adjustGrnInvoicedQty(invoice, false);
+            journalEntryService.reverseByReference("PURCHASE_INVOICE", invoice.getId());
         }
         return purchaseInvoiceRepository.save(invoice);
+    }
+
+    private void adjustGrnInvoicedQty(PurchaseInvoice invoice, boolean increment) {
+        if (invoice.getGoodsReceipt() == null || invoice.getGoodsReceipt().getId() == null || invoice.getDetails() == null) {
+            return;
+        }
+        goodsReceiptRepository.findById(invoice.getGoodsReceipt().getId()).ifPresent(grn -> {
+            for (var invDetail : invoice.getDetails()) {
+                if (invDetail.getProduct() == null || invDetail.getQuantity() == null) continue;
+                grn.getDetails().stream()
+                        .filter(gd -> gd.getProduct() != null && gd.getProduct().getId().equals(invDetail.getProduct().getId()))
+                        .findFirst()
+                        .ifPresent(gd -> {
+                            BigDecimal current = gd.getInvoicedQuantity() != null ? gd.getInvoicedQuantity() : BigDecimal.ZERO;
+                            BigDecimal updated = increment ? current.add(invDetail.getQuantity()) : current.subtract(invDetail.getQuantity()).max(BigDecimal.ZERO);
+                            gd.setInvoicedQuantity(updated);
+                        });
+            }
+            goodsReceiptRepository.save(grn);
+        });
     }
 
     private void createAccountingEntry(PurchaseInvoice invoice) {

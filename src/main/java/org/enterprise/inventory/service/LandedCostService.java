@@ -27,6 +27,7 @@ public class LandedCostService {
 
     private final LandedCostVoucherRepository landedCostVoucherRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
+    private final org.enterprise.inventory.repository.StockBalanceRepository stockBalanceRepository;
     private final JournalEntryService journalEntryService;
 
     public List<LandedCostVoucher> getAllVouchers() {
@@ -56,6 +57,28 @@ public class LandedCostService {
             voucher.getDetails().forEach(detail -> detail.setVoucher(voucher));
         }
         return landedCostVoucherRepository.save(voucher);
+    }
+
+    @Transactional
+    public LandedCostVoucher updateVoucher(Long id, LandedCostVoucher incoming) {
+        LandedCostVoucher existing = getVoucherById(id);
+        if (existing.getStatus() != LandedCostVoucher.LandedCostStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT landed cost vouchers can be updated");
+        }
+
+        if (incoming.getPostingDate() != null) existing.setPostingDate(incoming.getPostingDate());
+        if (incoming.getGoodsReceipt() != null) existing.setGoodsReceipt(incoming.getGoodsReceipt());
+        if (incoming.getTotalSecondaryCost() != null) existing.setTotalSecondaryCost(incoming.getTotalSecondaryCost());
+
+        if (incoming.getDetails() != null) {
+            existing.getDetails().clear();
+            incoming.getDetails().forEach(detail -> {
+                detail.setId(null);
+                detail.setVoucher(existing);
+                existing.getDetails().add(detail);
+            });
+        }
+        return landedCostVoucherRepository.save(existing);
     }
 
     @Transactional
@@ -103,6 +126,26 @@ public class LandedCostService {
                     // Update Inventory Cost Layer
                     layer.setUnitCost(layer.getUnitCost().add(additionalUnitCost));
                     inventoryCostLayerRepository.save(layer);
+
+                    // Also update StockBalance valuation for the remaining stock of this item in the warehouse
+                    java.util.Optional<org.enterprise.inventory.entity.StockBalance> sbOpt = detail.getBatch() != null
+                            ? stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+                                    detail.getProduct().getId(), grn.getWarehouse().getId(), null, detail.getBatch().getId())
+                            : stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+                                    detail.getProduct().getId(), grn.getWarehouse().getId(), null);
+
+                    sbOpt.ifPresent(sb -> {
+                        BigDecimal currentQty = sb.getQuantity() != null ? sb.getQuantity() : BigDecimal.ZERO;
+                        if (currentQty.compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal remainingLayerQty = layer.getRemainingQty() != null ? layer.getRemainingQty() : layer.getOriginalQty();
+                            BigDecimal capitalizableValue = additionalUnitCost.multiply(remainingLayerQty.min(currentQty));
+                            BigDecimal currentTotalValue = sb.getTotalValue() != null ? sb.getTotalValue() : BigDecimal.ZERO;
+                            BigDecimal newTotalValue = currentTotalValue.add(capitalizableValue);
+                            sb.setTotalValue(newTotalValue);
+                            sb.setAverageCost(newTotalValue.divide(currentQty, 6, RoundingMode.HALF_UP));
+                            stockBalanceRepository.save(sb);
+                        }
+                    });
                 });
         }
 

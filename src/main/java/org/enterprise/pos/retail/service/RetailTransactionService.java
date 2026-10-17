@@ -105,6 +105,10 @@ public class RetailTransactionService {
         RetailTransaction existing = retailTransactionRepository.findById(incoming.getId())
                 .orElseThrow(() -> new RuntimeException("Retail transaction not found with id: " + incoming.getId()));
 
+        if (existing.getStatus() != RetailTransaction.TransactionStatus.PENDING) {
+            throw new RuntimeException("Only PENDING retail transactions can be updated. Create a Return transaction for COMPLETED sales.");
+        }
+
         existing.setTransactionDate(incoming.getTransactionDate() != null ? incoming.getTransactionDate() : existing.getTransactionDate());
         if (incoming.getTransactionNo() != null && !incoming.getTransactionNo().trim().isEmpty()) {
             existing.setTransactionNo(incoming.getTransactionNo());
@@ -319,6 +323,11 @@ public class RetailTransactionService {
 
     @Transactional
     public void delete(Long id) {
+        RetailTransaction existing = retailTransactionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Retail transaction not found with id: " + id));
+        if (existing.getStatus() != RetailTransaction.TransactionStatus.PENDING) {
+            throw new RuntimeException("Only PENDING retail transactions can be deleted. Create a Return transaction for COMPLETED sales.");
+        }
         retailTransactionRepository.deleteById(id);
     }
 

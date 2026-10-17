@@ -63,10 +63,10 @@ public class InventoryService {
                 ? locationRepository.findById(request.getLocationId()).orElse(null) 
                 : null;
 
-        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
                         product.getId(),
                         warehouse.getId(),
-                        location != null ? location.getId() : null, null
+                        location != null ? location.getId() : null
                 )
                 .orElseGet(() -> {
                     StockBalance sb = new StockBalance();
@@ -120,7 +120,7 @@ public class InventoryService {
     }
 
     @Transactional
-    public void issueStock(InventoryTransactionRequest request) {
+    public BigDecimal issueStock(InventoryTransactionRequest request) {
         Long companyId = TenantContext.getCompanyId();
 
         Product product = productRepository.findById(request.getItemId())
@@ -133,10 +133,10 @@ public class InventoryService {
                 ? locationRepository.findById(request.getLocationId()).orElse(null) 
                 : null;
 
-        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
                         product.getId(),
                         warehouse.getId(),
-                        location != null ? location.getId() : null, null
+                        location != null ? location.getId() : null
                 )
                 .orElseThrow(() -> new RuntimeException("Stock not found for issue"));
 
@@ -167,7 +167,7 @@ public class InventoryService {
         ledger.setProduct(product);
         ledger.setWarehouse(warehouse);
         ledger.setLocation(location);
-        ledger.setTransactionType(InventoryTransactionType.valueOf(request.getTransactionType() != null ? request.getTransactionType() : "GOODS_ISSUE"));
+        ledger.setTransactionType(InventoryTransactionType.valueOf(request.getTransactionType() != null ? request.getTransactionType() : "ISSUE"));
         ledger.setDocumentType(request.getDocumentType());
         ledger.setDocumentId(request.getDocumentId());
         ledger.setTransactionDate(LocalDateTime.now());
@@ -178,14 +178,15 @@ public class InventoryService {
         ledger.setBalanceQty(newQty);
         ledger.setBalanceCost(newValue);
         inventoryLedgerRepository.save(ledger);
+        return issueValue;
     }
 
     @Transactional(readOnly = true)
     public StockBalanceResponse getStockBalance(Long itemId, Long warehouseId, Long locationId) {
-        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
                         itemId,
                         warehouseId,
-                        locationId, null
+                        locationId
                 )
                 .orElse(null);
 

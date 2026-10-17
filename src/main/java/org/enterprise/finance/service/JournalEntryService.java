@@ -64,6 +64,9 @@ public class JournalEntryService {
         JournalEntry existing = null;
         if (journalEntry.getId() != null) {
             existing = journalEntryRepository.findById(journalEntry.getId()).orElse(null);
+            if (existing != null && (existing.getStatus() == JournalStatus.POSTED || existing.getStatus() == JournalStatus.REVERSED)) {
+                throw new RuntimeException("Cannot modify a POSTED or REVERSED journal entry");
+            }
         }
         boolean transitioningToPosted = (existing != null && existing.getStatus() != JournalStatus.POSTED && journalEntry.getStatus() == JournalStatus.POSTED);
 
@@ -204,7 +207,51 @@ public class JournalEntryService {
 
     @Transactional
     public void deleteById(Long id) {
+        JournalEntry existing = journalEntryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Journal Entry not found"));
+        if (existing.getStatus() == JournalStatus.POSTED || existing.getStatus() == JournalStatus.REVERSED) {
+            throw new RuntimeException("Cannot delete a POSTED or REVERSED journal entry. Reverse it instead.");
+        }
         journalEntryRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void reverseByReference(String referenceType, Long referenceId) {
+        List<JournalEntry> postedJournals = journalEntryRepository.findByReferenceTypeAndReferenceIdAndStatus(
+                referenceType, referenceId, JournalStatus.POSTED);
+
+        for (JournalEntry original : postedJournals) {
+            original.setStatus(JournalStatus.REVERSED);
+            journalEntryRepository.save(original);
+
+            JournalEntry reversal = new JournalEntry();
+            reversal.setPostingDate(LocalDate.now());
+            reversal.setReferenceType(referenceType + "_REVERSAL");
+            reversal.setReferenceId(referenceId);
+            reversal.setStatus(JournalStatus.POSTED);
+            reversal.setCompanyId(original.getCompanyId());
+
+            if (original.getLines() != null) {
+                List<JournalEntryLine> reversalLines = original.getLines().stream().map(origLine -> {
+                    JournalEntryLine revLine = new JournalEntryLine();
+                    revLine.setJournalEntry(reversal);
+                    revLine.setAccount(origLine.getAccount());
+                    revLine.setDebit(origLine.getCredit() != null ? origLine.getCredit() : BigDecimal.ZERO);
+                    revLine.setCredit(origLine.getDebit() != null ? origLine.getDebit() : BigDecimal.ZERO);
+                    revLine.setBusinessPartner(origLine.getBusinessPartner());
+                    revLine.setCostCenter(origLine.getCostCenter());
+                    revLine.setProject(origLine.getProject());
+                    revLine.setLetterOfCredit(origLine.getLetterOfCredit());
+                    revLine.setLoan(origLine.getLoan());
+                    revLine.setBranch(origLine.getBranch());
+                    revLine.setCompanyId(origLine.getCompanyId());
+                    return revLine;
+                }).collect(Collectors.toList());
+                reversal.setLines(reversalLines);
+            }
+
+            this.save(reversal);
+        }
     }
 
     private JournalEntryDTO convertToDTO(JournalEntry entity) {
