@@ -54,10 +54,14 @@ public class MasterDataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        // Only run if the database is empty (no accounts exist)
+        // Only run full master data seeder if the database is empty (no accounts exist)
         Long accountCount = em.createQuery("SELECT COUNT(a) FROM Account a", Long.class).getSingleResult();
         if (accountCount > 0) {
-            log.info("Master data already exists. Skipping Seeder.");
+            log.info("Master data already exists. Ensuring new modules and menus are seeded...");
+            List<Company> existingCompanies = em.createQuery("SELECT c FROM Company c", Company.class).getResultList();
+            for (Company existingCompany : existingCompanies) {
+                seedModules(existingCompany);
+            }
             return;
         }
 
@@ -222,6 +226,8 @@ public class MasterDataSeeder implements CommandLineRunner {
         Location loc1 = new Location(); loc1.setCompanyId(companyId); loc1.setWarehouse(w1); loc1.setCode("L01"); loc1.setName("Aisle 1"); loc1.setType(Location.LocationType.AISLE); em.persist(loc1);
 
         Warehouse w2 = new Warehouse(); w2.setCompanyId(companyId); w2.setCode("WH02"); w2.setName("Secondary Warehouse"); w2.setInventoryAccount(inventoryAcc); w2.setCogsAccount(cogs); em.persist(w2);
+
+        Warehouse w3 = new Warehouse(); w3.setCompanyId(companyId); w3.setCode("WH-TECH"); w3.setName("Field Technician Warehouse"); w3.setInventoryAccount(inventoryAcc); w3.setCogsAccount(cogs); em.persist(w3);
 
         // 12. WorkCenter & Routing
         WorkCenter wc1 = new WorkCenter(); wc1.setCompanyId(companyId); wc1.setCode("WC01"); wc1.setName("Assembly Line 1"); wc1.setCostPerHour(BigDecimal.valueOf(50)); em.persist(wc1);
@@ -642,6 +648,7 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(finance, "Payment Vouchers", "finance/payment-voucher", "Upload", 10, cid);
         createMenu(finance, "Journal Vouchers", "finance/journal-voucher", "Upload", 11, cid);
         createMenu(finance, "Fiscal Years", "finance/fiscal-years", "Calendar", 12, cid);
+        createMenu(finance, "Account Balances", "finance/accountbalance", "Scale", 13, cid);
         createMenu(finance, "Reports", "finance/reports", "BarChart2", 14, cid);
         createReportMenu(finance, "GL Ledger", "finance/reports/gl-ledger", "BookOpen", 15, cid);
         createReportMenu(finance, "Customer Ledger", "finance/reports/customer-ledger", "UserCircle", 16, cid);
@@ -682,10 +689,11 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(serviceCrm, "Dashboard", "service-crm", "Headset", 1, cid);
         createMenu(serviceCrm, "Service Requests", "service-crm/servicerequests", "Wrench", 2, cid);
         createMenu(serviceCrm, "Service Orders", "service-crm/serviceorders", "ClipboardList", 3, cid);
-        createMenu(serviceCrm, "Service Estimates", "service-crm/serviceestimates", "FileText", 3, cid);
-        createMenu(serviceCrm, "Parts Requisitions", "service-crm/servicepartsrequisitions", "Tool", 4, cid);
-        createMenu(serviceCrm, "Maintenance Schedules", "service-crm/maintenanceschedules", "Calendar", 5, cid);
-        createMenu(serviceCrm, "Registered Products", "service-crm/registeredproducts", "Box", 6, cid);
+        createMenu(serviceCrm, "Service Estimates", "service-crm/serviceestimates", "FileText", 4, cid);
+        createMenu(serviceCrm, "Parts Requisitions", "service-crm/servicepartsrequisitions", "Tool", 5, cid);
+        createMenu(serviceCrm, "Technician Stock", "service-crm/technician-stock", "Package", 6, cid);
+        createMenu(serviceCrm, "Maintenance Schedules", "service-crm/maintenanceschedules", "Calendar", 7, cid);
+        createMenu(serviceCrm, "Registered Products", "service-crm/registeredproducts", "Box", 8, cid);
 
         var mfg = createModule("MANUFACTURING", "Manufacturing", "Production and manufacturing workflows.", "manufacturing", "Factory", 8, cid);
         createMenu(mfg, "Dashboard", "manufacturing", "Factory", 1, cid);
@@ -708,41 +716,45 @@ public class MasterDataSeeder implements CommandLineRunner {
 
         var restPos = createModule("RESTAURANT_POS", "Restaurant POS", "Point of sale for restaurants.", "restaurant-pos", "Utensils", 10, cid);
         createMenu(restPos, "Dashboard", "restaurant-pos", "Utensils", 1, cid);
-        createMenu(restPos, "Orders", "restaurant-pos/orders", "ClipboardList", 2, cid);
-        createMenu(restPos, "Menu Items", "restaurant-pos/items", "Coffee", 3, cid);
-        createMenu(restPos, "Tables", "restaurant-pos/tables", "Grid", 4, cid);
-        createMenu(restPos, "Kitchen Display", "restaurant-pos/kds", "Monitor", 5, cid);
+        createMenu(restPos, "POS Terminal", "restaurant-pos/terminal", "ShoppingCart", 2, cid);
+        createMenu(restPos, "Orders", "restaurant-pos/orders", "ClipboardList", 3, cid);
+        createMenu(restPos, "Returns", "restaurant-pos/returns", "Undo2", 4, cid);
+        createMenu(restPos, "Menu Items", "restaurant-pos/items", "Coffee", 5, cid);
+        createMenu(restPos, "Tables", "restaurant-pos/tables", "Grid", 6, cid);
+        createMenu(restPos, "Kitchen Display", "restaurant-pos/kds", "Monitor", 7, cid);
 
         var hr = createModule("HR", "HR module", "Human resources and payroll.", "hr", "Users", 11, cid);
         createMenu(hr, "Dashboard", "hr", "Users", 1, cid);
         createMenu(hr, "Attendance", "hr/attendance", "Clock", 2, cid);
         createMenu(hr, "Biometric Device", "hr/biometricdevice", "Fingerprint", 3, cid);
-        createMenu(hr, "Department", "hr/department", "Building", 4, cid);
-        createMenu(hr, "Designation", "hr/designation", "Award", 5, cid);
-        createMenu(hr, "Employee", "hr/employee", "Users", 6, cid);
-        createMenu(hr, "Employee Confirmation", "hr/employeeconfirmation", "CheckCircle", 7, cid);
-        createMenu(hr, "Employee Increment", "hr/employeeincrement", "TrendingUp", 8, cid);
-        createMenu(hr, "Employee Loan", "hr/employeeloan", "CreditCard", 9, cid);
-        createMenu(hr, "Employee Promotion", "hr/employeepromotion", "Star", 10, cid);
-        createMenu(hr, "Employee Roster", "hr/employeeroster", "Calendar", 11, cid);
-        createMenu(hr, "Employee Transfer", "hr/employeetransfer", "Repeat", 12, cid);
-        createMenu(hr, "Holiday", "hr/holiday", "CalendarHeart", 13, cid);
-        createMenu(hr, "Leave Application", "hr/leaveapplication", "FileText", 14, cid);
-        createMenu(hr, "Leave Balance", "hr/leavebalance", "Scale", 15, cid);
-        createMenu(hr, "Leave Type", "hr/leavetype", "Tag", 16, cid);
-        createMenu(hr, "Mobile Attendance", "hr/mobileattendance", "Smartphone", 17, cid);
-        createMenu(hr, "Payroll Process", "hr/payrollprocess", "Settings", 18, cid);
-        createMenu(hr, "Payslip", "hr/payslip", "FileSignature", 19, cid);
-        createMenu(hr, "Provident Fund", "hr/providentfund", "PiggyBank", 20, cid);
-        createMenu(hr, "Salary Component", "hr/salarycomponent", "PieChart", 21, cid);
-        createMenu(hr, "Shift", "hr/shift", "Clock", 22, cid);
-        createMenu(hr, "Tax Slab", "hr/taxslab", "Percent", 23, cid);
-        createMenu(hr, "Weekend", "hr/weekend", "CalendarDays", 24, cid);
-        createMenu(hr, "Reports", "hr/reports", "BarChart2", 25, cid);
-        createReportMenu(hr, "Employee Summary", "hr/reports/employee-summary", "Users", 26, cid);
-        createReportMenu(hr, "Attendance Report", "hr/reports/attendance", "Clock", 27, cid);
-        createReportMenu(hr, "Leave Balance", "hr/reports/leave-balance", "CalendarHeart", 28, cid);
-        createReportMenu(hr, "Payroll Summary", "hr/reports/payroll-summary", "DollarSign", 29, cid);
+        createMenu(hr, "Biometric Raw Log", "hr/biometricrawlog", "Activity", 4, cid);
+        createMenu(hr, "Department", "hr/department", "Building", 5, cid);
+        createMenu(hr, "Designation", "hr/designation", "Award", 6, cid);
+        createMenu(hr, "Employee", "hr/employee", "Users", 7, cid);
+        createMenu(hr, "Employee Confirmation", "hr/employeeconfirmation", "CheckCircle", 8, cid);
+        createMenu(hr, "Employee Increment", "hr/employeeincrement", "TrendingUp", 9, cid);
+        createMenu(hr, "Employee Loan", "hr/employeeloan", "CreditCard", 10, cid);
+        createMenu(hr, "Employee Promotion", "hr/employeepromotion", "Star", 11, cid);
+        createMenu(hr, "Employee Roster", "hr/employeeroster", "Calendar", 12, cid);
+        createMenu(hr, "Employee Salary", "hr/employeesalary", "DollarSign", 13, cid);
+        createMenu(hr, "Employee Transfer", "hr/employeetransfer", "Repeat", 14, cid);
+        createMenu(hr, "Holiday", "hr/holiday", "CalendarHeart", 15, cid);
+        createMenu(hr, "Leave Application", "hr/leaveapplication", "FileText", 16, cid);
+        createMenu(hr, "Leave Balance", "hr/leavebalance", "Scale", 17, cid);
+        createMenu(hr, "Leave Type", "hr/leavetype", "Tag", 18, cid);
+        createMenu(hr, "Mobile Attendance", "hr/mobileattendance", "Smartphone", 19, cid);
+        createMenu(hr, "Payroll Process", "hr/payrollprocess", "Settings", 20, cid);
+        createMenu(hr, "Payslip", "hr/payslip", "FileSignature", 21, cid);
+        createMenu(hr, "Provident Fund", "hr/providentfund", "PiggyBank", 22, cid);
+        createMenu(hr, "Salary Component", "hr/salarycomponent", "PieChart", 23, cid);
+        createMenu(hr, "Shift", "hr/shift", "Clock", 24, cid);
+        createMenu(hr, "Tax Slab", "hr/taxslab", "Percent", 25, cid);
+        createMenu(hr, "Weekend", "hr/weekend", "CalendarDays", 26, cid);
+        createMenu(hr, "Reports", "hr/reports", "BarChart2", 27, cid);
+        createReportMenu(hr, "Employee Summary", "hr/reports/employee-summary", "Users", 28, cid);
+        createReportMenu(hr, "Attendance Report", "hr/reports/attendance", "Clock", 29, cid);
+        createReportMenu(hr, "Leave Balance", "hr/reports/leave-balance", "CalendarHeart", 30, cid);
+        createReportMenu(hr, "Payroll Summary", "hr/reports/payroll-summary", "DollarSign", 31, cid);
 
         var workflow = createModule("WORKFLOW", "Workflow", "Approval engines and processes.", "workflow", "Workflow", 12, cid);
         createMenu(workflow, "Dashboard", "workflow", "Workflow", 1, cid);

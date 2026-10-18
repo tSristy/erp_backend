@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 public class TransferOrderDetail extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private TransferOrder transferOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)

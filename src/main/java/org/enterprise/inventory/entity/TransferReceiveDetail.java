@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 public class TransferReceiveDetail extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private TransferReceive transferReceive;
 
     @ManyToOne(fetch = FetchType.LAZY)
