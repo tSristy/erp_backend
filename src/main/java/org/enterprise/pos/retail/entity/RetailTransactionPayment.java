@@ -36,6 +36,6 @@ public class RetailTransactionPayment extends AuditableEntity implements PosPaym
     }
 
     public enum PaymentMode {
-        CASH, CARD, MFS, DUE, LOYALTY_POINTS
+        CASH, CARD, MFS, DUE, LOYALTY_POINTS, ADVANCE_RECEIPT
     }
 }

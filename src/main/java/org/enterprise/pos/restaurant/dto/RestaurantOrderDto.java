@@ -20,6 +20,8 @@ public class RestaurantOrderDto {
     private Long referenceOrderId;
     private Long customerId;
     private String customerName;
+    private String walkInCustomerName;
+    private String walkInCustomerPhone;
     private Long warehouseId;
     private String warehouseName;
     private String status;

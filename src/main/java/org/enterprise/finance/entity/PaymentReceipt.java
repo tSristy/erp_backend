@@ -24,11 +24,20 @@ public class PaymentReceipt extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private BusinessPartner customer;
 
+    @Column(length = 100)
+    private String walkInCustomerName;
+
+    @Column(length = 50)
+    private String walkInCustomerPhone;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private BankAccount bankAccount;
 
     @Column(precision = 18, scale = 2)
     private BigDecimal totalAmount;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal utilizedAmount = BigDecimal.ZERO;
 
     private String paymentMethod;
     

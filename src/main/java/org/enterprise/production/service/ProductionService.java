@@ -36,9 +36,20 @@ public class ProductionService {
     private final JournalEntryService journalEntryService;
     private final CostingService costingService;
     private final org.enterprise.inventory.service.BatchSerialTrackingService batchSerialTrackingService;
+    private final org.enterprise.production.repository.QualityInspectionRepository qualityInspectionRepository;
 
     @Transactional
     public void completeProduction(Long orderId, BigDecimal producedQty) {
+        completeProduction(orderId, producedQty, null, null, null);
+    }
+
+    @Transactional
+    public void completeProduction(
+            Long orderId,
+            BigDecimal producedQty,
+            BigDecimal rejectedQty,
+            Long qcInspectorId,
+            String qcNotes) {
         ManufacturingOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
@@ -46,7 +57,18 @@ public class ProductionService {
             throw new RuntimeException("Order is already completed");
         }
 
-        BigDecimal factor = producedQty.divide(order.getBom().getBaseQuantity(), 6, RoundingMode.HALF_UP);
+        if (producedQty == null || producedQty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Produced (accepted) quantity must be greater than zero");
+        }
+
+        BigDecimal rejected = Optional.ofNullable(rejectedQty).orElse(BigDecimal.ZERO);
+        if (rejected.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Rejected quantity cannot be negative");
+        }
+
+        // Total batch manufactured (good units + rejected scrap units) consumes raw materials
+        BigDecimal totalManufacturedQty = producedQty.add(rejected);
+        BigDecimal factor = totalManufacturedQty.divide(order.getBom().getBaseQuantity(), 6, RoundingMode.HALF_UP);
         BigDecimal totalRawMaterialCost = BigDecimal.ZERO;
 
         // 1. Consume Raw Materials
@@ -160,14 +182,50 @@ public class ProductionService {
         // 3. Post Accounting Entries
         createAccountingEntry(order, totalRawMaterialCost);
 
-        // 4. Update Order Status
-        order.setProducedQuantity(order.getProducedQuantity().add(producedQty));
+        // 4. Update Order Status & QC Summary
+        order.setProducedQuantity(Optional.ofNullable(order.getProducedQuantity()).orElse(BigDecimal.ZERO).add(producedQty));
+        order.setQcPassedQuantity(Optional.ofNullable(order.getQcPassedQuantity()).orElse(BigDecimal.ZERO).add(producedQty));
+        order.setQcRejectedQuantity(Optional.ofNullable(order.getQcRejectedQuantity()).orElse(BigDecimal.ZERO).add(rejected));
+        if (qcInspectorId != null) {
+            order.setQcInspectorId(qcInspectorId);
+        }
+        if (qcNotes != null && !qcNotes.trim().isEmpty()) {
+            order.setQcNotes(qcNotes.trim());
+        }
+        if (rejected.compareTo(BigDecimal.ZERO) > 0) {
+            order.setQcStatus(ManufacturingOrder.QcStatus.PARTIALLY_PASSED);
+        } else if (order.getQcStatus() == null || order.getQcStatus() == ManufacturingOrder.QcStatus.PENDING) {
+            order.setQcStatus(ManufacturingOrder.QcStatus.PASSED);
+        }
+
         if (order.getProducedQuantity().compareTo(order.getPlannedQuantity()) >= 0) {
             order.setStatus(ManufacturingOrder.OrderStatus.COMPLETED);
         } else {
             order.setStatus(ManufacturingOrder.OrderStatus.IN_PROGRESS);
         }
         orderRepository.save(order);
+
+        // 5. Record QualityInspection audit log if QC params or completion occurred
+        org.enterprise.production.entity.QualityInspection inspection = new org.enterprise.production.entity.QualityInspection();
+        String nextNo = qualityInspectionRepository.findTopByOrderByIdDesc()
+                .map(last -> String.format("QC-%04d", last.getId() + 1))
+                .orElse("QC-0001");
+        inspection.setInspectionNo(nextNo);
+        inspection.setInspectionDate(LocalDate.now());
+        inspection.setManufacturingOrder(order);
+        inspection.setInspectorId(qcInspectorId != null ? qcInspectorId : order.getQcInspectorId());
+        inspection.setInspectedQuantity(totalManufacturedQty);
+        inspection.setPassedQuantity(producedQty);
+        inspection.setRejectedQuantity(rejected);
+        inspection.setReworkQuantity(BigDecimal.ZERO);
+        inspection.setStatus(rejected.compareTo(BigDecimal.ZERO) > 0
+                ? ManufacturingOrder.QcStatus.PARTIALLY_PASSED
+                : ManufacturingOrder.QcStatus.PASSED);
+        inspection.setRemarks(qcNotes != null && !qcNotes.trim().isEmpty()
+                ? qcNotes.trim()
+                : "Auto-recorded upon production completion");
+        inspection.setCompanyId(order.getCompanyId());
+        qualityInspectionRepository.save(inspection);
     }
 
     private void createAccountingEntry(ManufacturingOrder order, BigDecimal totalRawMaterialCost) {

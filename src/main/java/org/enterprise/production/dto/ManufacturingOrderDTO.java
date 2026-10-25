@@ -16,4 +16,9 @@ public class ManufacturingOrderDTO {
     private Long batchId;
     private Long routingId;
     private java.util.List<String> serialNumbers;
+    private org.enterprise.production.entity.ManufacturingOrder.QcStatus qcStatus;
+    private Long qcInspectorId;
+    private java.math.BigDecimal qcPassedQuantity;
+    private java.math.BigDecimal qcRejectedQuantity;
+    private String qcNotes;
 }

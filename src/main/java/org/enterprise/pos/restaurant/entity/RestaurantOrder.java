@@ -45,6 +45,12 @@ public class RestaurantOrder extends AuditableEntity {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private BusinessPartner customer;
 
+    @Column(length = 100)
+    private String walkInCustomerName;
+
+    @Column(length = 50)
+    private String walkInCustomerPhone;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "warehouse_id")
     @com.fasterxml.jackson.annotation.JsonIgnore
@@ -182,9 +188,12 @@ public class RestaurantOrder extends AuditableEntity {
     @com.fasterxml.jackson.annotation.JsonProperty("customerName")
     public String getCustomerName() {
         try {
-            return customer != null ? customer.getName() : null;
+            if (customer != null && customer.getName() != null) {
+                return customer.getName();
+            }
+            return walkInCustomerName;
         } catch (Exception ignored) {
-            return null;
+            return walkInCustomerName;
         }
     }
 

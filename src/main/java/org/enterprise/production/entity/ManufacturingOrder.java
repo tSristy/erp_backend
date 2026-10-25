@@ -49,7 +49,25 @@ public class ManufacturingOrder extends AuditableEntity {
     @Column(name = "serial_no")
     private java.util.List<String> serialNumbers = new java.util.ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
+    private QcStatus qcStatus = QcStatus.PENDING;
+
+    private Long qcInspectorId;
+
+    @Column(precision = 18, scale = 6)
+    private BigDecimal qcPassedQuantity = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 6)
+    private BigDecimal qcRejectedQuantity = BigDecimal.ZERO;
+
+    @Column(columnDefinition = "TEXT")
+    private String qcNotes;
+
     public enum OrderStatus {
         PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
+    }
+
+    public enum QcStatus {
+        PENDING, PASSED, PARTIALLY_PASSED, FAILED
     }
 }

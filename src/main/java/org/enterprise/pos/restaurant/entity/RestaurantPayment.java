@@ -38,6 +38,6 @@ public class RestaurantPayment extends AuditableEntity implements PosPayment {
     }
 
     public enum PaymentMode {
-        CASH, CARD, MFS, DUE, LOYALTY_POINTS
+        CASH, CARD, MFS, DUE, LOYALTY_POINTS, ADVANCE_RECEIPT
     }
 }

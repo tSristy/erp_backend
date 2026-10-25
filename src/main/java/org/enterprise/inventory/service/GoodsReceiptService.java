@@ -1,8 +1,10 @@
 package org.enterprise.inventory.service;
 
+import org.enterprise.finance.entity.Account;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
 import org.enterprise.finance.enums.JournalStatus;
+import org.enterprise.finance.repository.AccountRepository;
 import org.enterprise.finance.service.JournalEntryService;
 import org.enterprise.inventory.dto.GoodsReceiptLineDto;
 import org.enterprise.inventory.dto.GoodsReceiptRequestDto;
@@ -33,8 +35,10 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final StockBalanceRepository stockBalanceRepository;
     private final JournalEntryService journalEntryService;
+    private final AccountRepository accountRepository;
     private final CostingService costingService;
     private final BatchSerialTrackingService batchSerialTrackingService;
+    private final org.enterprise.asset.service.FixedAssetService fixedAssetService;
 
     public GoodsReceiptService(
             GoodsReceiptRepository goodsReceiptRepository,
@@ -46,8 +50,10 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             InventoryLedgerRepository inventoryLedgerRepository,
             StockBalanceRepository stockBalanceRepository,
             JournalEntryService journalEntryService,
+            AccountRepository accountRepository,
             CostingService costingService,
-            BatchSerialTrackingService batchSerialTrackingService) {
+            BatchSerialTrackingService batchSerialTrackingService,
+            org.enterprise.asset.service.FixedAssetService fixedAssetService) {
         super(goodsReceiptRepository);
         this.goodsReceiptRepository = goodsReceiptRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
@@ -58,8 +64,10 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         this.inventoryLedgerRepository = inventoryLedgerRepository;
         this.stockBalanceRepository = stockBalanceRepository;
         this.journalEntryService = journalEntryService;
+        this.accountRepository = accountRepository;
         this.costingService = costingService;
         this.batchSerialTrackingService = batchSerialTrackingService;
+        this.fixedAssetService = fixedAssetService;
     }
 
     @Override
@@ -257,8 +265,58 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         createAccountingEntry(goodsReceipt, isInbound);
 
         goodsReceipt.setStatus(GoodsReceiptStatus.POSTED);
+        GoodsReceipt saved = this.save(goodsReceipt);
 
-        return this.save(goodsReceipt);
+        if (isInbound) {
+            capitalizeFixedAssetsFromGrn(saved);
+        }
+
+        return saved;
+    }
+
+    private void capitalizeFixedAssetsFromGrn(GoodsReceipt goodsReceipt) {
+        if (goodsReceipt.getDetails() == null) return;
+        for (GoodsReceiptDetail detail : goodsReceipt.getDetails()) {
+            Product product = detail.getProduct();
+            if (product == null || product.getProductType() != org.enterprise.inventory.enums.ProductType.FIXED_ASSET) {
+                continue;
+            }
+            int qty = detail.getQuantity() != null ? Math.max(1, detail.getQuantity().intValue()) : 1;
+            List<String> serials = detail.getSerialNumbers() != null ? detail.getSerialNumbers() : List.of();
+            for (int i = 0; i < qty; i++) {
+                org.enterprise.asset.entity.FixedAsset asset = new org.enterprise.asset.entity.FixedAsset();
+                asset.setCompanyId(goodsReceipt.getCompanyId());
+                asset.setAssetCode("FA-" + goodsReceipt.getId() + "-" + detail.getId() + "-" + (i + 1));
+                asset.setName(product.getName());
+                if (i < serials.size() && serials.get(i) != null && !serials.get(i).trim().isEmpty()) {
+                    asset.setSerialNumber(serials.get(i).trim());
+                }
+                if (product.getCategory() != null) {
+                    asset.setCategoryName(product.getCategory().getName());
+                }
+                asset.setProductId(product.getId());
+                asset.setProductName(product.getName());
+                asset.setPurchaseDate(goodsReceipt.getGrnDate() != null ? goodsReceipt.getGrnDate() : LocalDate.now());
+                asset.setInServiceDate(asset.getPurchaseDate());
+                asset.setPurchaseCost(detail.getUnitCost() != null ? detail.getUnitCost() : BigDecimal.ZERO);
+                asset.setCurrentBookValue(asset.getPurchaseCost());
+                if (goodsReceipt.getVendor() != null) {
+                    asset.setVendorId(goodsReceipt.getVendor().getId());
+                    asset.setVendorName(goodsReceipt.getVendor().getName());
+                }
+                if (goodsReceipt.getPurchaseOrder() != null) {
+                    asset.setPurchaseOrderId(goodsReceipt.getPurchaseOrder().getId());
+                    asset.setPurchaseOrderNo(goodsReceipt.getPurchaseOrder().getPoNo());
+                }
+                asset.setGoodsReceiptId(goodsReceipt.getId());
+                asset.setGoodsReceiptNo(goodsReceipt.getGrnNo());
+                if (goodsReceipt.getWarehouse() != null) {
+                    asset.setLocationName(goodsReceipt.getWarehouse().getName());
+                }
+                asset.setStatus(org.enterprise.asset.entity.FixedAsset.AssetStatus.ACTIVE);
+                fixedAssetService.save(asset);
+            }
+        }
     }
 
     /**
@@ -441,26 +499,68 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
 
         List<JournalEntryLine> lines = new ArrayList<>();
         BigDecimal totalAmount = goodsReceipt.getTotalAmount();
+        Long companyId = goodsReceipt.getCompanyId() != null ? goodsReceipt.getCompanyId() : org.enterprise.common.util.TenantContext.getCompanyId();
+        Account defaultPpeAccount = companyId != null
+                ? accountRepository.findByCodeAndCompanyId("1510", companyId).orElse(goodsReceipt.getWarehouse().getInventoryAccount())
+                : goodsReceipt.getWarehouse().getInventoryAccount();
+        Account clearingAccount = goodsReceipt.getVendor().getVendorDetail().getGrnClearingAccount();
 
-        JournalEntryLine debitLine = new JournalEntryLine();
-        debitLine.setJournalEntry(journal);
-        debitLine.setAccount(isInbound ? goodsReceipt.getWarehouse().getInventoryAccount() : goodsReceipt.getVendor().getVendorDetail().getGrnClearingAccount());
-        debitLine.setDebit(totalAmount);
-        debitLine.setCredit(BigDecimal.ZERO);
-        if (!isInbound) {
-            debitLine.setBusinessPartner(goodsReceipt.getVendor());
-        }
-        lines.add(debitLine);
+        boolean hasFixedAssetLine = goodsReceipt.getDetails() != null && goodsReceipt.getDetails().stream()
+                .anyMatch(d -> d.getProduct() != null && d.getProduct().getProductType() == org.enterprise.inventory.enums.ProductType.FIXED_ASSET);
 
-        JournalEntryLine creditLine = new JournalEntryLine();
-        creditLine.setJournalEntry(journal);
-        creditLine.setAccount(isInbound ? goodsReceipt.getVendor().getVendorDetail().getGrnClearingAccount() : goodsReceipt.getWarehouse().getInventoryAccount());
-        creditLine.setDebit(BigDecimal.ZERO);
-        creditLine.setCredit(totalAmount);
-        if (isInbound) {
-            creditLine.setBusinessPartner(goodsReceipt.getVendor());
+        if (hasFixedAssetLine && goodsReceipt.getDetails() != null) {
+            for (GoodsReceiptDetail detail : goodsReceipt.getDetails()) {
+                BigDecimal lineAmt = detail.getLineTotal() != null ? detail.getLineTotal() : BigDecimal.ZERO;
+                if (lineAmt.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                Account assetOrInvAccount = goodsReceipt.getWarehouse().getInventoryAccount();
+                if (detail.getProduct() != null && detail.getProduct().getProductType() == org.enterprise.inventory.enums.ProductType.FIXED_ASSET) {
+                    assetOrInvAccount = detail.getProduct().getInventoryAccount() != null
+                            ? detail.getProduct().getInventoryAccount()
+                            : defaultPpeAccount;
+                }
+                JournalEntryLine itemLine = new JournalEntryLine();
+                itemLine.setJournalEntry(journal);
+                itemLine.setAccount(isInbound ? assetOrInvAccount : clearingAccount);
+                itemLine.setDebit(isInbound ? lineAmt : BigDecimal.ZERO);
+                itemLine.setCredit(isInbound ? BigDecimal.ZERO : lineAmt);
+                if (!isInbound) {
+                    itemLine.setBusinessPartner(goodsReceipt.getVendor());
+                }
+                lines.add(itemLine);
+            }
+
+            JournalEntryLine offsetLine = new JournalEntryLine();
+            offsetLine.setJournalEntry(journal);
+            offsetLine.setAccount(isInbound ? clearingAccount : defaultPpeAccount);
+            offsetLine.setDebit(isInbound ? BigDecimal.ZERO : totalAmount);
+            offsetLine.setCredit(isInbound ? totalAmount : BigDecimal.ZERO);
+            if (isInbound) {
+                offsetLine.setBusinessPartner(goodsReceipt.getVendor());
+            }
+            lines.add(offsetLine);
+        } else {
+            JournalEntryLine debitLine = new JournalEntryLine();
+            debitLine.setJournalEntry(journal);
+            debitLine.setAccount(isInbound ? goodsReceipt.getWarehouse().getInventoryAccount() : clearingAccount);
+            debitLine.setDebit(totalAmount);
+            debitLine.setCredit(BigDecimal.ZERO);
+            if (!isInbound) {
+                debitLine.setBusinessPartner(goodsReceipt.getVendor());
+            }
+            lines.add(debitLine);
+
+            JournalEntryLine creditLine = new JournalEntryLine();
+            creditLine.setJournalEntry(journal);
+            creditLine.setAccount(isInbound ? clearingAccount : goodsReceipt.getWarehouse().getInventoryAccount());
+            creditLine.setDebit(BigDecimal.ZERO);
+            creditLine.setCredit(totalAmount);
+            if (isInbound) {
+                creditLine.setBusinessPartner(goodsReceipt.getVendor());
+            }
+            lines.add(creditLine);
         }
-        lines.add(creditLine);
 
         journal.setLines(lines);
         journalEntryService.save(journal);

@@ -9,9 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import org.enterprise.finance.entity.Account;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
 import org.enterprise.finance.enums.JournalStatus;
+import org.enterprise.finance.repository.AccountRepository;
 import org.enterprise.finance.service.JournalEntryService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,6 +30,7 @@ public class PaymentReceiptService {
     private final PaymentReceiptRepository paymentReceiptRepository;
     private final SalesInvoiceRepository salesInvoiceRepository;
     private final JournalEntryService journalEntryService;
+    private final AccountRepository accountRepository;
 
     public List<PaymentReceipt> getAllReceipts() {
         Long companyId = TenantContext.getCompanyId();
@@ -73,7 +76,10 @@ public class PaymentReceiptService {
 
         if (receipt.getDetails() == null || receipt.getDetails().isEmpty()) {
             // System FIFO logic
-            if (receipt.getCustomer() == null) throw new RuntimeException("Customer is required for FIFO allocation");
+            if (receipt.getCustomer() == null || receipt.getCustomer().getId() == null) {
+                // Walk-in customer standalone advance receipt — no invoice allocation needed yet
+                return;
+            }
             
             List<SalesInvoice> unpaidInvoices = salesInvoiceRepository.findUnpaidByCustomerOrderByDueDateAsc(
                     receipt.getCustomer().getId(), SalesInvoice.InvoiceStatus.POSTED);
@@ -124,8 +130,20 @@ public class PaymentReceiptService {
             throw new RuntimeException("Bank account / GL account missing on Receipt");
         }
         
-        if (receipt.getCustomer() == null || receipt.getCustomer().getCustomerDetail() == null || receipt.getCustomer().getCustomerDetail().getAccountsReceivableAccount() == null) {
-            throw new RuntimeException("Accounts Receivable account missing on Customer");
+        Account receivableAccount = null;
+        if (receipt.getCustomer() != null
+                && receipt.getCustomer().getCustomerDetail() != null
+                && receipt.getCustomer().getCustomerDetail().getAccountsReceivableAccount() != null) {
+            receivableAccount = receipt.getCustomer().getCustomerDetail().getAccountsReceivableAccount();
+        } else {
+            Long companyId = receipt.getCompanyId() != null ? receipt.getCompanyId() : TenantContext.getCompanyId();
+            if (companyId != null) {
+                receivableAccount = accountRepository.findByCodeAndCompanyId("1020", companyId).orElse(null);
+            }
+        }
+
+        if (receivableAccount == null) {
+            return;
         }
 
         JournalEntry journal = new JournalEntry();
@@ -145,10 +163,12 @@ public class PaymentReceiptService {
 
         JournalEntryLine creditLine = new JournalEntryLine();
         creditLine.setJournalEntry(journal);
-        creditLine.setAccount(receipt.getCustomer().getCustomerDetail().getAccountsReceivableAccount());
+        creditLine.setAccount(receivableAccount);
         creditLine.setDebit(BigDecimal.ZERO);
         creditLine.setCredit(totalAmount);
-        creditLine.setBusinessPartner(receipt.getCustomer());
+        if (receipt.getCustomer() != null) {
+            creditLine.setBusinessPartner(receipt.getCustomer());
+        }
         lines.add(creditLine);
 
         journal.setLines(lines);
@@ -164,8 +184,13 @@ public class PaymentReceiptService {
         }
         existing.setReceiptDate(update.getReceiptDate());
         existing.setCustomer(update.getCustomer());
+        existing.setWalkInCustomerName(update.getWalkInCustomerName());
+        existing.setWalkInCustomerPhone(update.getWalkInCustomerPhone());
         existing.setBankAccount(update.getBankAccount());
         existing.setTotalAmount(update.getTotalAmount());
+        if (update.getUtilizedAmount() != null) {
+            existing.setUtilizedAmount(update.getUtilizedAmount());
+        }
         existing.setPaymentMethod(update.getPaymentMethod());
         existing.setReferenceNo(update.getReferenceNo());
         

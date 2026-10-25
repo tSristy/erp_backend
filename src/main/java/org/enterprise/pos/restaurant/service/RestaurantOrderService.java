@@ -30,6 +30,7 @@ public class RestaurantOrderService {
     private final RestaurantOrderRepository orderRepository;
     private final KitchenOrderTicketRepository kotRepository;
     private final RestaurantPaymentRepository paymentRepository;
+    private final org.enterprise.finance.repository.PaymentReceiptRepository paymentReceiptRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
@@ -96,6 +97,8 @@ public class RestaurantOrderService {
                 }
                 existing.setCustomer(order.getCustomer());
                 existing.setCustomerId(order.getCustomerId());
+                if (order.getWalkInCustomerName() != null) existing.setWalkInCustomerName(order.getWalkInCustomerName());
+                if (order.getWalkInCustomerPhone() != null) existing.setWalkInCustomerPhone(order.getWalkInCustomerPhone());
                 if (order.getWarehouse() != null) existing.setWarehouse(order.getWarehouse());
                 if (order.getWarehouseId() != null) existing.setWarehouseId(order.getWarehouseId());
                 if (order.getWaiterId() != null) existing.setWaiterId(order.getWaiterId());
@@ -141,7 +144,9 @@ public class RestaurantOrderService {
                     BigDecimal totalPaid = existing.getPayments().stream()
                             .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    if (existing.getTotalAmount() != null && totalPaid.compareTo(existing.getTotalAmount()) >= 0) {
+                    if (existing.getTotalAmount() != null
+                            && existing.getTotalAmount().compareTo(BigDecimal.ZERO) > 0
+                            && totalPaid.compareTo(existing.getTotalAmount()) >= 0) {
                         existing.setStatus(RestaurantOrder.RestaurantOrderStatus.PAID);
                     }
                 }
@@ -294,8 +299,6 @@ public class RestaurantOrderService {
         if (order.getType() == RestaurantOrder.TransactionType.RETURN) {
             log.info("Bypassing KOT state machine for Return transaction.");
         }
-        
-        order.setStatus(RestaurantOrder.RestaurantOrderStatus.PAID);
 
         // Record payment
         BigDecimal payAmount = amount != null ? amount : (order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO);
@@ -323,27 +326,47 @@ public class RestaurantOrderService {
         payment = paymentRepository.save(payment);
         order.getPayments().add(payment);
 
+        if (mode == RestaurantPayment.PaymentMode.ADVANCE_RECEIPT && referenceNumber != null && !referenceNumber.trim().isEmpty()) {
+            paymentReceiptRepository.findByReceiptNo(referenceNumber.trim()).ifPresent(receipt -> {
+                BigDecimal utilized = receipt.getUtilizedAmount() != null ? receipt.getUtilizedAmount() : BigDecimal.ZERO;
+                receipt.setUtilizedAmount(utilized.add(payAmount));
+                paymentReceiptRepository.save(receipt);
+            });
+        }
+
+        BigDecimal totalPaidSoFar = order.getPayments().stream()
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal billTotal = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+
+        boolean fullyPaid = totalPaidSoFar.compareTo(billTotal) >= 0 && billTotal.compareTo(BigDecimal.ZERO) > 0;
+        if (fullyPaid || order.getType() == RestaurantOrder.TransactionType.RETURN) {
+            order.setStatus(RestaurantOrder.RestaurantOrderStatus.PAID);
+        }
+
         order = orderRepository.save(order);
 
-        // Map to standard POS ERP Integration Event
-        Long customerId = order.getCustomer() != null ? order.getCustomer().getId() : null;
-        Long warehouseId = order.getWarehouse() != null ? order.getWarehouse().getId() : null;
+        if (order.getStatus() == RestaurantOrder.RestaurantOrderStatus.PAID) {
+            // Map to standard POS ERP Integration Event
+            Long customerId = order.getCustomer() != null ? order.getCustomer().getId() : null;
+            Long warehouseId = order.getWarehouse() != null ? order.getWarehouse().getId() : null;
 
-        // Publish event for Sales, Finance, Inventory modules
-        PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
-                this,
-                order.getOrderNo(),
-                order.getType().name(),
-                order.getTotalAmount(),
-                order.getOrderDate() != null ? order.getOrderDate() : LocalDateTime.now(),
-                customerId,
-                warehouseId,
-                order.getDetails(),
-                order.getPayments()
-        );
+            // Publish event for Sales, Finance, Inventory modules
+            PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
+                    this,
+                    order.getOrderNo(),
+                    order.getType().name(),
+                    order.getTotalAmount(),
+                    order.getOrderDate() != null ? order.getOrderDate() : LocalDateTime.now(),
+                    customerId,
+                    warehouseId,
+                    order.getDetails(),
+                    order.getPayments()
+            );
 
-        eventPublisher.publishEvent(event);
-        log.info("Published PosTransactionCompletedEvent for Restaurant Order: {}", order.getOrderNo());
+            eventPublisher.publishEvent(event);
+            log.info("Published PosTransactionCompletedEvent for Restaurant Order: {}", order.getOrderNo());
+        }
 
         return order;
     }

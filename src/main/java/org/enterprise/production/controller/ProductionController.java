@@ -12,7 +12,7 @@ import java.net.URI;
 import java.math.BigDecimal;
 
 @RestController
-@RequestMapping("/api/v1/production/production-orders")
+@RequestMapping({"/api/v1/production/production-orders", "/api/v1/production-orders"})
 @RequiredArgsConstructor
 public class ProductionController {
 
@@ -21,9 +21,12 @@ public class ProductionController {
     @PostMapping("/{id}/complete")
     public ResponseEntity<String> completeProduction(
             @PathVariable Long id,
-            @RequestParam BigDecimal producedQty) {
+            @RequestParam BigDecimal producedQty,
+            @RequestParam(required = false) BigDecimal rejectedQty,
+            @RequestParam(required = false) Long qcInspectorId,
+            @RequestParam(required = false) String qcNotes) {
         
-        productionService.completeProduction(id, producedQty);
+        productionService.completeProduction(id, producedQty, rejectedQty, qcInspectorId, qcNotes);
         return ResponseEntity.ok("Production completed successfully for quantity: " + producedQty);
     }
 

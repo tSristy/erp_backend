@@ -5,6 +5,7 @@ public enum ProductType {
     SERVICE,
     BUNDLE,
     RAW_MATERIAL,
-    FINISHED_GOOD
+    FINISHED_GOOD,
+    FIXED_ASSET
 }
 

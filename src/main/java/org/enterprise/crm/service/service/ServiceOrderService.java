@@ -80,7 +80,30 @@ public class ServiceOrderService extends BaseService<ServiceOrder, Long> {
             entity.setServiceRequest(serviceRequestRepository.findById(reqId).orElse(null));
         }
 
-        return super.save(entity);
+        if (entity.getStatus() == ServiceOrder.ServiceOrderStatus.RESOLVED) {
+            if (entity.getQcStatus() != ServiceOrder.QCStatus.PASSED) {
+                throw new RuntimeException("Service Order cannot be marked as RESOLVED until Quality Control (QC) status is PASSED");
+            }
+        }
+
+        ServiceOrder saved = super.save(entity);
+
+        if (saved.getServiceRequest() != null) {
+            org.enterprise.crm.service.entity.ServiceRequest sr = saved.getServiceRequest();
+            if (saved.getStatus() == ServiceOrder.ServiceOrderStatus.RESOLVED
+                    && saved.getQcStatus() == ServiceOrder.QCStatus.PASSED
+                    && sr.getStatus() != org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.DELIVERED
+                    && sr.getStatus() != org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.CLOSED) {
+                sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.READY_FOR_DELIVERY);
+                serviceRequestRepository.save(sr);
+            } else if (saved.getQcStatus() == ServiceOrder.QCStatus.FAILED
+                    && sr.getStatus() == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.READY_FOR_DELIVERY) {
+                sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.IN_PROGRESS);
+                serviceRequestRepository.save(sr);
+            }
+        }
+
+        return saved;
     }
 
     public Page<ServiceOrder> searchServiceOrders(Long companyId, String searchTerm, Pageable pageable) {

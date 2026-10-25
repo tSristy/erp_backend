@@ -124,6 +124,7 @@ public class MasterDataSeeder implements CommandLineRunner {
         Account expenses = createAccount(companyId, "5000", "Expenses", AccountType.EXPENSE, null, false);
         Account cogs = createAccount(companyId, "5010", "COGS", AccountType.EXPENSE, expenses, true);
         Account salary = createAccount(companyId, "5020", "Salary", AccountType.EXPENSE, expenses, true);
+        Account depExpense = createAccount(companyId, "5030", "Depreciation Expense", AccountType.EXPENSE, expenses, true);
 
         // 6. Statement Setup
         createSetup(companyId, ReportType.BALANCE_SHEET, 10, null, 1, "ASSETS", CalculationType.HEADER, null, true, false, List.of());
@@ -154,7 +155,8 @@ public class MasterDataSeeder implements CommandLineRunner {
         createSetup(companyId, ReportType.INCOME_STATEMENT, 420, 400, 1, "GROSS PROFIT", CalculationType.FORMULA, "320 - 410", true, false, List.of());
 
         createSetup(companyId, ReportType.INCOME_STATEMENT, 430, 400, 2, "Salary Expense", CalculationType.ACCOUNT_SUM, null, false, false, List.of(salary));
-        createSetup(companyId, ReportType.INCOME_STATEMENT, 440, 400, 1, "TOTAL EXPENSES", CalculationType.FORMULA, "410 + 430", true, false, List.of());
+        createSetup(companyId, ReportType.INCOME_STATEMENT, 435, 400, 2, "Depreciation Expense", CalculationType.ACCOUNT_SUM, null, false, false, List.of(depExpense));
+        createSetup(companyId, ReportType.INCOME_STATEMENT, 440, 400, 1, "TOTAL EXPENSES", CalculationType.FORMULA, "410 + 430 + 435", true, false, List.of());
 
         createSetup(companyId, ReportType.INCOME_STATEMENT, 500, null, 1, "NET INCOME", CalculationType.FORMULA, "320 - 440", true, true, List.of());
 
@@ -702,12 +704,13 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(mfg, "Bill of Materials", "manufacturing/billofmaterials", "ClipboardList", 4, cid);
         createMenu(mfg, "Manufacturing Orders", "manufacturing/orders", "FileStack", 5, cid);
         createMenu(mfg, "Production", "manufacturing/production", "Hammer", 6, cid);
-        createMenu(mfg, "Reports", "manufacturing/reports", "BarChart2", 7, cid);
-        createReportMenu(mfg, "Daily Production", "manufacturing/reports/daily", "Calendar", 8, cid);
-        createReportMenu(mfg, "By Product", "manufacturing/reports/product", "Package", 9, cid);
-        createReportMenu(mfg, "By Status", "manufacturing/reports/status", "PieChart", 10, cid);
-        createReportMenu(mfg, "Production Yield", "manufacturing/reports/yield", "TrendingUp", 11, cid);
-        createReportMenu(mfg, "BOM Usage", "manufacturing/reports/bom", "Layers", 12, cid);
+        createMenu(mfg, "Quality Control", "manufacturing/qc", "ShieldCheck", 7, cid);
+        createMenu(mfg, "Reports", "manufacturing/reports", "BarChart2", 8, cid);
+        createReportMenu(mfg, "Daily Production", "manufacturing/reports/daily", "Calendar", 9, cid);
+        createReportMenu(mfg, "By Product", "manufacturing/reports/product", "Package", 10, cid);
+        createReportMenu(mfg, "By Status", "manufacturing/reports/status", "PieChart", 11, cid);
+        createReportMenu(mfg, "Production Yield", "manufacturing/reports/yield", "TrendingUp", 12, cid);
+        createReportMenu(mfg, "BOM Usage", "manufacturing/reports/bom", "Layers", 13, cid);
 
         var retail = createModule("RETAIL_POS", "Retail POS", "Point of sale for retail.", "retail-pos", "Store", 9, cid);
         createMenu(retail, "Dashboard", "retail-pos", "Store", 1, cid);
@@ -770,6 +773,14 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(organizations, "Zones", "organizations/zone", "Map", 6, cid);
         createMenu(organizations, "Areas", "organizations/area", "MapPin", 7, cid);
         createMenu(organizations, "Territories", "organizations/territory", "Navigation", 8, cid);
+
+        var assetManagement = createModule("ASSET_MANAGEMENT", "Fixed Asset Management", "Track fixed assets, depreciation, transfers, and disposals.", "asset-management", "Landmark", 14, cid);
+        createMenu(assetManagement, "Dashboard", "asset-management", "Landmark", 1, cid);
+        createMenu(assetManagement, "Asset Categories", "asset-management/categories", "List", 2, cid);
+        createMenu(assetManagement, "Fixed Assets", "asset-management/assets", "Box", 3, cid);
+        createMenu(assetManagement, "Depreciation", "asset-management/depreciation", "TrendingDown", 4, cid);
+        createMenu(assetManagement, "Asset Transfers", "asset-management/transfers", "ArrowRightLeft", 5, cid);
+        createMenu(assetManagement, "Asset Disposals", "asset-management/disposals", "Trash2", 6, cid);
 
         log.info("Modules and menus seeded successfully.");
     }

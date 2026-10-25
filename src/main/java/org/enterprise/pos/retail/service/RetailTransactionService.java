@@ -22,6 +22,7 @@ public class RetailTransactionService {
 
     private final ApplicationEventPublisher eventPublisher;
     private final org.enterprise.pos.retail.repository.RetailTransactionRepository retailTransactionRepository;
+    private final org.enterprise.finance.repository.PaymentReceiptRepository paymentReceiptRepository;
     private final EntityManager entityManager;
 
     @Transactional
@@ -152,7 +153,19 @@ public class RetailTransactionService {
         // Update payments
         updatePayments(existing, incoming.getPayments(), companyId);
 
-        return retailTransactionRepository.save(existing);
+        boolean justCompleted = false;
+        if (incoming.getStatus() == RetailTransaction.TransactionStatus.COMPLETED) {
+            existing.setStatus(RetailTransaction.TransactionStatus.COMPLETED);
+            justCompleted = true;
+        }
+
+        RetailTransaction saved = retailTransactionRepository.save(existing);
+
+        if (justCompleted) {
+            publishCompletedEvent(saved);
+        }
+
+        return saved;
     }
 
     private void updateDetails(RetailTransaction existing, List<RetailTransactionDetail> incomingDetails, Long companyId) {
@@ -284,14 +297,52 @@ public class RetailTransactionService {
         if (transaction.getTransactionNo() == null || transaction.getTransactionNo().trim().isEmpty()) {
             transaction.setTransactionNo("RET-" + System.currentTimeMillis());
         }
-        log.info("Completing retail transaction: {}", transaction.getTransactionNo());
+        log.info("Processing retail transaction: {}", transaction.getTransactionNo());
         if (transaction.getType() == null) {
             transaction.setType(RetailTransaction.TransactionType.SALES);
         }
-        transaction.setStatus(RetailTransaction.TransactionStatus.COMPLETED);
-        
+
+        java.math.BigDecimal totalAmount = transaction.getTotalAmount() != null ? transaction.getTotalAmount() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal amountPaid = transaction.getAmountPaid() != null ? transaction.getAmountPaid() : java.math.BigDecimal.ZERO;
+        if (amountPaid.compareTo(java.math.BigDecimal.ZERO) == 0 && transaction.getPayments() != null) {
+            amountPaid = transaction.getPayments().stream()
+                    .map(p -> p.getAmount() != null ? p.getAmount() : java.math.BigDecimal.ZERO)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        }
+        transaction.setAmountPaid(amountPaid);
+        transaction.setAmountDue(totalAmount.subtract(amountPaid).max(java.math.BigDecimal.ZERO));
+
+        if (transaction.getStatus() == RetailTransaction.TransactionStatus.PENDING
+                || totalAmount.compareTo(java.math.BigDecimal.ZERO) == 0
+                || (transaction.getType() == RetailTransaction.TransactionType.SALES
+                && amountPaid.compareTo(totalAmount) < 0)) {
+            transaction.setStatus(RetailTransaction.TransactionStatus.PENDING);
+        } else {
+            transaction.setStatus(RetailTransaction.TransactionStatus.COMPLETED);
+        }
+
         transaction = this.save(transaction);
-        
+
+        if (transaction.getStatus() == RetailTransaction.TransactionStatus.COMPLETED) {
+            if (transaction.getPayments() != null) {
+                for (var p : transaction.getPayments()) {
+                    if (p.getPaymentMode() == RetailTransactionPayment.PaymentMode.ADVANCE_RECEIPT
+                            && p.getReferenceNumber() != null
+                            && !p.getReferenceNumber().trim().isEmpty()) {
+                        paymentReceiptRepository.findByReceiptNo(p.getReferenceNumber().trim()).ifPresent(receipt -> {
+                            java.math.BigDecimal utilized = receipt.getUtilizedAmount() != null ? receipt.getUtilizedAmount() : java.math.BigDecimal.ZERO;
+                            java.math.BigDecimal amt = p.getAmount() != null ? p.getAmount() : java.math.BigDecimal.ZERO;
+                            receipt.setUtilizedAmount(utilized.add(amt));
+                            paymentReceiptRepository.save(receipt);
+                        });
+                    }
+                }
+            }
+            publishCompletedEvent(transaction);
+        }
+    }
+
+    private void publishCompletedEvent(RetailTransaction transaction) {
         Long customerId = transaction.getCustomer() != null ? transaction.getCustomer().getId() : null;
         Long warehouseId = transaction.getWarehouse() != null ? transaction.getWarehouse().getId() : null;
 
@@ -306,7 +357,7 @@ public class RetailTransactionService {
                 transaction.getDetails(),
                 transaction.getPayments()
         );
-        
+
         eventPublisher.publishEvent(event);
         log.info("Published PosTransactionCompletedEvent for transaction: {}", transaction.getTransactionNo());
     }

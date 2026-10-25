@@ -143,10 +143,14 @@ public class RestaurantOrderController {
         dto.setType(entity.getType() != null ? entity.getType().name() : null);
         dto.setReferenceOrderId(entity.getReferenceOrder() != null ? entity.getReferenceOrder().getId() : null);
         dto.setCustomerId(entity.getCustomerId() != null ? entity.getCustomerId() : (entity.getCustomer() != null ? entity.getCustomer().getId() : null));
+        dto.setWalkInCustomerName(entity.getWalkInCustomerName());
+        dto.setWalkInCustomerPhone(entity.getWalkInCustomerPhone());
         if (entity.getCustomer() != null) {
             try {
                 dto.setCustomerName(entity.getCustomer().getName());
             } catch (Exception ignored) {}
+        } else if (entity.getWalkInCustomerName() != null && !entity.getWalkInCustomerName().trim().isEmpty()) {
+            dto.setCustomerName(entity.getWalkInCustomerName().trim());
         } else {
             dto.setCustomerName("Walk-in Customer");
         }
