@@ -500,9 +500,8 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
         List<JournalEntryLine> lines = new ArrayList<>();
         BigDecimal totalAmount = goodsReceipt.getTotalAmount();
         Long companyId = goodsReceipt.getCompanyId() != null ? goodsReceipt.getCompanyId() : org.enterprise.common.util.TenantContext.getCompanyId();
-        Account defaultPpeAccount = companyId != null
-                ? accountRepository.findByCodeAndCompanyId("1510", companyId).orElse(goodsReceipt.getWarehouse().getInventoryAccount())
-                : goodsReceipt.getWarehouse().getInventoryAccount();
+        Account ppeLookup = companyId != null ? accountRepository.findByCodeAndCompanyId("1510", companyId) : null;
+        Account defaultPpeAccount = ppeLookup != null ? ppeLookup : goodsReceipt.getWarehouse().getInventoryAccount();
         Account clearingAccount = goodsReceipt.getVendor().getVendorDetail().getGrnClearingAccount();
 
         boolean hasFixedAssetLine = goodsReceipt.getDetails() != null && goodsReceipt.getDetails().stream()

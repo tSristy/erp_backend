@@ -51,42 +51,51 @@ public class AssetDepreciationEntryService extends BaseService<AssetDepreciation
         this.journalEntryService = journalEntryService;
     }
 
+    public List<AssetDepreciationEntry> findAllByCurrentCompany() {
+        Long companyId = TenantContext.getCompanyId();
+        if (companyId != null) {
+            return repository.findByCompanyIdOrderByIdDesc(companyId);
+        }
+        return repository.findAll();
+    }
+
     @Override
     public AssetDepreciationEntry save(AssetDepreciationEntry entity) {
         if (entity.getCompanyId() == null) {
             entity.setCompanyId(TenantContext.getCompanyId());
         }
-        if (entity.getEntryNo() == null || entity.getEntryNo().isBlank()) {
-            entity.setEntryNo("DEP-" + System.currentTimeMillis() % 1000000);
+        if (entity.getEntryNumber() == null || entity.getEntryNumber().isBlank()) {
+            entity.setEntryNumber("DEP-" + System.currentTimeMillis() % 1000000);
         }
-        if (entity.getDepreciationDate() == null) {
-            entity.setDepreciationDate(LocalDate.now());
+        if (entity.getPeriodDate() == null) {
+            entity.setPeriodDate(LocalDate.now());
         }
 
         boolean isNew = entity.getId() == null;
         FixedAsset targetAsset = null;
 
-        if (isNew && entity.getFixedAssetId() != null) {
-            Optional<FixedAsset> assetOpt = fixedAssetRepository.findById(entity.getFixedAssetId());
+        if (entity.getAssetId() != null) {
+            Optional<FixedAsset> assetOpt = fixedAssetRepository.findById(entity.getAssetId());
             if (assetOpt.isPresent()) {
                 FixedAsset asset = assetOpt.get();
                 targetAsset = asset;
-                BigDecimal opening = asset.getCurrentBookValue() != null
-                        ? asset.getCurrentBookValue()
-                        : (asset.getPurchaseCost() != null ? asset.getPurchaseCost() : BigDecimal.ZERO);
+                entity.setAssetCode(asset.getAssetCode());
+                entity.setAssetName(asset.getName());
+
                 BigDecimal depAmt = entity.getDepreciationAmount() != null ? entity.getDepreciationAmount() : BigDecimal.ZERO;
-                BigDecimal closing = opening.subtract(depAmt).max(asset.getSalvageValue() != null ? asset.getSalvageValue() : BigDecimal.ZERO);
+                BigDecimal currentAccDep = asset.getAccumulatedDepreciation() != null ? asset.getAccumulatedDepreciation() : BigDecimal.ZERO;
+                BigDecimal purchaseCost = asset.getPurchaseCost() != null ? asset.getPurchaseCost() : BigDecimal.ZERO;
+                BigDecimal salvageVal = asset.getSalvageValue() != null ? asset.getSalvageValue() : BigDecimal.ZERO;
 
-                entity.setOpeningBookValue(opening);
-                entity.setClosingBookValue(closing);
+                BigDecimal newAccDep = currentAccDep.add(depAmt);
+                BigDecimal newBookVal = purchaseCost.subtract(newAccDep).max(salvageVal);
 
-                if (entity.getStatus() == AssetDepreciationEntry.DepreciationEntryStatus.POSTED) {
-                    BigDecimal currentAccDep = asset.getAccumulatedDepreciation() != null ? asset.getAccumulatedDepreciation() : BigDecimal.ZERO;
-                    asset.setAccumulatedDepreciation(currentAccDep.add(depAmt));
-                    asset.setCurrentBookValue(closing);
-                    if (closing.compareTo(asset.getSalvageValue() != null ? asset.getSalvageValue() : BigDecimal.ZERO) <= 0) {
-                        asset.setStatus(FixedAsset.AssetStatus.FULLY_DEPRECIATED);
-                    }
+                entity.setAccumulatedDepreciationAfter(newAccDep);
+                entity.setBookValueAfter(newBookVal);
+
+                if (isNew && entity.getStatus() == AssetDepreciationEntry.DepreciationStatus.POSTED) {
+                    asset.setAccumulatedDepreciation(newAccDep);
+                    asset.setCurrentBookValue(newBookVal);
                     fixedAssetRepository.save(asset);
                 }
             }
@@ -95,7 +104,7 @@ public class AssetDepreciationEntryService extends BaseService<AssetDepreciation
         AssetDepreciationEntry saved = super.save(entity);
 
         if (isNew
-                && saved.getStatus() == AssetDepreciationEntry.DepreciationEntryStatus.POSTED
+                && saved.getStatus() == AssetDepreciationEntry.DepreciationStatus.POSTED
                 && saved.getDepreciationAmount() != null
                 && saved.getDepreciationAmount().compareTo(BigDecimal.ZERO) > 0) {
             postDepreciationJournalEntry(saved, targetAsset);
@@ -117,9 +126,10 @@ public class AssetDepreciationEntryService extends BaseService<AssetDepreciation
                 depExpenseAccount = accountRepository.findById(category.getDepExpenseAccountId()).orElse(null);
             }
             if (depExpenseAccount == null && companyId != null) {
-                depExpenseAccount = accountRepository.findByCodeAndCompanyId("5030", companyId)
-                        .or(() -> accountRepository.findByCodeAndCompanyId("5010", companyId))
-                        .orElse(null);
+                depExpenseAccount = accountRepository.findByCodeAndCompanyId("5030", companyId);
+                if (depExpenseAccount == null) {
+                    depExpenseAccount = accountRepository.findByCodeAndCompanyId("5010", companyId);
+                }
             }
 
             Account accumulatedDepAccount = null;
@@ -127,17 +137,17 @@ public class AssetDepreciationEntryService extends BaseService<AssetDepreciation
                 accumulatedDepAccount = accountRepository.findById(category.getAccumulatedDepAccountId()).orElse(null);
             }
             if (accumulatedDepAccount == null && companyId != null) {
-                accumulatedDepAccount = accountRepository.findByCodeAndCompanyId("1520", companyId).orElse(null);
+                accumulatedDepAccount = accountRepository.findByCodeAndCompanyId("1520", companyId);
             }
 
             if (depExpenseAccount == null || accumulatedDepAccount == null) {
-                log.warn("Skipping GL JournalEntry for Depreciation {}: missing Expense or Accumulated Depreciation account", entry.getEntryNo());
+                log.warn("Skipping GL JournalEntry for Depreciation {}: missing Expense or Accumulated Depreciation account", entry.getEntryNumber());
                 return;
             }
 
             JournalEntry journal = new JournalEntry();
             journal.setCompanyId(companyId);
-            journal.setPostingDate(entry.getDepreciationDate() != null ? entry.getDepreciationDate() : LocalDate.now());
+            journal.setPostingDate(entry.getPeriodDate() != null ? entry.getPeriodDate() : LocalDate.now());
             journal.setReferenceType("ASSET_DEPRECIATION");
             journal.setReferenceId(entry.getId());
             journal.setStatus(JournalStatus.POSTED);
@@ -163,7 +173,7 @@ public class AssetDepreciationEntryService extends BaseService<AssetDepreciation
             journal.setLines(lines);
             journalEntryService.save(journal);
         } catch (Exception ex) {
-            log.warn("Could not auto-post Finance GL JournalEntry for AssetDepreciationEntry {}: {}", entry.getEntryNo(), ex.getMessage());
+            log.warn("Could not auto-post Finance GL JournalEntry for AssetDepreciationEntry {}: {}", entry.getEntryNumber(), ex.getMessage());
         }
     }
 }

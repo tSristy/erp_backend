@@ -3,6 +3,7 @@ package org.enterprise.finance.listener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.enterprise.common.event.PosTransactionCompletedEvent;
+import org.enterprise.common.util.TenantContext;
 import org.enterprise.finance.entity.Account;
 import org.enterprise.finance.entity.JournalEntry;
 import org.enterprise.finance.entity.JournalEntryLine;
@@ -37,14 +38,14 @@ public class PosTransactionFinanceListener {
         log.info("Finance Module received POS transaction completion event for: {} (Type: {}). Processing payments...", event.getTransactionNo(), event.getTransactionType());
 
         try {
-            Long companyId = event.getCompanyId();
+            Long companyId = TenantContext.getCompanyId();
             if (companyId == null || event.getPayments() == null || event.getPayments().isEmpty()) {
                 return;
             }
 
-            Account cashAccount = accountRepository.findByCodeAndCompanyId("1010", companyId).orElse(null);
-            Account arAccount = accountRepository.findByCodeAndCompanyId("1020", companyId).orElse(null);
-            Account salesRevenueAccount = accountRepository.findByCodeAndCompanyId("4010", companyId).orElse(null);
+            Account cashAccount = accountRepository.findByCodeAndCompanyId("1010", companyId);
+            Account arAccount = accountRepository.findByCodeAndCompanyId("1020", companyId);
+            Account salesRevenueAccount = accountRepository.findByCodeAndCompanyId("4010", companyId);
 
             if (cashAccount == null || salesRevenueAccount == null) {
                 log.warn("Skipping POS Finance GL JournalEntry for {}: required accounts (1010/4010) not found for company {}", event.getTransactionNo(), companyId);
@@ -57,7 +58,6 @@ public class PosTransactionFinanceListener {
             journal.setCompanyId(companyId);
             journal.setPostingDate(LocalDate.now());
             journal.setReferenceType("POS_TRANSACTION");
-            journal.setReferenceId(event.getTransactionId());
             journal.setStatus(JournalStatus.POSTED);
 
             List<JournalEntryLine> lines = new ArrayList<>();

@@ -51,13 +51,21 @@ public class AssetDisposalService extends BaseService<AssetDisposal, Long> {
         this.journalEntryService = journalEntryService;
     }
 
+    public List<AssetDisposal> findAllByCurrentCompany() {
+        Long companyId = TenantContext.getCompanyId();
+        if (companyId != null) {
+            return repository.findByCompanyIdOrderByIdDesc(companyId);
+        }
+        return repository.findAll();
+    }
+
     @Override
     public AssetDisposal save(AssetDisposal entity) {
         if (entity.getCompanyId() == null) {
             entity.setCompanyId(TenantContext.getCompanyId());
         }
-        if (entity.getDisposalNo() == null || entity.getDisposalNo().isBlank()) {
-            entity.setDisposalNo("DSP-" + System.currentTimeMillis() % 1000000);
+        if (entity.getDisposalNumber() == null || entity.getDisposalNumber().isBlank()) {
+            entity.setDisposalNumber("DSP-" + System.currentTimeMillis() % 1000000);
         }
         if (entity.getDisposalDate() == null) {
             entity.setDisposalDate(LocalDate.now());
@@ -68,11 +76,14 @@ public class AssetDisposalService extends BaseService<AssetDisposal, Long> {
         BigDecimal originalCost = BigDecimal.ZERO;
         BigDecimal accumulatedDep = BigDecimal.ZERO;
 
-        if (entity.getFixedAssetId() != null) {
-            Optional<FixedAsset> assetOpt = fixedAssetRepository.findById(entity.getFixedAssetId());
+        if (entity.getAssetId() != null) {
+            Optional<FixedAsset> assetOpt = fixedAssetRepository.findById(entity.getAssetId());
             if (assetOpt.isPresent()) {
                 FixedAsset asset = assetOpt.get();
                 targetAsset = asset;
+                entity.setAssetCode(asset.getAssetCode());
+                entity.setAssetName(asset.getName());
+
                 originalCost = asset.getPurchaseCost() != null ? asset.getPurchaseCost() : BigDecimal.ZERO;
                 accumulatedDep = asset.getAccumulatedDepreciation() != null ? asset.getAccumulatedDepreciation() : BigDecimal.ZERO;
                 BigDecimal bookVal = asset.getCurrentBookValue() != null ? asset.getCurrentBookValue() : originalCost.subtract(accumulatedDep);
@@ -81,7 +92,12 @@ public class AssetDisposalService extends BaseService<AssetDisposal, Long> {
                 entity.setGainLossAmount(saleAmt.subtract(bookVal));
 
                 if (entity.getStatus() == AssetDisposal.DisposalStatus.APPROVED) {
-                    asset.setStatus(FixedAsset.AssetStatus.DISPOSED);
+                    if (entity.getDisposalType() == AssetDisposal.DisposalType.WRITE_OFF
+                            || entity.getDisposalType() == AssetDisposal.DisposalType.LOST) {
+                        asset.setStatus(FixedAsset.AssetStatus.WRITTEN_OFF);
+                    } else {
+                        asset.setStatus(FixedAsset.AssetStatus.DISPOSED);
+                    }
                     asset.setCurrentBookValue(BigDecimal.ZERO);
                     fixedAssetRepository.save(asset);
                 }
@@ -117,7 +133,7 @@ public class AssetDisposalService extends BaseService<AssetDisposal, Long> {
                 assetAccount = accountRepository.findById(category.getAssetAccountId()).orElse(null);
             }
             if (assetAccount == null && companyId != null) {
-                assetAccount = accountRepository.findByCodeAndCompanyId("1510", companyId).orElse(null);
+                assetAccount = accountRepository.findByCodeAndCompanyId("1510", companyId);
             }
 
             Account accumulatedDepAccount = null;
@@ -125,23 +141,25 @@ public class AssetDisposalService extends BaseService<AssetDisposal, Long> {
                 accumulatedDepAccount = accountRepository.findById(category.getAccumulatedDepAccountId()).orElse(null);
             }
             if (accumulatedDepAccount == null && companyId != null) {
-                accumulatedDepAccount = accountRepository.findByCodeAndCompanyId("1520", companyId).orElse(null);
+                accumulatedDepAccount = accountRepository.findByCodeAndCompanyId("1520", companyId);
             }
 
             Account cashAccount = companyId != null
-                    ? accountRepository.findByCodeAndCompanyId("1010", companyId).orElse(null)
+                    ? accountRepository.findByCodeAndCompanyId("1010", companyId)
                     : null;
-            Account expenseAccount = companyId != null
-                    ? accountRepository.findByCodeAndCompanyId("5030", companyId)
-                            .or(() -> accountRepository.findByCodeAndCompanyId("5010", companyId))
-                            .orElse(null)
-                    : null;
+            Account expenseAccount = null;
+            if (companyId != null) {
+                expenseAccount = accountRepository.findByCodeAndCompanyId("5030", companyId);
+                if (expenseAccount == null) {
+                    expenseAccount = accountRepository.findByCodeAndCompanyId("5010", companyId);
+                }
+            }
             Account revenueAccount = companyId != null
-                    ? accountRepository.findByCodeAndCompanyId("4010", companyId).orElse(null)
+                    ? accountRepository.findByCodeAndCompanyId("4010", companyId)
                     : null;
 
             if (assetAccount == null) {
-                log.warn("Skipping GL JournalEntry for AssetDisposal {}: missing Fixed Asset GL account", disposal.getDisposalNo());
+                log.warn("Skipping GL JournalEntry for AssetDisposal {}: missing Fixed Asset GL account", disposal.getDisposalNumber());
                 return;
             }
 
@@ -211,7 +229,7 @@ public class AssetDisposalService extends BaseService<AssetDisposal, Long> {
             journal.setLines(lines);
             journalEntryService.save(journal);
         } catch (Exception ex) {
-            log.warn("Could not auto-post Finance GL JournalEntry for AssetDisposal {}: {}", disposal.getDisposalNo(), ex.getMessage());
+            log.warn("Could not auto-post Finance GL JournalEntry for AssetDisposal {}: {}", disposal.getDisposalNumber(), ex.getMessage());
         }
     }
 }

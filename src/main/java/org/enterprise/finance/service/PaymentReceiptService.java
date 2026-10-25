@@ -138,7 +138,7 @@ public class PaymentReceiptService {
         } else {
             Long companyId = receipt.getCompanyId() != null ? receipt.getCompanyId() : TenantContext.getCompanyId();
             if (companyId != null) {
-                receivableAccount = accountRepository.findByCodeAndCompanyId("1020", companyId).orElse(null);
+                receivableAccount = accountRepository.findByCodeAndCompanyId("1020", companyId);
             }
         }
 
