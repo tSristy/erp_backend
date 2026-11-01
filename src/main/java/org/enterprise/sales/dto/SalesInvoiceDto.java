@@ -14,6 +14,8 @@ public class SalesInvoiceDto extends AuditableDto {
     private LocalDate invoiceDate;
     private LocalDate dueDate;
     private InvoiceStatus status;
+    private Long salesOrderId;
+    private String salesOrderNo;
     private Long deliveryNoteId;
     private String deliveryNoteNo;
     private Long customerId;

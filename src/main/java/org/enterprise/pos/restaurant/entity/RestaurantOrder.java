@@ -99,6 +99,39 @@ public class RestaurantOrder extends AuditableEntity {
     }
 
     @Transient
+    private Long transientReferenceOrderId;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("referenceOrderId")
+    public Long getReferenceOrderId() {
+        try {
+            return referenceOrder != null ? referenceOrder.getId() : transientReferenceOrderId;
+        } catch (Exception ignored) {
+            return transientReferenceOrderId;
+        }
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("referenceOrderId")
+    public void setReferenceOrderIdFromObject(Object refId) {
+        Long parsedId = null;
+        if (refId instanceof Number) {
+            parsedId = ((Number) refId).longValue();
+        } else if (refId instanceof String) {
+            try {
+                parsedId = Long.parseLong(((String) refId).trim());
+            } catch (Exception ignored) {}
+        }
+        this.transientReferenceOrderId = parsedId;
+        if (parsedId != null) {
+            if (this.referenceOrder == null) {
+                this.referenceOrder = new RestaurantOrder();
+            }
+            this.referenceOrder.setId(parsedId);
+        } else {
+            this.referenceOrder = null;
+        }
+    }
+
+    @Transient
     private Long transientWarehouseId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("warehouseId")

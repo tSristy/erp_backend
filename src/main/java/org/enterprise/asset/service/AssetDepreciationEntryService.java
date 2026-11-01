@@ -113,6 +113,95 @@ public class AssetDepreciationEntryService extends BaseService<AssetDepreciation
         return saved;
     }
 
+    public List<AssetDepreciationEntry> runBulkDepreciation(
+            LocalDate periodDate,
+            String frequency,
+            String remarks,
+            List<Long> assetIds) {
+        Long companyId = TenantContext.getCompanyId();
+        LocalDate effectiveDate = periodDate != null ? periodDate : LocalDate.now();
+        String freq = frequency != null ? frequency.trim().toUpperCase() : "MONTHLY";
+
+        List<FixedAsset> allAssets = companyId != null
+                ? fixedAssetRepository.findByCompanyIdOrderByIdDesc(companyId)
+                : fixedAssetRepository.findAll();
+
+        List<AssetDepreciationEntry> createdEntries = new ArrayList<>();
+        int seq = 1;
+
+        for (FixedAsset asset : allAssets) {
+            if (asset.getStatus() != FixedAsset.AssetStatus.ACTIVE) {
+                continue;
+            }
+            if (assetIds != null && !assetIds.isEmpty() && !assetIds.contains(asset.getId())) {
+                continue;
+            }
+            if (asset.getDepreciationMethod() == AssetCategory.DepreciationMethod.NO_DEPRECIATION) {
+                continue;
+            }
+            if (repository.existsByAssetIdAndPeriodDate(asset.getId(), effectiveDate)) {
+                continue;
+            }
+
+            BigDecimal depAmount = calculatePeriodicDepreciation(asset, freq);
+            if (depAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            AssetDepreciationEntry entry = new AssetDepreciationEntry();
+            entry.setCompanyId(companyId != null ? companyId : asset.getCompanyId());
+            entry.setEntryNumber(String.format("DEP-%s-%03d",
+                    effectiveDate.toString().replace("-", ""),
+                    (System.currentTimeMillis() % 1000) + (seq++)));
+            entry.setAssetId(asset.getId());
+            entry.setPeriodDate(effectiveDate);
+            entry.setDepreciationAmount(depAmount);
+            entry.setStatus(AssetDepreciationEntry.DepreciationStatus.POSTED);
+            entry.setRemarks(remarks != null && !remarks.isBlank()
+                    ? remarks.trim()
+                    : ("Bulk " + freq.toLowerCase() + " depreciation run"));
+
+            createdEntries.add(this.save(entry));
+        }
+
+        return createdEntries;
+    }
+
+    private BigDecimal calculatePeriodicDepreciation(FixedAsset asset, String frequency) {
+        BigDecimal purchaseCost = asset.getPurchaseCost() != null ? asset.getPurchaseCost() : BigDecimal.ZERO;
+        BigDecimal salvageVal = asset.getSalvageValue() != null ? asset.getSalvageValue() : BigDecimal.ZERO;
+        BigDecimal currentBookVal = asset.getCurrentBookValue() != null ? asset.getCurrentBookValue() : purchaseCost;
+
+        BigDecimal maxRemaining = currentBookVal.subtract(salvageVal);
+        if (maxRemaining.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        int usefulYears = asset.getUsefulLifeYears() != null && asset.getUsefulLifeYears() > 0
+                ? asset.getUsefulLifeYears()
+                : 5;
+
+        BigDecimal annualDep;
+        if (asset.getDepreciationMethod() == AssetCategory.DepreciationMethod.DECLINING_BALANCE) {
+            BigDecimal rate = BigDecimal.valueOf(2.0 / usefulYears);
+            annualDep = currentBookVal.multiply(rate);
+        } else {
+            BigDecimal depreciableBase = purchaseCost.subtract(salvageVal).max(BigDecimal.ZERO);
+            annualDep = depreciableBase.divide(BigDecimal.valueOf(usefulYears), 4, java.math.RoundingMode.HALF_UP);
+        }
+
+        BigDecimal periodDep;
+        if ("DAILY".equalsIgnoreCase(frequency)) {
+            periodDep = annualDep.divide(BigDecimal.valueOf(365), 2, java.math.RoundingMode.HALF_UP);
+        } else if ("YEARLY".equalsIgnoreCase(frequency)) {
+            periodDep = annualDep.setScale(2, java.math.RoundingMode.HALF_UP);
+        } else {
+            periodDep = annualDep.divide(BigDecimal.valueOf(12), 2, java.math.RoundingMode.HALF_UP);
+        }
+
+        return periodDep.min(maxRemaining).max(BigDecimal.ZERO);
+    }
+
     private void postDepreciationJournalEntry(AssetDepreciationEntry entry, FixedAsset asset) {
         try {
             Long companyId = entry.getCompanyId() != null ? entry.getCompanyId() : TenantContext.getCompanyId();

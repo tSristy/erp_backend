@@ -29,6 +29,7 @@ public class SalesOrderDetailDto extends AuditableDto {
 
     private java.util.List<SalesOrderDetailDiscountDto> discounts;
     private BigDecimal shippedQuantity;
+    private BigDecimal invoicedQuantity;
     private BigDecimal returnedQuantity;
 
     @com.fasterxml.jackson.annotation.JsonAlias({"variant_id", "variant"})

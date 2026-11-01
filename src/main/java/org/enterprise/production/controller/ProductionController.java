@@ -24,9 +24,26 @@ public class ProductionController {
             @RequestParam BigDecimal producedQty,
             @RequestParam(required = false) BigDecimal rejectedQty,
             @RequestParam(required = false) Long qcInspectorId,
-            @RequestParam(required = false) String qcNotes) {
-        
-        productionService.completeProduction(id, producedQty, rejectedQty, qcInspectorId, qcNotes);
+            @RequestParam(required = false) String qcNotes,
+            @RequestParam(required = false) java.util.List<String> serialNumbers,
+            @RequestParam(required = false) String batchNo,
+            @RequestBody(required = false) java.util.Map<String, Object> body) {
+
+        java.util.List<String> resolvedSerials = serialNumbers;
+        if ((resolvedSerials == null || resolvedSerials.isEmpty()) && body != null && body.get("serialNumbers") instanceof java.util.List<?> rawList) {
+            resolvedSerials = rawList.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .map(Object::toString)
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+        }
+        String resolvedBatchNo = batchNo;
+        if ((resolvedBatchNo == null || resolvedBatchNo.isBlank()) && body != null && body.get("batchNo") != null) {
+            resolvedBatchNo = body.get("batchNo").toString().trim();
+        }
+
+        productionService.completeProduction(id, producedQty, rejectedQty, qcInspectorId, qcNotes, resolvedSerials, resolvedBatchNo);
         return ResponseEntity.ok("Production completed successfully for quantity: " + producedQty);
     }
 

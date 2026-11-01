@@ -32,6 +32,9 @@ public class SalesOrderDetail extends AuditableEntity {
     private BigDecimal shippedQuantity = BigDecimal.ZERO;
 
     @Column(precision = 18, scale = 6)
+    private BigDecimal invoicedQuantity = BigDecimal.ZERO;
+
+    @Column(precision = 18, scale = 6)
     private BigDecimal returnedQuantity = BigDecimal.ZERO;
 
     @Column(precision = 18, scale = 2)

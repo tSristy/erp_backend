@@ -68,8 +68,9 @@ public class PosTransactionFinanceListener {
                     continue;
                 }
                 BigDecimal amount = payment.getAmount();
-                boolean isDue = "DUE".equalsIgnoreCase(payment.getPaymentMode());
-                Account settlementAccount = (isDue && arAccount != null) ? arAccount : cashAccount;
+                boolean isReceivableOrAdvance = "DUE".equalsIgnoreCase(payment.getPaymentMode())
+                        || "ADVANCE_RECEIPT".equalsIgnoreCase(payment.getPaymentMode());
+                Account settlementAccount = (isReceivableOrAdvance && arAccount != null) ? arAccount : cashAccount;
 
                 JournalEntryLine line = new JournalEntryLine();
                 line.setJournalEntry(journal);

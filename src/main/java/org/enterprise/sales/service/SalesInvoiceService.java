@@ -24,6 +24,7 @@ public class SalesInvoiceService {
     private final JournalEntryService journalService;
     private final org.enterprise.inventory.repository.BusinessPartnerRepository businessPartnerRepository;
     private final org.enterprise.inventory.repository.WarehouseRepository warehouseRepository;
+    private final org.enterprise.sales.repository.SalesOrderRepository salesOrderRepository;
     private final org.enterprise.sales.repository.DeliveryNoteRepository deliveryNoteRepository;
     private final org.enterprise.inventory.repository.ProductRepository productRepository;
     private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
@@ -58,9 +59,31 @@ public class SalesInvoiceService {
             salesInvoice.setInvoiceNo(generateNextInvoiceNo(companyId));
         }
 
+        if (salesInvoice.getSalesOrder() != null && salesInvoice.getSalesOrder().getId() != null) {
+            salesOrderRepository.findById(salesInvoice.getSalesOrder().getId()).ifPresentOrElse(so -> {
+                salesInvoice.setSalesOrder(so);
+                if (salesInvoice.getCustomer() == null && so.getCustomer() != null) {
+                    salesInvoice.setCustomer(so.getCustomer());
+                }
+                if (salesInvoice.getWarehouse() == null && so.getWarehouse() != null) {
+                    salesInvoice.setWarehouse(so.getWarehouse());
+                }
+                if (salesInvoice.getSalesChannel() == null && so.getSalesChannel() != null) {
+                    try {
+                        salesInvoice.setSalesChannel(SalesInvoice.SalesChannel.valueOf(so.getSalesChannel().name()));
+                    } catch (Exception ignored) {}
+                }
+            }, () -> salesInvoice.setSalesOrder(null));
+        } else {
+            salesInvoice.setSalesOrder(null);
+        }
+
         if (salesInvoice.getDeliveryNote() != null && salesInvoice.getDeliveryNote().getId() != null) {
             deliveryNoteRepository.findById(salesInvoice.getDeliveryNote().getId()).ifPresentOrElse(dn -> {
                 salesInvoice.setDeliveryNote(dn);
+                if (salesInvoice.getSalesOrder() == null && dn.getSalesOrder() != null) {
+                    salesInvoice.setSalesOrder(dn.getSalesOrder());
+                }
                 if (salesInvoice.getCustomer() == null && dn.getCustomer() != null) {
                     salesInvoice.setCustomer(dn.getCustomer());
                 }
@@ -79,14 +102,27 @@ public class SalesInvoiceService {
 
         if (salesInvoice.getCustomer() != null && salesInvoice.getCustomer().getId() != null) {
             salesInvoice.setCustomer(businessPartnerRepository.findById(salesInvoice.getCustomer().getId()).orElse(null));
+        } else if (salesInvoice.getSalesOrder() != null && salesInvoice.getSalesOrder().getCustomer() != null) {
+            salesInvoice.setCustomer(salesInvoice.getSalesOrder().getCustomer());
         } else {
             salesInvoice.setCustomer(null);
         }
 
         if (salesInvoice.getWarehouse() != null && salesInvoice.getWarehouse().getId() != null) {
             salesInvoice.setWarehouse(warehouseRepository.findById(salesInvoice.getWarehouse().getId()).orElse(null));
+        } else if (salesInvoice.getSalesOrder() != null && salesInvoice.getSalesOrder().getWarehouse() != null) {
+            salesInvoice.setWarehouse(salesInvoice.getSalesOrder().getWarehouse());
         } else {
             salesInvoice.setWarehouse(null);
+        }
+
+        if (salesInvoice.getDiscounts() != null) {
+            for (var d : salesInvoice.getDiscounts()) {
+                d.setSalesInvoice(salesInvoice);
+                if (d.getCompanyId() == null) {
+                    d.setCompanyId(companyId);
+                }
+            }
         }
 
         if (salesInvoice.getDetails() != null) {
@@ -142,6 +178,51 @@ public class SalesInvoiceService {
                 } else {
                     detail.setDeliveryNoteDetail(null);
                 }
+
+                org.enterprise.sales.entity.SalesOrderDetail matchedSod = null;
+                if (detail.getDeliveryNoteDetail() != null && detail.getDeliveryNoteDetail().getSalesOrderDetail() != null) {
+                    matchedSod = detail.getDeliveryNoteDetail().getSalesOrderDetail();
+                } else if (salesInvoice.getSalesOrder() != null && salesInvoice.getSalesOrder().getDetails() != null) {
+                    for (var sod : salesInvoice.getSalesOrder().getDetails()) {
+                        if (detail.getSalesOrderDetail() != null && detail.getSalesOrderDetail().getId() != null && detail.getSalesOrderDetail().getId().equals(sod.getId())) {
+                            matchedSod = sod;
+                            break;
+                        }
+                    }
+                    if (matchedSod == null && detail.getProduct() != null && detail.getProduct().getId() != null) {
+                        for (var sod : salesInvoice.getSalesOrder().getDetails()) {
+                            if (sod.getProduct() != null && sod.getProduct().getId().equals(detail.getProduct().getId())) {
+                                matchedSod = sod;
+                                break;
+                            }
+                        }
+                    }
+                }
+                detail.setSalesOrderDetail(matchedSod);
+
+                if (matchedSod != null) {
+                    if (detail.getVariant() == null && matchedSod.getVariant() != null) {
+                        detail.setVariant(matchedSod.getVariant());
+                    }
+                    if (detail.getVatRate() == null || detail.getVatRate().compareTo(BigDecimal.ZERO) == 0) {
+                        detail.setVatRate(matchedSod.getVatRate());
+                    }
+                    if (detail.getIsVatInclusive() == null || !detail.getIsVatInclusive()) {
+                        detail.setIsVatInclusive(matchedSod.getIsVatInclusive());
+                    }
+                    if (detail.getVatTotal() == null || detail.getVatTotal().compareTo(BigDecimal.ZERO) == 0) {
+                        detail.setVatTotal(matchedSod.getVatTotal());
+                    }
+                }
+
+                if (detail.getDiscounts() != null) {
+                    for (var dd : detail.getDiscounts()) {
+                        dd.setSalesInvoiceDetail(detail);
+                        if (dd.getCompanyId() == null) {
+                            dd.setCompanyId(companyId);
+                        }
+                    }
+                }
             }
         }
         return salesInvoiceRepository.save(salesInvoice);
@@ -167,6 +248,18 @@ public class SalesInvoiceService {
                     } else {
                         BigDecimal updated = currentInvoiced.subtract(detail.getQuantity());
                         dnd.setInvoicedQuantity(updated.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : updated);
+                    }
+                }
+                var sod = detail.getSalesOrderDetail() != null
+                        ? detail.getSalesOrderDetail()
+                        : (dnd != null ? dnd.getSalesOrderDetail() : null);
+                if (sod != null && detail.getQuantity() != null) {
+                    BigDecimal currentOrderInvoiced = sod.getInvoicedQuantity() != null ? sod.getInvoicedQuantity() : BigDecimal.ZERO;
+                    if (isInvoice) {
+                        sod.setInvoicedQuantity(currentOrderInvoiced.add(detail.getQuantity()));
+                    } else {
+                        BigDecimal updated = currentOrderInvoiced.subtract(detail.getQuantity());
+                        sod.setInvoicedQuantity(updated.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : updated);
                     }
                 }
             }
@@ -267,6 +360,7 @@ public class SalesInvoiceService {
 
         SalesInvoice creditMemo = new SalesInvoice();
         creditMemo.setInvoiceType(SalesInvoice.InvoiceType.CREDIT_MEMO);
+        creditMemo.setSalesOrder(original.getSalesOrder());
         creditMemo.setDeliveryNote(original.getDeliveryNote());
         creditMemo.setCustomer(original.getCustomer());
         creditMemo.setWarehouse(original.getWarehouse());
@@ -292,6 +386,7 @@ public class SalesInvoiceService {
         for (SalesInvoiceDetail originalDetail : original.getDetails()) {
             SalesInvoiceDetail creditDetail = new SalesInvoiceDetail();
             creditDetail.setSalesInvoice(creditMemo);
+            creditDetail.setSalesOrderDetail(originalDetail.getSalesOrderDetail());
             creditDetail.setDeliveryNoteDetail(originalDetail.getDeliveryNoteDetail());
             creditDetail.setProduct(originalDetail.getProduct());
             creditDetail.setQuantity(originalDetail.getQuantity());

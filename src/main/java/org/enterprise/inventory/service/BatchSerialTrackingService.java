@@ -21,7 +21,7 @@ public class BatchSerialTrackingService {
     private final SerialNumberTransactionRepository serialNumberTransactionRepository;
 
     public Batch findOrCreateBatch(Product product, String batchNo, LocalDate mfgDate, LocalDate expDate) {
-        if (!product.getIsBatchManaged()) {
+        if (!Boolean.TRUE.equals(product.getIsBatchManaged())) {
             return null;
         }
         if (batchNo == null || batchNo.trim().isEmpty()) {
@@ -42,17 +42,25 @@ public class BatchSerialTrackingService {
     }
 
     public void validateSerialNumbers(Product product, List<String> serialNumbers, int expectedQuantity) {
-        if (!product.getIsSerialManaged()) {
+        if (!Boolean.TRUE.equals(product.getIsSerialManaged())) {
             return;
         }
         if (serialNumbers == null || serialNumbers.size() != expectedQuantity) {
             throw new RuntimeException("Provided serial numbers count (" + (serialNumbers == null ? 0 : serialNumbers.size()) +
                     ") does not match quantity (" + expectedQuantity + ") for product: " + product.getName());
         }
+        long distinctCount = serialNumbers.stream()
+                .map(s -> s == null ? "" : s.trim())
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .count();
+        if (distinctCount != expectedQuantity) {
+            throw new RuntimeException("Serial numbers must be non-empty and unique. Expected " + expectedQuantity + " unique serial numbers for product: " + product.getName());
+        }
     }
 
     public void processInboundSerials(Product product, Batch batch, List<String> serialNumbers, Warehouse warehouse, Location location, InventoryTransactionType type, String docType, Long docId) {
-        if (!product.getIsSerialManaged() || serialNumbers == null || serialNumbers.isEmpty()) {
+        if (!Boolean.TRUE.equals(product.getIsSerialManaged()) || serialNumbers == null || serialNumbers.isEmpty()) {
             return;
         }
 

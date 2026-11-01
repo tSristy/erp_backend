@@ -92,11 +92,21 @@ public class ManufacturingOrderService {
     private ManufacturingOrderDTO convertToDTO(ManufacturingOrder entity) {
         ManufacturingOrderDTO dto = new ManufacturingOrderDTO();
         BeanUtils.copyProperties(entity, dto);
-        if (entity.getFinishedGood() != null) dto.setFinishedGoodId(entity.getFinishedGood().getId());
+        if (entity.getFinishedGood() != null) {
+            dto.setFinishedGoodId(entity.getFinishedGood().getId());
+            dto.setIsSerialManaged(Boolean.TRUE.equals(entity.getFinishedGood().getIsSerialManaged()));
+            dto.setIsBatchManaged(Boolean.TRUE.equals(entity.getFinishedGood().getIsBatchManaged()));
+        }
         if (entity.getBom() != null) dto.setBomId(entity.getBom().getId());
         if (entity.getProductionWarehouse() != null) dto.setProductionWarehouseId(entity.getProductionWarehouse().getId());
-        if (entity.getBatch() != null) dto.setBatchId(entity.getBatch().getId());
+        if (entity.getBatch() != null) {
+            dto.setBatchId(entity.getBatch().getId());
+            dto.setBatchNo(entity.getBatch().getBatchNo());
+        }
         if (entity.getRouting() != null) dto.setRoutingId(entity.getRouting().getId());
+        if (entity.getSerialNumbers() != null) {
+            dto.setSerialNumbers(new java.util.ArrayList<>(entity.getSerialNumbers()));
+        }
         return dto;
     }
 

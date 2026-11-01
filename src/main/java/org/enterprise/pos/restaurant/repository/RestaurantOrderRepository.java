@@ -29,6 +29,7 @@ public interface RestaurantOrderRepository extends JpaRepository<RestaurantOrder
     @Query("SELECT r FROM RestaurantOrder r " +
            "LEFT JOIN FETCH r.warehouse w " +
            "LEFT JOIN FETCH r.customer c " +
+           "LEFT JOIN FETCH r.referenceOrder ref " +
            "WHERE r.type = :type " +
            "ORDER BY r.id DESC")
     List<RestaurantOrder> findByType(@Param("type") RestaurantOrder.TransactionType type);
@@ -61,6 +62,7 @@ public interface RestaurantOrderRepository extends JpaRepository<RestaurantOrder
     @Query("SELECT DISTINCT r FROM RestaurantOrder r " +
            "LEFT JOIN FETCH r.warehouse w " +
            "LEFT JOIN FETCH r.customer c " +
+           "LEFT JOIN FETCH r.referenceOrder ref " +
            "LEFT JOIN FETCH r.details d " +
            "LEFT JOIN FETCH d.product p " +
            "WHERE r.id = :id")

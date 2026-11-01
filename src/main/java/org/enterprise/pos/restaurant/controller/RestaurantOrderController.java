@@ -78,6 +78,7 @@ public class RestaurantOrderController {
         BigDecimal amount = null;
         BigDecimal tipAmount = null;
         String referenceNumber = null;
+        boolean isAdvance = false;
 
         if (body != null) {
             if (body.containsKey("paymentMode") && body.get("paymentMode") != null) {
@@ -96,9 +97,12 @@ public class RestaurantOrderController {
             if (body.containsKey("referenceNumber") && body.get("referenceNumber") != null) {
                 referenceNumber = body.get("referenceNumber").toString();
             }
+            if (body.containsKey("isAdvance") && body.get("isAdvance") != null) {
+                isAdvance = Boolean.parseBoolean(body.get("isAdvance").toString());
+            }
         }
 
-        return ResponseEntity.ok(mapToDto(orderService.settlePayment(orderId, paymentMode, amount, tipAmount, referenceNumber)));
+        return ResponseEntity.ok(mapToDto(orderService.settlePayment(orderId, paymentMode, amount, tipAmount, referenceNumber, isAdvance)));
     }
 
     @RequestMapping(value = "/{orderId}/waiter", method = {RequestMethod.PATCH, RequestMethod.PUT, RequestMethod.POST})

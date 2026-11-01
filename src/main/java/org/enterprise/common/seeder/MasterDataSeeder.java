@@ -57,10 +57,12 @@ public class MasterDataSeeder implements CommandLineRunner {
         // Only run full master data seeder if the database is empty (no accounts exist)
         Long accountCount = em.createQuery("SELECT COUNT(a) FROM Account a", Long.class).getSingleResult();
         if (accountCount > 0) {
-            log.info("Master data already exists. Ensuring new modules and menus are seeded...");
             List<Company> existingCompanies = em.createQuery("SELECT c FROM Company c", Company.class).getResultList();
             for (Company existingCompany : existingCompanies) {
-                seedModules(existingCompany);
+                if (moduleRepository.findByCodeAndCompanyId("ASSET_MANAGEMENT", existingCompany.getId()).isEmpty()
+                        || menuRepository.findByCodeAndCompanyId("ASSET_MANAGEMENT_REPORTS", existingCompany.getId()).isEmpty()) {
+                    seedAssetManagementModule(existingCompany.getId());
+                }
             }
             return;
         }
@@ -774,6 +776,12 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(organizations, "Areas", "organizations/area", "MapPin", 7, cid);
         createMenu(organizations, "Territories", "organizations/territory", "Navigation", 8, cid);
 
+        seedAssetManagementModule(cid);
+
+        log.info("Modules and menus seeded successfully.");
+    }
+
+    private void seedAssetManagementModule(Long cid) {
         var assetManagement = createModule("ASSET_MANAGEMENT", "Fixed Asset Management", "Track fixed assets, depreciation, transfers, and disposals.", "asset-management", "Landmark", 14, cid);
         createMenu(assetManagement, "Dashboard", "asset-management", "Landmark", 1, cid);
         createMenu(assetManagement, "Asset Categories", "asset-management/categories", "List", 2, cid);
@@ -781,8 +789,12 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(assetManagement, "Depreciation", "asset-management/depreciation", "TrendingDown", 4, cid);
         createMenu(assetManagement, "Asset Transfers", "asset-management/transfers", "ArrowRightLeft", 5, cid);
         createMenu(assetManagement, "Asset Disposals", "asset-management/disposals", "Trash2", 6, cid);
-
-        log.info("Modules and menus seeded successfully.");
+        createMenu(assetManagement, "Reports", "asset-management/reports", "BarChart2", 7, cid);
+        createReportMenu(assetManagement, "Asset Register", "asset-management/reports/register", "Box", 8, cid);
+        createReportMenu(assetManagement, "Depreciation Schedule", "asset-management/reports/depreciation", "TrendingDown", 9, cid);
+        createReportMenu(assetManagement, "Asset Transfers", "asset-management/reports/transfers", "ArrowRightLeft", 10, cid);
+        createReportMenu(assetManagement, "Asset Disposals", "asset-management/reports/disposals", "Trash2", 11, cid);
+        createReportMenu(assetManagement, "Valuation by Category", "asset-management/reports/category", "PieChart", 12, cid);
     }
 
     private org.enterprise.security.entity.Module createModule(String code, String name, String description, String route, String icon, int order, Long companyId) {

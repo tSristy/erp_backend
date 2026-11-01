@@ -35,6 +35,35 @@ public class AssetDepreciationEntryController {
         return ResponseEntity.ok(service.save(entry));
     }
 
+    @PostMapping("/bulk-run")
+    public ResponseEntity<List<AssetDepreciationEntry>> bulkRun(
+            @RequestBody(required = false) java.util.Map<String, Object> body) {
+        java.time.LocalDate periodDate = java.time.LocalDate.now();
+        String frequency = "MONTHLY";
+        String remarks = null;
+        java.util.List<Long> assetIds = null;
+
+        if (body != null) {
+            if (body.get("periodDate") != null && !body.get("periodDate").toString().isBlank()) {
+                periodDate = java.time.LocalDate.parse(body.get("periodDate").toString().substring(0, 10));
+            }
+            if (body.get("frequency") != null) {
+                frequency = body.get("frequency").toString();
+            }
+            if (body.get("remarks") != null) {
+                remarks = body.get("remarks").toString();
+            }
+            if (body.get("assetIds") instanceof java.util.List<?> rawIds) {
+                assetIds = rawIds.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .map(o -> Long.valueOf(o.toString()))
+                        .toList();
+            }
+        }
+
+        return ResponseEntity.ok(service.runBulkDepreciation(periodDate, frequency, remarks, assetIds));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<AssetDepreciationEntry> update(@PathVariable Long id, @RequestBody AssetDepreciationEntry entry) {
         entry.setId(id);

@@ -88,11 +88,14 @@ public interface SalesMapper {
     @Mapping(target = "batchNumber", source = "batch.batchNo")
     DeliveryNoteDetailDto toDto(DeliveryNoteDetail entity);
 
+    @Mapping(target = "salesOrder.id", source = "salesOrderId")
     @Mapping(target = "deliveryNote.id", source = "deliveryNoteId")
     @Mapping(target = "customer.id", source = "customerId")
     @Mapping(target = "warehouse.id", source = "warehouseId")
     SalesInvoice toEntity(SalesInvoiceDto dto);
     
+    @Mapping(target = "salesOrderId", source = "salesOrder.id")
+    @Mapping(target = "salesOrderNo", source = "salesOrder.orderNo")
     @Mapping(target = "deliveryNoteId", source = "deliveryNote.id")
     @Mapping(target = "deliveryNoteNo", source = "deliveryNote.deliveryNo")
     @Mapping(target = "customerId", source = "customer.id")
@@ -104,12 +107,14 @@ public interface SalesMapper {
     SalesInvoiceDto toDto(SalesInvoice entity);
 
     @Mapping(target = "salesInvoice", ignore = true)
+    @Mapping(target = "salesOrderDetail.id", source = "salesOrderDetailId")
     @Mapping(target = "deliveryNoteDetail.id", source = "deliveryNoteDetailId")
     @Mapping(target = "product.id", source = "productId")
     @Mapping(target = "variant.id", source = "variantId")
     SalesInvoiceDetail toEntity(SalesInvoiceDetailDto dto);
     
     @Mapping(target = "salesInvoiceId", source = "salesInvoice.id")
+    @Mapping(target = "salesOrderDetailId", source = "salesOrderDetail.id")
     @Mapping(target = "deliveryNoteDetailId", source = "deliveryNoteDetail.id")
     @Mapping(target = "productId", source = "product.id")
     @Mapping(target = "productName", source = "product.name")

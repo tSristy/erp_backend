@@ -18,6 +18,9 @@ public class SalesInvoiceDetail extends AuditableEntity {
     private SalesInvoice salesInvoice;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    private SalesOrderDetail salesOrderDetail;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private DeliveryNoteDetail deliveryNoteDetail;
 
     @ManyToOne(fetch = FetchType.LAZY)

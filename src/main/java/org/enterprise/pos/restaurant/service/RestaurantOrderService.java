@@ -69,6 +69,12 @@ public class RestaurantOrderService {
             wh.setId(order.getWarehouseId());
             order.setWarehouse(wh);
         }
+
+        if (order.getReferenceOrder() == null && order.getReferenceOrderId() != null) {
+            RestaurantOrder ref = new RestaurantOrder();
+            ref.setId(order.getReferenceOrderId());
+            order.setReferenceOrder(ref);
+        }
         
         if (order.getCustomerId() != null) {
             org.enterprise.inventory.entity.BusinessPartner cust = new org.enterprise.inventory.entity.BusinessPartner();
@@ -86,14 +92,13 @@ public class RestaurantOrderService {
             order.setCompanyId(companyId != null ? companyId : 1L);
         }
 
-        // If updating an existing order (e.g. from Manage Orders edit page)
+        // If updating an existing order (e.g. from Manage Orders edit page or POS Terminal)
         if (order.getId() != null) {
             Optional<RestaurantOrder> existingOpt = orderRepository.findById(order.getId());
             if (existingOpt.isPresent()) {
                 RestaurantOrder existing = existingOpt.get();
-                if (existing.getStatus() == RestaurantOrder.RestaurantOrderStatus.PAID
-                        || existing.getStatus() == RestaurantOrder.RestaurantOrderStatus.CANCELLED) {
-                    throw new IllegalStateException("Cannot modify a PAID or CANCELLED restaurant order.");
+                if (existing.getStatus() == RestaurantOrder.RestaurantOrderStatus.CANCELLED) {
+                    throw new IllegalStateException("Cannot modify a CANCELLED restaurant order.");
                 }
                 existing.setCustomer(order.getCustomer());
                 existing.setCustomerId(order.getCustomerId());
@@ -106,25 +111,56 @@ public class RestaurantOrderService {
                 if (order.getOrderType() != null) existing.setOrderType(order.getOrderType());
                 if (order.getStatus() != null) existing.setStatus(order.getStatus());
                 if (order.getEventDateTime() != null) existing.setEventDateTime(order.getEventDateTime());
+                if (order.getReferenceOrder() != null) existing.setReferenceOrder(order.getReferenceOrder());
 
-                // Update details
+                // Update details while preserving existing detail entities and KOT links
                 if (order.getDetails() != null) {
-                    existing.getDetails().clear();
+                    List<RestaurantOrderDetail> currentDetails = new ArrayList<>(existing.getDetails());
+                    List<Long> incomingIds = order.getDetails().stream()
+                            .map(RestaurantOrderDetail::getId)
+                            .filter(java.util.Objects::nonNull)
+                            .collect(Collectors.toList());
+
+                    existing.getDetails().removeIf(d -> d.getId() != null && !incomingIds.contains(d.getId()) && d.getKot() == null);
+
                     for (RestaurantOrderDetail detail : order.getDetails()) {
-                        detail.setOrder(existing);
-                        detail.setCompanyId(existing.getCompanyId());
-                        if (detail.getProduct() == null && detail.getProductId() != null) {
-                            org.enterprise.inventory.entity.Product p = new org.enterprise.inventory.entity.Product();
-                            p.setId(detail.getProductId());
-                            detail.setProduct(p);
+                        RestaurantOrderDetail matched = detail.getId() != null
+                                ? currentDetails.stream().filter(cd -> detail.getId().equals(cd.getId())).findFirst().orElse(null)
+                                : null;
+
+                        if (matched != null) {
+                            if (detail.getProductId() != null) {
+                                org.enterprise.inventory.entity.Product p = new org.enterprise.inventory.entity.Product();
+                                p.setId(detail.getProductId());
+                                matched.setProduct(p);
+                            } else if (detail.getProduct() != null) {
+                                matched.setProduct(detail.getProduct());
+                            }
+                            if (detail.getQuantity() != null) matched.setQuantity(detail.getQuantity());
+                            if (detail.getUnitPrice() != null) matched.setUnitPrice(detail.getUnitPrice());
+                            if (matched.getQuantity() != null && matched.getUnitPrice() != null) {
+                                matched.setLineTotal(matched.getQuantity().multiply(matched.getUnitPrice()));
+                            }
+                            if (detail.getStatus() != null && matched.getKot() == null) {
+                                matched.setStatus(detail.getStatus());
+                            }
+                        } else {
+                            detail.setId(null);
+                            detail.setOrder(existing);
+                            detail.setCompanyId(existing.getCompanyId());
+                            if (detail.getProduct() == null && detail.getProductId() != null) {
+                                org.enterprise.inventory.entity.Product p = new org.enterprise.inventory.entity.Product();
+                                p.setId(detail.getProductId());
+                                detail.setProduct(p);
+                            }
+                            if (detail.getQuantity() != null && detail.getUnitPrice() != null) {
+                                detail.setLineTotal(detail.getQuantity().multiply(detail.getUnitPrice()));
+                            }
+                            if (detail.getStatus() == null) {
+                                detail.setStatus(RestaurantOrderDetail.DetailStatus.PENDING);
+                            }
+                            existing.getDetails().add(detail);
                         }
-                        if (detail.getQuantity() != null && detail.getUnitPrice() != null) {
-                            detail.setLineTotal(detail.getQuantity().multiply(detail.getUnitPrice()));
-                        }
-                        if (detail.getStatus() == null) {
-                            detail.setStatus(RestaurantOrderDetail.DetailStatus.PENDING);
-                        }
-                        existing.getDetails().add(detail);
                     }
                 }
 
@@ -141,10 +177,14 @@ public class RestaurantOrderService {
                             existing.getPayments().add(savedPayment);
                         }
                     }
+                    boolean hasUnservedItems = existing.getDetails().stream()
+                            .anyMatch(d -> d.getStatus() != RestaurantOrderDetail.DetailStatus.SERVED
+                                    && d.getStatus() != RestaurantOrderDetail.DetailStatus.CANCELLED);
                     BigDecimal totalPaid = existing.getPayments().stream()
                             .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    if (existing.getTotalAmount() != null
+                    if (!hasUnservedItems
+                            && existing.getTotalAmount() != null
                             && existing.getTotalAmount().compareTo(BigDecimal.ZERO) > 0
                             && totalPaid.compareTo(existing.getTotalAmount()) >= 0) {
                         existing.setStatus(RestaurantOrder.RestaurantOrderStatus.PAID);
@@ -152,11 +192,13 @@ public class RestaurantOrderService {
                 }
 
                 recalculateTotal(existing);
-                return orderRepository.save(existing);
+                return orderRepository.saveAndFlush(existing);
             }
         }
 
-        if (order.getTableNumber() != null && !order.getTableNumber().isEmpty()) {
+        if (order.getType() != RestaurantOrder.TransactionType.RETURN
+                && order.getTableNumber() != null
+                && !order.getTableNumber().isEmpty()) {
             Optional<RestaurantOrder> existing = orderRepository.findByTableNumberAndStatusIn(
                     order.getTableNumber(),
                     Arrays.asList(RestaurantOrder.RestaurantOrderStatus.NEW, RestaurantOrder.RestaurantOrderStatus.KOT_SENT, RestaurantOrder.RestaurantOrderStatus.SERVED)
@@ -170,6 +212,7 @@ public class RestaurantOrderService {
                     // Append new items to the existing active order on this table
                     if (order.getDetails() != null) {
                         for (RestaurantOrderDetail detail : order.getDetails()) {
+                            detail.setId(null);
                             detail.setOrder(activeOrder);
                             detail.setCompanyId(activeOrder.getCompanyId());
                             if (detail.getProduct() == null && detail.getProductId() != null) {
@@ -187,13 +230,14 @@ public class RestaurantOrderService {
                         }
                     }
                     recalculateTotal(activeOrder);
-                    return orderRepository.save(activeOrder);
+                    return orderRepository.saveAndFlush(activeOrder);
                 }
             }
         }
         
         if (order.getDetails() != null) {
             for (RestaurantOrderDetail detail : order.getDetails()) {
+                detail.setId(null);
                 detail.setOrder(order);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(order.getCompanyId());
@@ -214,6 +258,7 @@ public class RestaurantOrderService {
 
         if (order.getPayments() != null) {
             for (RestaurantPayment payment : order.getPayments()) {
+                payment.setId(null);
                 payment.setOrder(order);
                 if (payment.getCompanyId() == null) {
                     payment.setCompanyId(order.getCompanyId());
@@ -227,17 +272,23 @@ public class RestaurantOrderService {
         if (order.getStatus() == null) {
             order.setStatus(RestaurantOrder.RestaurantOrderStatus.NEW);
         }
-        RestaurantOrder savedOrder = orderRepository.save(order);
+        RestaurantOrder savedOrder = orderRepository.saveAndFlush(order);
 
-        if (order.getPayments() != null && !order.getPayments().isEmpty()) {
-            for (RestaurantPayment payment : order.getPayments()) {
-                if (payment.getId() != null && !paymentRepository.existsById(payment.getId())) {
-                    payment.setId(null);
-                }
-                payment.setOrder(savedOrder);
-                payment.setCompanyId(savedOrder.getCompanyId());
-                paymentRepository.save(payment);
-            }
+        if (savedOrder.getStatus() == RestaurantOrder.RestaurantOrderStatus.PAID) {
+            Long customerId = savedOrder.getCustomer() != null ? savedOrder.getCustomer().getId() : null;
+            Long warehouseId = savedOrder.getWarehouse() != null ? savedOrder.getWarehouse().getId() : null;
+            PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
+                    this,
+                    savedOrder.getOrderNo(),
+                    savedOrder.getType() != null ? savedOrder.getType().name() : "SALES",
+                    savedOrder.getTotalAmount(),
+                    savedOrder.getOrderDate() != null ? savedOrder.getOrderDate() : LocalDateTime.now(),
+                    customerId,
+                    warehouseId,
+                    savedOrder.getDetails(),
+                    savedOrder.getPayments()
+            );
+            eventPublisher.publishEvent(event);
         }
 
         return savedOrder;
@@ -286,15 +337,20 @@ public class RestaurantOrderService {
 
     @Transactional
     public RestaurantOrder settlePayment(Long orderId) {
-        return settlePayment(orderId, "CASH", null, null, null);
+        return settlePayment(orderId, "CASH", null, null, null, false);
     }
 
     @Transactional
     public RestaurantOrder settlePayment(Long orderId, String paymentModeStr, BigDecimal amount, BigDecimal tipAmount, String referenceNumber) {
+        return settlePayment(orderId, paymentModeStr, amount, tipAmount, referenceNumber, false);
+    }
+
+    @Transactional
+    public RestaurantOrder settlePayment(Long orderId, String paymentModeStr, BigDecimal amount, BigDecimal tipAmount, String referenceNumber, boolean isAdvance) {
         RestaurantOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
 
-        log.info("Settling payment for Restaurant Order: {} (Type: {})", order.getOrderNo(), order.getType());
+        log.info("Settling payment for Restaurant Order: {} (Type: {}, isAdvance: {})", order.getOrderNo(), order.getType(), isAdvance);
         
         if (order.getType() == RestaurantOrder.TransactionType.RETURN) {
             log.info("Bypassing KOT state machine for Return transaction.");
@@ -315,23 +371,25 @@ public class RestaurantOrderService {
             order.setPayments(new ArrayList<>());
         }
 
-        RestaurantPayment payment = new RestaurantPayment();
-        payment.setOrder(order);
-        payment.setCompanyId(order.getCompanyId());
-        payment.setPaymentMode(mode);
-        payment.setAmount(payAmount);
-        payment.setTipAmount(tipAmount != null ? tipAmount : BigDecimal.ZERO);
-        payment.setReferenceNumber(referenceNumber);
+        if (payAmount.compareTo(BigDecimal.ZERO) > 0) {
+            RestaurantPayment payment = new RestaurantPayment();
+            payment.setOrder(order);
+            payment.setCompanyId(order.getCompanyId());
+            payment.setPaymentMode(mode);
+            payment.setAmount(payAmount);
+            payment.setTipAmount(tipAmount != null ? tipAmount : BigDecimal.ZERO);
+            payment.setReferenceNumber(referenceNumber);
 
-        payment = paymentRepository.save(payment);
-        order.getPayments().add(payment);
+            payment = paymentRepository.save(payment);
+            order.getPayments().add(payment);
 
-        if (mode == RestaurantPayment.PaymentMode.ADVANCE_RECEIPT && referenceNumber != null && !referenceNumber.trim().isEmpty()) {
-            paymentReceiptRepository.findByReceiptNo(referenceNumber.trim()).ifPresent(receipt -> {
-                BigDecimal utilized = receipt.getUtilizedAmount() != null ? receipt.getUtilizedAmount() : BigDecimal.ZERO;
-                receipt.setUtilizedAmount(utilized.add(payAmount));
-                paymentReceiptRepository.save(receipt);
-            });
+            if (mode == RestaurantPayment.PaymentMode.ADVANCE_RECEIPT && referenceNumber != null && !referenceNumber.trim().isEmpty()) {
+                paymentReceiptRepository.findByReceiptNo(referenceNumber.trim()).ifPresent(receipt -> {
+                    BigDecimal utilized = receipt.getUtilizedAmount() != null ? receipt.getUtilizedAmount() : BigDecimal.ZERO;
+                    receipt.setUtilizedAmount(utilized.add(payAmount));
+                    paymentReceiptRepository.save(receipt);
+                });
+            }
         }
 
         BigDecimal totalPaidSoFar = order.getPayments().stream()
@@ -340,8 +398,10 @@ public class RestaurantOrderService {
         BigDecimal billTotal = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
 
         boolean fullyPaid = totalPaidSoFar.compareTo(billTotal) >= 0 && billTotal.compareTo(BigDecimal.ZERO) > 0;
-        if (fullyPaid || order.getType() == RestaurantOrder.TransactionType.RETURN) {
+        if (!isAdvance && (fullyPaid || order.getType() == RestaurantOrder.TransactionType.RETURN)) {
             order.setStatus(RestaurantOrder.RestaurantOrderStatus.PAID);
+        } else if (isAdvance && order.getStatus() == RestaurantOrder.RestaurantOrderStatus.PAID) {
+            order.setStatus(RestaurantOrder.RestaurantOrderStatus.NEW);
         }
 
         order = orderRepository.save(order);

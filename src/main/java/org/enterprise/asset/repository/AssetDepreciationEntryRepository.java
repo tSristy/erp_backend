@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface AssetDepreciationEntryRepository extends JpaRepository<AssetDepreciationEntry, Long> {
     List<AssetDepreciationEntry> findByCompanyIdOrderByIdDesc(Long companyId);
+    boolean existsByAssetIdAndPeriodDate(Long assetId, java.time.LocalDate periodDate);
 }

@@ -26,6 +26,9 @@ public class SalesInvoice extends AuditableEntity {
     private InvoiceStatus status = InvoiceStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    private SalesOrder salesOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private DeliveryNote deliveryNote;
 
     @ManyToOne(fetch = FetchType.LAZY)

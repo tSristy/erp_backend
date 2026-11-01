@@ -34,13 +34,14 @@ public class ProductionService {
     private final StockBalanceRepository stockBalanceRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final JournalEntryService journalEntryService;
+    private final org.enterprise.finance.repository.AccountRepository accountRepository;
     private final CostingService costingService;
     private final org.enterprise.inventory.service.BatchSerialTrackingService batchSerialTrackingService;
     private final org.enterprise.production.repository.QualityInspectionRepository qualityInspectionRepository;
 
     @Transactional
     public void completeProduction(Long orderId, BigDecimal producedQty) {
-        completeProduction(orderId, producedQty, null, null, null);
+        completeProduction(orderId, producedQty, null, null, null, null, null);
     }
 
     @Transactional
@@ -50,6 +51,18 @@ public class ProductionService {
             BigDecimal rejectedQty,
             Long qcInspectorId,
             String qcNotes) {
+        completeProduction(orderId, producedQty, rejectedQty, qcInspectorId, qcNotes, null, null);
+    }
+
+    @Transactional
+    public void completeProduction(
+            Long orderId,
+            BigDecimal producedQty,
+            BigDecimal rejectedQty,
+            Long qcInspectorId,
+            String qcNotes,
+            List<String> serialNumbers,
+            String batchNo) {
         ManufacturingOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
@@ -76,8 +89,19 @@ public class ProductionService {
             BigDecimal consumeQty = item.getQuantity().multiply(factor);
 
             StockBalance rmStock = stockBalanceRepository
-                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchId(item.getRawMaterial().getId(),
-                            order.getProductionWarehouse().getId(), null,null)
+                    .findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+                            item.getRawMaterial().getId(),
+                            order.getProductionWarehouse().getId(),
+                            null)
+                    .or(() -> stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
+                            item.getRawMaterial().getId(),
+                            order.getProductionWarehouse().getId(),
+                            null,
+                            null))
+                    .or(() -> stockBalanceRepository
+                            .findAvailableBatchesForIssue(item.getRawMaterial().getId(), order.getProductionWarehouse().getId())
+                            .stream()
+                            .findFirst())
                     .orElseThrow(() -> new RuntimeException(
                             "Raw material stock not found: " + item.getRawMaterial().getName()));
 
@@ -104,6 +128,7 @@ public class ProductionService {
 
             // Create ledger entry for consumption
             InventoryLedger issueLedger = new InventoryLedger();
+            issueLedger.setCompanyId(order.getCompanyId());
             issueLedger.setTransactionType(InventoryTransactionType.PRODUCTION_ISSUE);
             issueLedger.setDocumentType("MO");
             issueLedger.setDocumentId(order.getId());
@@ -121,7 +146,16 @@ public class ProductionService {
             inventoryLedgerRepository.save(issueLedger);
         }
 
-        // 2. Receive Finished Goods
+        // 2. Receive Finished Goods (resolve Batch if batch-managed)
+        if (Boolean.TRUE.equals(order.getFinishedGood().getIsBatchManaged())) {
+            String effectiveBatchNo = (batchNo != null && !batchNo.trim().isEmpty())
+                    ? batchNo.trim()
+                    : (order.getBatch() != null ? order.getBatch().getBatchNo() : "BATCH-" + order.getOrderNo());
+            org.enterprise.inventory.entity.Batch resolvedBatch = batchSerialTrackingService.findOrCreateBatch(
+                    order.getFinishedGood(), effectiveBatchNo, LocalDate.now(), null);
+            order.setBatch(resolvedBatch);
+        }
+
         StockBalance fgStock;
         if (order.getBatch() != null) {
             fgStock = stockBalanceRepository
@@ -135,6 +169,7 @@ public class ProductionService {
                     .orElseGet(StockBalance::new);
         }
 
+        fgStock.setCompanyId(order.getCompanyId());
         fgStock.setProduct(order.getFinishedGood());
         fgStock.setWarehouse(order.getProductionWarehouse());
         fgStock.setBatch(order.getBatch());
@@ -151,11 +186,31 @@ public class ProductionService {
 
         stockBalanceRepository.save(fgStock);
 
-        batchSerialTrackingService.validateSerialNumbers(order.getFinishedGood(), order.getSerialNumbers(), producedQty.intValue());
-        batchSerialTrackingService.processInboundSerials(order.getFinishedGood(), order.getBatch(), order.getSerialNumbers(), order.getProductionWarehouse(), null, InventoryTransactionType.PRODUCTION_RECEIVE, "MO", order.getId());
+        List<String> effectiveSerials = (serialNumbers != null && !serialNumbers.isEmpty())
+                ? serialNumbers.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .toList()
+                : (order.getSerialNumbers() != null ? order.getSerialNumbers() : List.of());
+
+        batchSerialTrackingService.validateSerialNumbers(order.getFinishedGood(), effectiveSerials, producedQty.intValue());
+        batchSerialTrackingService.processInboundSerials(order.getFinishedGood(), order.getBatch(), effectiveSerials, order.getProductionWarehouse(), null, InventoryTransactionType.PRODUCTION_RECEIVE, "MO", order.getId());
+
+        if (!effectiveSerials.isEmpty()) {
+            if (order.getSerialNumbers() == null) {
+                order.setSerialNumbers(new ArrayList<>());
+            }
+            for (String s : effectiveSerials) {
+                if (!order.getSerialNumbers().contains(s)) {
+                    order.getSerialNumbers().add(s);
+                }
+            }
+        }
 
         // Create ledger entry for receipt
         InventoryLedger receiveLedger = new InventoryLedger();
+        receiveLedger.setCompanyId(order.getCompanyId());
         receiveLedger.setTransactionType(InventoryTransactionType.PRODUCTION_RECEIVE);
         receiveLedger.setDocumentType("MO");
         receiveLedger.setDocumentId(order.getId());
@@ -232,12 +287,27 @@ public class ProductionService {
         if (totalRawMaterialCost.compareTo(BigDecimal.ZERO) <= 0)
             return;
 
+        Long companyId = order.getCompanyId() != null
+                ? order.getCompanyId()
+                : org.enterprise.common.util.TenantContext.getCompanyId();
+
         Warehouse warehouse = order.getProductionWarehouse();
-        if (warehouse.getInventoryAccount() == null || warehouse.getWipAccount() == null) {
-            throw new RuntimeException("Inventory or WIP account missing on Warehouse");
+        org.enterprise.finance.entity.Account inventoryAccount = warehouse != null && warehouse.getInventoryAccount() != null
+                ? warehouse.getInventoryAccount()
+                : (order.getFinishedGood() != null && order.getFinishedGood().getInventoryAccount() != null
+                        ? order.getFinishedGood().getInventoryAccount()
+                        : (companyId != null ? accountRepository.findByCodeAndCompanyId("1030", companyId) : null));
+
+        org.enterprise.finance.entity.Account wipAccount = warehouse != null && warehouse.getWipAccount() != null
+                ? warehouse.getWipAccount()
+                : inventoryAccount;
+
+        if (inventoryAccount == null || wipAccount == null) {
+            return;
         }
 
         JournalEntry journal = new JournalEntry();
+        journal.setCompanyId(companyId);
         journal.setPostingDate(LocalDate.now());
         journal.setReferenceType("MANUFACTURING_ORDER");
         journal.setReferenceId(order.getId());
@@ -247,30 +317,34 @@ public class ProductionService {
 
         // 1. Issue Materials (Dr WIP, Cr Raw Material Inventory)
         JournalEntryLine drWipLine = new JournalEntryLine();
+        drWipLine.setCompanyId(companyId);
         drWipLine.setJournalEntry(journal);
-        drWipLine.setAccount(warehouse.getWipAccount());
+        drWipLine.setAccount(wipAccount);
         drWipLine.setDebit(totalRawMaterialCost);
         drWipLine.setCredit(BigDecimal.ZERO);
         lines.add(drWipLine);
 
         JournalEntryLine crRmLine = new JournalEntryLine();
+        crRmLine.setCompanyId(companyId);
         crRmLine.setJournalEntry(journal);
-        crRmLine.setAccount(warehouse.getInventoryAccount());
+        crRmLine.setAccount(inventoryAccount);
         crRmLine.setDebit(BigDecimal.ZERO);
         crRmLine.setCredit(totalRawMaterialCost);
         lines.add(crRmLine);
 
         // 2. Receive Finished Goods (Dr FG Inventory, Cr WIP)
         JournalEntryLine drFgLine = new JournalEntryLine();
+        drFgLine.setCompanyId(companyId);
         drFgLine.setJournalEntry(journal);
-        drFgLine.setAccount(warehouse.getInventoryAccount());
+        drFgLine.setAccount(inventoryAccount);
         drFgLine.setDebit(totalRawMaterialCost);
         drFgLine.setCredit(BigDecimal.ZERO);
         lines.add(drFgLine);
 
         JournalEntryLine crWipLine = new JournalEntryLine();
+        crWipLine.setCompanyId(companyId);
         crWipLine.setJournalEntry(journal);
-        crWipLine.setAccount(warehouse.getWipAccount());
+        crWipLine.setAccount(wipAccount);
         crWipLine.setDebit(BigDecimal.ZERO);
         crWipLine.setCredit(totalRawMaterialCost);
         lines.add(crWipLine);

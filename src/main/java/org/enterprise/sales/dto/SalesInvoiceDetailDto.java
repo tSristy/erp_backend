@@ -7,6 +7,7 @@ import org.enterprise.common.dto.AuditableDto;
 @Data
 public class SalesInvoiceDetailDto extends AuditableDto {
     private Long salesInvoiceId;
+    private Long salesOrderDetailId;
     private Long deliveryNoteDetailId;
     private Long productId;
     private String productName;
