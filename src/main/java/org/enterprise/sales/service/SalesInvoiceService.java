@@ -28,6 +28,7 @@ public class SalesInvoiceService {
     private final org.enterprise.sales.repository.DeliveryNoteRepository deliveryNoteRepository;
     private final org.enterprise.inventory.repository.ProductRepository productRepository;
     private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
+    private final org.enterprise.crm.service.LoyaltyService loyaltyService;
 
     public synchronized String generateNextInvoiceNo(Long companyId) {
         long nextNum = salesInvoiceRepository.findTopByOrderByIdDesc()
@@ -266,7 +267,27 @@ public class SalesInvoiceService {
         }
 
         invoice.setStatus(SalesInvoice.InvoiceStatus.POSTED);
-        return salesInvoiceRepository.save(invoice);
+        SalesInvoice savedInvoice = salesInvoiceRepository.save(invoice);
+
+        if (savedInvoice.getCustomer() != null && savedInvoice.getCustomer().getId() != null) {
+            if (isInvoice) {
+                loyaltyService.awardPoints(
+                        savedInvoice.getCustomer().getId(),
+                        savedInvoice.getTotalAmount(),
+                        savedInvoice.getInvoiceNo(),
+                        java.time.LocalDateTime.now()
+                );
+            } else {
+                loyaltyService.reversePointsForReturn(
+                        savedInvoice.getCustomer().getId(),
+                        savedInvoice.getTotalAmount(),
+                        savedInvoice.getInvoiceNo(),
+                        java.time.LocalDateTime.now()
+                );
+            }
+        }
+
+        return savedInvoice;
     }
     private void createAccountingEntry(SalesInvoice invoice, boolean isInvoice) {
         BigDecimal totalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO;

@@ -10,11 +10,14 @@ import org.enterprise.sales.dto.*;
 public interface SalesMapper {
 
     @Mapping(target = "customer.id", source = "customerId")
+    @Mapping(target = "opportunity.id", source = "opportunityId")
     @Mapping(target = "warehouse.id", source = "warehouseId")
     SalesQuotation toEntity(SalesQuotationDto dto);
     
     @Mapping(target = "customerId", source = "customer.id")
     @Mapping(target = "customerName", source = "customer.name")
+    @Mapping(target = "opportunityId", source = "opportunity.id")
+    @Mapping(target = "opportunityName", source = "opportunity.name")
     @Mapping(target = "warehouseId", source = "warehouse.id")
     @Mapping(target = "warehouseName", source = "warehouse.name")
     SalesQuotationDto toDto(SalesQuotation entity);
@@ -35,6 +38,7 @@ public interface SalesMapper {
     @Mapping(target = "warehouse.id", source = "warehouseId")
     @Mapping(target = "referenceOrder.id", source = "referenceOrderId")
     @Mapping(target = "salesQuotation.id", source = "salesQuotationId")
+    @Mapping(target = "opportunity.id", source = "opportunityId")
     SalesOrder toEntity(SalesOrderDto dto);
     
     @Mapping(target = "customerId", source = "customer.id")
@@ -44,6 +48,8 @@ public interface SalesMapper {
     @Mapping(target = "referenceOrderId", source = "referenceOrder.id")
     @Mapping(target = "salesQuotationId", source = "salesQuotation.id")
     @Mapping(target = "salesQuotationNo", source = "salesQuotation.quotationNo")
+    @Mapping(target = "opportunityId", source = "opportunity.id")
+    @Mapping(target = "opportunityName", source = "opportunity.name")
     SalesOrderDto toDto(SalesOrder entity);
 
     @Mapping(target = "salesOrder", ignore = true)

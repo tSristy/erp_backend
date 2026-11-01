@@ -16,6 +16,8 @@ public class SalesQuotationDto extends AuditableDto {
     private org.enterprise.sales.entity.SalesQuotation.SalesChannel salesChannel;
     private Long customerId;
     private String customerName;
+    private Long opportunityId;
+    private String opportunityName;
     private Long warehouseId;
     private String warehouseName;
     private BigDecimal subTotal;

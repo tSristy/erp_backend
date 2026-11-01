@@ -16,6 +16,7 @@ import java.util.List;
 public class LoyaltyController {
 
     private final LoyaltyProfileRepository loyaltyProfileRepository;
+    private final org.enterprise.crm.service.LoyaltyService loyaltyService;
 
     @GetMapping
     public ResponseEntity<List<LoyaltyProfile>> getAllProfiles() {
@@ -27,9 +28,14 @@ public class LoyaltyController {
         return loyaltyProfileRepository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/customer/{customerId}")
+    public ResponseEntity<LoyaltyProfile> getProfileByCustomerId(@org.springframework.web.bind.annotation.PathVariable Long customerId) {
+        return ResponseEntity.ok(loyaltyService.getOrBuildDefaultProfile(customerId));
+    }
+
     @org.springframework.web.bind.annotation.PostMapping
     public ResponseEntity<LoyaltyProfile> createProfile(@jakarta.validation.Valid @org.springframework.web.bind.annotation.RequestBody LoyaltyProfile profile) {
-        LoyaltyProfile created = loyaltyProfileRepository.save(profile);
+        LoyaltyProfile created = loyaltyService.saveProfile(profile);
         java.net.URI location = org.springframework.web.servlet.support.ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(created.getId()).toUri();
         return ResponseEntity.created(location).body(created);
     }
@@ -37,7 +43,7 @@ public class LoyaltyController {
     @org.springframework.web.bind.annotation.PutMapping("/{id}")
     public ResponseEntity<LoyaltyProfile> updateProfile(@org.springframework.web.bind.annotation.PathVariable Long id, @jakarta.validation.Valid @org.springframework.web.bind.annotation.RequestBody LoyaltyProfile profile) {
         profile.setId(id);
-        return ResponseEntity.ok(loyaltyProfileRepository.save(profile));
+        return ResponseEntity.ok(loyaltyService.saveProfile(profile));
     }
 
     @org.springframework.web.bind.annotation.DeleteMapping("/{id}")

@@ -9,5 +9,6 @@ import java.util.Optional;
 
 @Repository
 public interface LoyaltyProfileRepository extends JpaRepository<LoyaltyProfile, Long>, JpaSpecificationExecutor<LoyaltyProfile> {
-    Optional<LoyaltyProfile> findByCustomerId(Long customerId);
+    @org.springframework.data.jpa.repository.Query("SELECT lp FROM LoyaltyProfile lp WHERE lp.customer.id = :customerId")
+    Optional<LoyaltyProfile> findByCustomerId(@org.springframework.data.repository.query.Param("customerId") Long customerId);
 }

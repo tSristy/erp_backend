@@ -23,6 +23,18 @@ public class Lead extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     private LeadStatus status = LeadStatus.NEW;
 
+    private Long convertedCustomerId;
+
+    private Long convertedOpportunityId;
+
+    @com.fasterxml.jackson.annotation.JsonGetter("fullName")
+    public String resolveFullName() {
+        String first = firstName != null ? firstName.trim() : "";
+        String last = lastName != null ? lastName.trim() : "";
+        String full = (first + " " + last).trim();
+        return full.isEmpty() ? (company != null ? company : "Lead #" + getId()) : full;
+    }
+
     public enum LeadStatus {
         NEW, CONTACTED, QUALIFIED, UNQUALIFIED, CONVERTED
     }

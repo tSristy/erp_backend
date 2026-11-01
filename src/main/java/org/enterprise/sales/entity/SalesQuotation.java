@@ -29,6 +29,10 @@ public class SalesQuotation extends AuditableEntity {
     private BusinessPartner customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "opportunity_id")
+    private org.enterprise.crm.sales.entity.Opportunity opportunity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private Warehouse warehouse;
 
     @Column(precision = 18, scale = 2)

@@ -12,6 +12,7 @@ public class SalesQuotationService {
 
     private final SalesQuotationRepository salesQuotationRepository;
     private final org.enterprise.inventory.repository.BusinessPartnerRepository businessPartnerRepository;
+    private final org.enterprise.crm.sales.repository.OpportunityRepository opportunityRepository;
     private final org.enterprise.inventory.repository.WarehouseRepository warehouseRepository;
     private final org.enterprise.inventory.repository.ProductRepository productRepository;
     private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
@@ -57,6 +58,18 @@ public class SalesQuotationService {
             salesQuotation.setCustomer(businessPartnerRepository.findById(salesQuotation.getCustomer().getId()).orElse(null));
         } else {
             salesQuotation.setCustomer(null);
+        }
+        if (salesQuotation.getOpportunity() != null && salesQuotation.getOpportunity().getId() != null) {
+            org.enterprise.crm.sales.entity.Opportunity opp = opportunityRepository.findById(salesQuotation.getOpportunity().getId()).orElse(null);
+            salesQuotation.setOpportunity(opp);
+            if (opp != null) {
+                if (salesQuotation.getCustomer() == null && opp.getCustomer() != null) {
+                    salesQuotation.setCustomer(opp.getCustomer());
+                }
+                syncOpportunityStageFromQuotation(opp, salesQuotation);
+            }
+        } else {
+            salesQuotation.setOpportunity(null);
         }
         if (salesQuotation.getWarehouse() != null && salesQuotation.getWarehouse().getId() != null) {
             salesQuotation.setWarehouse(warehouseRepository.findById(salesQuotation.getWarehouse().getId()).orElse(null));
@@ -158,6 +171,15 @@ public class SalesQuotationService {
         } else {
             existing.setCustomer(null);
         }
+        if (updated.getOpportunity() != null && updated.getOpportunity().getId() != null) {
+            org.enterprise.crm.sales.entity.Opportunity opp = opportunityRepository.findById(updated.getOpportunity().getId()).orElse(null);
+            existing.setOpportunity(opp);
+            if (opp != null) {
+                syncOpportunityStageFromQuotation(opp, existing);
+            }
+        } else {
+            existing.setOpportunity(null);
+        }
         if (updated.getWarehouse() != null && updated.getWarehouse().getId() != null) {
             existing.setWarehouse(warehouseRepository.findById(updated.getWarehouse().getId()).orElse(null));
         } else {
@@ -231,12 +253,43 @@ public class SalesQuotationService {
 
         return salesQuotationRepository.save(existing);
     }
+    private void syncOpportunityStageFromQuotation(org.enterprise.crm.sales.entity.Opportunity opp, SalesQuotation sq) {
+        if (opp == null) return;
+        boolean changed = false;
+        if (sq.getTotalAmount() != null && sq.getTotalAmount().compareTo(java.math.BigDecimal.ZERO) > 0
+                && (opp.getAmount() == null || opp.getAmount().compareTo(java.math.BigDecimal.ZERO) == 0)) {
+            opp.setAmount(sq.getTotalAmount());
+            changed = true;
+        }
+        if (sq.getStatus() == SalesQuotation.QuotationStatus.ACCEPTED) {
+            if (opp.getStage() != org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.CLOSED_WON) {
+                opp.setStage(org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.NEGOTIATION);
+                changed = true;
+            }
+        } else if (sq.getStatus() == SalesQuotation.QuotationStatus.REJECTED) {
+            if (opp.getStage() != org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.CLOSED_WON) {
+                opp.setStage(org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.CLOSED_LOST);
+                changed = true;
+            }
+        } else if (opp.getStage() == org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.PROSPECTING
+                || opp.getStage() == org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.QUALIFICATION) {
+            opp.setStage(org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.PROPOSAL);
+            changed = true;
+        }
+        if (changed) {
+            opportunityRepository.save(opp);
+        }
+    }
+
     @Transactional
     public SalesQuotation updateStatus(Long quotationId, SalesQuotation.QuotationStatus status) {
         SalesQuotation quotation = salesQuotationRepository.findById(quotationId)
                 .orElseThrow(() -> new RuntimeException("Sales Quotation not found"));
 
         quotation.setStatus(status);
+        if (quotation.getOpportunity() != null) {
+            syncOpportunityStageFromQuotation(quotation.getOpportunity(), quotation);
+        }
         return salesQuotationRepository.save(quotation);
 }
     public java.util.List<SalesQuotation> findAll() {

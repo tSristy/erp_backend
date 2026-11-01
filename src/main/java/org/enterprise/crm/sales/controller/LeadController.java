@@ -38,8 +38,34 @@ public class LeadController {
     public ResponseEntity<Lead> update(@PathVariable Long id, @RequestBody Lead lead) {
         return service.findById(id).map(existing -> {
             lead.setId(existing.getId());
+            if (lead.getConvertedCustomerId() == null) {
+                lead.setConvertedCustomerId(existing.getConvertedCustomerId());
+            }
+            if (lead.getConvertedOpportunityId() == null) {
+                lead.setConvertedOpportunityId(existing.getConvertedOpportunityId());
+            }
             return ResponseEntity.ok(service.save(lead));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/convert")
+    public ResponseEntity<Lead> convert(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, Object> body) {
+        String opportunityName = body != null && body.get("opportunityName") != null ? String.valueOf(body.get("opportunityName")) : null;
+        java.math.BigDecimal amount = null;
+        if (body != null && body.get("amount") != null && !String.valueOf(body.get("amount")).trim().isEmpty()) {
+            try {
+                amount = new java.math.BigDecimal(String.valueOf(body.get("amount")).trim());
+            } catch (Exception ignored) {}
+        }
+        java.time.LocalDate closeDate = null;
+        if (body != null && body.get("expectedCloseDate") != null && !String.valueOf(body.get("expectedCloseDate")).trim().isEmpty()) {
+            try {
+                closeDate = java.time.LocalDate.parse(String.valueOf(body.get("expectedCloseDate")).trim());
+            } catch (Exception ignored) {}
+        }
+        return ResponseEntity.ok(service.convertLead(id, opportunityName, amount, closeDate));
     }
 
     @DeleteMapping("/{id}")

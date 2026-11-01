@@ -22,6 +22,7 @@ public class SalesOrderService {
     private final org.enterprise.inventory.repository.ProductRepository productRepository;
     private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
     private final org.enterprise.sales.repository.SalesQuotationRepository salesQuotationRepository;
+    private final org.enterprise.crm.sales.repository.OpportunityRepository opportunityRepository;
     private final org.enterprise.sales.mapper.SalesMapper mapper;
 
     public synchronized String generateNextOrderNo(Long companyId) {
@@ -71,9 +72,22 @@ public class SalesOrderService {
             salesOrder.setWarehouse(null);
         }
         if (salesOrder.getSalesQuotation() != null && salesOrder.getSalesQuotation().getId() != null) {
-            salesOrder.setSalesQuotation(salesQuotationRepository.findById(salesOrder.getSalesQuotation().getId()).orElse(null));
+            org.enterprise.sales.entity.SalesQuotation sq = salesQuotationRepository.findById(salesOrder.getSalesQuotation().getId()).orElse(null);
+            salesOrder.setSalesQuotation(sq);
+            if (sq != null && (salesOrder.getOpportunity() == null || salesOrder.getOpportunity().getId() == null) && sq.getOpportunity() != null) {
+                salesOrder.setOpportunity(sq.getOpportunity());
+            }
         } else {
             salesOrder.setSalesQuotation(null);
+        }
+        if (salesOrder.getOpportunity() != null && salesOrder.getOpportunity().getId() != null) {
+            org.enterprise.crm.sales.entity.Opportunity opp = opportunityRepository.findById(salesOrder.getOpportunity().getId()).orElse(null);
+            salesOrder.setOpportunity(opp);
+            if (opp != null && salesOrder.getOrderType() != SalesOrder.OrderType.RETURN) {
+                markOpportunityClosedWon(opp, salesOrder.getTotalAmount());
+            }
+        } else {
+            salesOrder.setOpportunity(null);
         }
         if (salesOrder.getReferenceOrder() != null && salesOrder.getReferenceOrder().getId() != null) {
             salesOrder.setReferenceOrder(salesOrderRepository.findById(salesOrder.getReferenceOrder().getId()).orElse(null));
@@ -183,9 +197,22 @@ public class SalesOrderService {
             existing.setWarehouse(null);
         }
         if (updated.getSalesQuotation() != null && updated.getSalesQuotation().getId() != null) {
-            existing.setSalesQuotation(salesQuotationRepository.findById(updated.getSalesQuotation().getId()).orElse(null));
+            org.enterprise.sales.entity.SalesQuotation sq = salesQuotationRepository.findById(updated.getSalesQuotation().getId()).orElse(null);
+            existing.setSalesQuotation(sq);
+            if (sq != null && (updated.getOpportunity() == null || updated.getOpportunity().getId() == null) && sq.getOpportunity() != null) {
+                existing.setOpportunity(sq.getOpportunity());
+            }
         } else {
             existing.setSalesQuotation(null);
+        }
+        if (updated.getOpportunity() != null && updated.getOpportunity().getId() != null) {
+            org.enterprise.crm.sales.entity.Opportunity opp = opportunityRepository.findById(updated.getOpportunity().getId()).orElse(null);
+            existing.setOpportunity(opp);
+            if (opp != null && existing.getOrderType() != SalesOrder.OrderType.RETURN) {
+                markOpportunityClosedWon(opp, existing.getTotalAmount());
+            }
+        } else if (existing.getSalesQuotation() == null || existing.getSalesQuotation().getOpportunity() == null) {
+            existing.setOpportunity(null);
         }
         if (updated.getReferenceOrder() != null && updated.getReferenceOrder().getId() != null) {
             existing.setReferenceOrder(salesOrderRepository.findById(updated.getReferenceOrder().getId()).orElse(null));
@@ -261,6 +288,23 @@ public class SalesOrderService {
         return salesOrderRepository.save(existing);
     }
 
+    private void markOpportunityClosedWon(org.enterprise.crm.sales.entity.Opportunity opp, BigDecimal orderTotal) {
+        if (opp == null) return;
+        boolean changed = false;
+        if (opp.getStage() != org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.CLOSED_WON) {
+            opp.setStage(org.enterprise.crm.sales.entity.Opportunity.OpportunityStage.CLOSED_WON);
+            changed = true;
+        }
+        if (orderTotal != null && orderTotal.compareTo(BigDecimal.ZERO) > 0
+                && (opp.getAmount() == null || opp.getAmount().compareTo(BigDecimal.ZERO) == 0)) {
+            opp.setAmount(orderTotal);
+            changed = true;
+        }
+        if (changed) {
+            opportunityRepository.save(opp);
+        }
+    }
+
     @Transactional
     public SalesOrder confirmOrder(Long salesOrderId) {
         SalesOrder order = salesOrderRepository.findById(salesOrderId)
@@ -270,6 +314,9 @@ public class SalesOrderService {
             throw new RuntimeException("Only DRAFT orders can be confirmed");
         }
         order.setStatus(SalesOrder.SalesOrderStatus.CONFIRMED);
+        if (order.getOpportunity() != null && order.getOrderType() != SalesOrder.OrderType.RETURN) {
+            markOpportunityClosedWon(order.getOpportunity(), order.getTotalAmount());
+        }
         return salesOrderRepository.save(order);
     }
 

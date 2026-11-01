@@ -26,6 +26,8 @@ public class SalesOrderDto extends AuditableDto {
     private Long referenceOrderId;
     private Long salesQuotationId;
     private String salesQuotationNo;
+    private Long opportunityId;
+    private String opportunityName;
     private org.enterprise.sales.entity.SalesOrder.SalesChannel salesChannel;
     private List<SalesOrderDiscountDto> discounts;
     private List<SalesOrderDetailDto> details;

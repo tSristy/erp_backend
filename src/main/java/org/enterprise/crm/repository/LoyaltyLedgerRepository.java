@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface LoyaltyLedgerRepository extends JpaRepository<LoyaltyLedger, Long> {
+    boolean existsByReferenceTransactionNoAndTransactionType(String referenceTransactionNo, LoyaltyLedger.TransactionType transactionType);
+    java.util.List<LoyaltyLedger> findByProfile_IdOrderByTransactionDateDesc(Long profileId);
 }

@@ -192,7 +192,24 @@ public class RestaurantOrderService {
                 }
 
                 recalculateTotal(existing);
-                return orderRepository.saveAndFlush(existing);
+                RestaurantOrder savedExisting = orderRepository.saveAndFlush(existing);
+                if (savedExisting.getStatus() == RestaurantOrder.RestaurantOrderStatus.PAID) {
+                    Long customerId = savedExisting.getCustomer() != null ? savedExisting.getCustomer().getId() : savedExisting.getCustomerId();
+                    Long warehouseId = savedExisting.getWarehouse() != null ? savedExisting.getWarehouse().getId() : savedExisting.getWarehouseId();
+                    PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
+                            this,
+                            savedExisting.getOrderNo(),
+                            savedExisting.getType() != null ? savedExisting.getType().name() : "SALES",
+                            savedExisting.getTotalAmount(),
+                            savedExisting.getOrderDate() != null ? savedExisting.getOrderDate() : LocalDateTime.now(),
+                            customerId,
+                            warehouseId,
+                            savedExisting.getDetails(),
+                            savedExisting.getPayments()
+                    );
+                    eventPublisher.publishEvent(event);
+                }
+                return savedExisting;
             }
         }
 
