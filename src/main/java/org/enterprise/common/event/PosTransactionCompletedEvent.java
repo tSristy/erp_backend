@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 
 @Getter
 public class PosTransactionCompletedEvent extends ApplicationEvent {
+    private final Long transactionId;
+    private final Long companyId;
     private final String transactionNo;
     private final String transactionType; // SALES or RETURN
     private final BigDecimal totalAmount;
@@ -31,7 +33,23 @@ public class PosTransactionCompletedEvent extends ApplicationEvent {
                                         Long warehouseId,
                                         List<LineItemDto> lineItems,
                                         List<PaymentDto> payments) {
+        this(source, null, null, transactionNo, transactionType, totalAmount, transactionDate, customerId, warehouseId, lineItems, payments);
+    }
+
+    public PosTransactionCompletedEvent(Object source,
+                                        Long transactionId,
+                                        Long companyId,
+                                        String transactionNo,
+                                        String transactionType,
+                                        BigDecimal totalAmount,
+                                        LocalDateTime transactionDate,
+                                        Long customerId,
+                                        Long warehouseId,
+                                        List<LineItemDto> lineItems,
+                                        List<PaymentDto> payments) {
         super(source);
+        this.transactionId = transactionId;
+        this.companyId = companyId;
         this.transactionNo = transactionNo;
         this.transactionType = transactionType;
         this.totalAmount = totalAmount;
@@ -46,8 +64,16 @@ public class PosTransactionCompletedEvent extends ApplicationEvent {
             Object source, String transactionNo, String transactionType, BigDecimal totalAmount, 
             LocalDateTime transactionDate, Long customerId, Long warehouseId,
             List<? extends PosLineItem> lineItems, List<? extends PosPayment> payments) {
+        return fromInterfaces(source, null, null, transactionNo, transactionType, totalAmount, transactionDate, customerId, warehouseId, lineItems, payments);
+    }
+
+    public static PosTransactionCompletedEvent fromInterfaces(
+            Object source, Long transactionId, Long companyId,
+            String transactionNo, String transactionType, BigDecimal totalAmount, 
+            LocalDateTime transactionDate, Long customerId, Long warehouseId,
+            List<? extends PosLineItem> lineItems, List<? extends PosPayment> payments) {
         
-        List<LineItemDto> lineItemDtos = lineItems.stream().map(item -> LineItemDto.builder()
+        List<LineItemDto> lineItemDtos = lineItems != null ? lineItems.stream().map(item -> LineItemDto.builder()
                 .productId(item.getProductId())
                 .quantity(item.getQuantity())
                 .unitPrice(item.getUnitPrice())
@@ -56,19 +82,20 @@ public class PosTransactionCompletedEvent extends ApplicationEvent {
                         .discountName(d.getDiscountName())
                         .discountAmount(d.getDiscountAmount())
                         .build()).collect(Collectors.toList()) : null)
-                .build()).collect(Collectors.toList());
+                .build()).collect(Collectors.toList()) : List.of();
                 
-        List<PaymentDto> paymentDtos = payments.stream().map(payment -> PaymentDto.builder()
+        List<PaymentDto> paymentDtos = payments != null ? payments.stream().map(payment -> PaymentDto.builder()
                 .paymentMode(payment.getPaymentModeName())
                 .amount(payment.getAmount())
                 .referenceNumber(payment.getReferenceNumber())
-                .build()).collect(Collectors.toList());
+                .build()).collect(Collectors.toList()) : List.of();
                 
-        return new PosTransactionCompletedEvent(source, transactionNo, transactionType, totalAmount, transactionDate, customerId, warehouseId, lineItemDtos, paymentDtos);
+        return new PosTransactionCompletedEvent(source, transactionId, companyId, transactionNo, transactionType, totalAmount, transactionDate, customerId, warehouseId, lineItemDtos, paymentDtos);
     }
 
     @Getter
     @Builder
+    @lombok.AllArgsConstructor
     public static class LineItemDto {
         private final Long productId;
         private final BigDecimal quantity;
@@ -79,6 +106,7 @@ public class PosTransactionCompletedEvent extends ApplicationEvent {
 
     @Getter
     @Builder
+    @lombok.AllArgsConstructor
     public static class DiscountDto {
         private final String discountName;
         private final BigDecimal discountAmount;
@@ -86,6 +114,7 @@ public class PosTransactionCompletedEvent extends ApplicationEvent {
 
     @Getter
     @Builder
+    @lombok.AllArgsConstructor
     public static class PaymentDto {
         private final String paymentMode; // CASH, CARD, MFS, DUE
         private final BigDecimal amount;

@@ -72,7 +72,9 @@ public class JournalEntryService {
 
         validateJournalEntry(journalEntry);
         
-        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        Long companyId = journalEntry.getCompanyId() != null
+                ? journalEntry.getCompanyId()
+                : org.enterprise.common.util.TenantContext.getCompanyId();
         if (journalEntry.getCompanyId() == null) {
             journalEntry.setCompanyId(companyId);
         }
@@ -96,7 +98,14 @@ public class JournalEntryService {
     private void updateLedgerBalances(JournalEntry journal) {
         LocalDate postingDate = journal.getPostingDate() != null ? journal.getPostingDate() : LocalDate.now();
         FiscalPeriod period = fiscalPeriodRepository.findActivePeriodByDate(postingDate)
-                .orElseThrow(() -> new RuntimeException("No open fiscal period found for date: " + postingDate));
+                .or(() -> fiscalPeriodRepository.findPeriodByDate(postingDate))
+                .orElse(null);
+        if (period == null) {
+            return;
+        }
+        Long companyId = journal.getCompanyId() != null
+                ? journal.getCompanyId()
+                : org.enterprise.common.util.TenantContext.getCompanyId();
 
         for (JournalEntryLine line : journal.getLines()) {
             // Update GL Balance
@@ -115,7 +124,7 @@ public class JournalEntryService {
                     newAb.setPeriodCredit(BigDecimal.ZERO);
                     newAb.setClosingDebit(BigDecimal.ZERO);
                     newAb.setClosingCredit(BigDecimal.ZERO);
-                    newAb.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
+                    newAb.setCompanyId(companyId);
                     return newAb;
                 });
 
@@ -147,7 +156,7 @@ public class JournalEntryService {
                     newBpb.setPeriodDebit(BigDecimal.ZERO);
                     newBpb.setPeriodCredit(BigDecimal.ZERO);
                     newBpb.setClosingBalance(BigDecimal.ZERO);
-                    newBpb.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
+                    newBpb.setCompanyId(companyId);
                     return newBpb;
                 });
 

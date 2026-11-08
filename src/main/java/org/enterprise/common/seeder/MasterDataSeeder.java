@@ -63,6 +63,10 @@ public class MasterDataSeeder implements CommandLineRunner {
                         || menuRepository.findByCodeAndCompanyId("ASSET_MANAGEMENT_REPORTS", existingCompany.getId()).isEmpty()) {
                     seedAssetManagementModule(existingCompany.getId());
                 }
+                if (menuRepository.findByCodeAndCompanyId("RETAIL_POS_REPORTS", existingCompany.getId()).isEmpty()
+                        || menuRepository.findByCodeAndCompanyId("RESTAURANT_POS_REPORTS", existingCompany.getId()).isEmpty()) {
+                    seedPosReportMenus(existingCompany.getId());
+                }
             }
             return;
         }
@@ -718,6 +722,13 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(retail, "Dashboard", "retail-pos", "Store", 1, cid);
         createMenu(retail, "POS Sales", "retail-pos/possales", "ShoppingCart", 2, cid);
         createMenu(retail, "POS Return", "retail-pos/posreturn", "Undo2", 3, cid);
+        createMenu(retail, "Reports", "retail-pos/reports", "BarChart2", 4, cid);
+        createReportMenu(retail, "POS Sales Register", "retail-pos/reports/sales", "ShoppingCart", 5, cid);
+        createReportMenu(retail, "Product & SKU Sales Summary", "retail-pos/reports/products", "Package", 6, cid);
+        createReportMenu(retail, "Payment Tender Summary", "retail-pos/reports/payments", "CreditCard", 7, cid);
+        createReportMenu(retail, "Customer & Walk-in Analysis", "retail-pos/reports/customers", "Users", 8, cid);
+        createReportMenu(retail, "Outlet / Warehouse Sales Summary", "retail-pos/reports/warehouses", "Warehouse", 9, cid);
+        createReportMenu(retail, "POS Returns Register", "retail-pos/reports/returns", "Undo2", 10, cid);
 
         var restPos = createModule("RESTAURANT_POS", "Restaurant POS", "Point of sale for restaurants.", "restaurant-pos", "Utensils", 10, cid);
         createMenu(restPos, "Dashboard", "restaurant-pos", "Utensils", 1, cid);
@@ -727,6 +738,13 @@ public class MasterDataSeeder implements CommandLineRunner {
         createMenu(restPos, "Menu Items", "restaurant-pos/items", "Coffee", 5, cid);
         createMenu(restPos, "Tables", "restaurant-pos/tables", "Grid", 6, cid);
         createMenu(restPos, "Kitchen Display", "restaurant-pos/kds", "Monitor", 7, cid);
+        createMenu(restPos, "Reports", "restaurant-pos/reports", "BarChart2", 8, cid);
+        createReportMenu(restPos, "Order & Billing Register", "restaurant-pos/reports/orders", "ClipboardList", 9, cid);
+        createReportMenu(restPos, "Menu Item Sales Summary", "restaurant-pos/reports/items", "Coffee", 10, cid);
+        createReportMenu(restPos, "Table & Service Mode Analysis", "restaurant-pos/reports/tables", "Grid", 11, cid);
+        createReportMenu(restPos, "Waiter Performance", "restaurant-pos/reports/waiters", "Users", 12, cid);
+        createReportMenu(restPos, "Payment Mode Settlement", "restaurant-pos/reports/payments", "CreditCard", 13, cid);
+        createReportMenu(restPos, "Returns & Cancellations", "restaurant-pos/reports/returns", "Undo2", 14, cid);
 
         var hr = createModule("HR", "HR module", "Human resources and payroll.", "hr", "Users", 11, cid);
         createMenu(hr, "Dashboard", "hr", "Users", 1, cid);
@@ -795,6 +813,26 @@ public class MasterDataSeeder implements CommandLineRunner {
         createReportMenu(assetManagement, "Asset Transfers", "asset-management/reports/transfers", "ArrowRightLeft", 10, cid);
         createReportMenu(assetManagement, "Asset Disposals", "asset-management/reports/disposals", "Trash2", 11, cid);
         createReportMenu(assetManagement, "Valuation by Category", "asset-management/reports/category", "PieChart", 12, cid);
+    }
+
+    private void seedPosReportMenus(Long cid) {
+        var retail = createModule("RETAIL_POS", "Retail POS", "Point of sale for retail.", "retail-pos", "Store", 9, cid);
+        createMenu(retail, "Reports", "retail-pos/reports", "BarChart2", 4, cid);
+        createReportMenu(retail, "POS Sales Register", "retail-pos/reports/sales", "ShoppingCart", 5, cid);
+        createReportMenu(retail, "Product & SKU Sales Summary", "retail-pos/reports/products", "Package", 6, cid);
+        createReportMenu(retail, "Payment Tender Summary", "retail-pos/reports/payments", "CreditCard", 7, cid);
+        createReportMenu(retail, "Customer & Walk-in Analysis", "retail-pos/reports/customers", "Users", 8, cid);
+        createReportMenu(retail, "Outlet / Warehouse Sales Summary", "retail-pos/reports/warehouses", "Warehouse", 9, cid);
+        createReportMenu(retail, "POS Returns Register", "retail-pos/reports/returns", "Undo2", 10, cid);
+
+        var restPos = createModule("RESTAURANT_POS", "Restaurant POS", "Point of sale for restaurants.", "restaurant-pos", "Utensils", 10, cid);
+        createMenu(restPos, "Reports", "restaurant-pos/reports", "BarChart2", 8, cid);
+        createReportMenu(restPos, "Order & Billing Register", "restaurant-pos/reports/orders", "ClipboardList", 9, cid);
+        createReportMenu(restPos, "Menu Item Sales Summary", "restaurant-pos/reports/items", "Coffee", 10, cid);
+        createReportMenu(restPos, "Table & Service Mode Analysis", "restaurant-pos/reports/tables", "Grid", 11, cid);
+        createReportMenu(restPos, "Waiter Performance", "restaurant-pos/reports/waiters", "Users", 12, cid);
+        createReportMenu(restPos, "Payment Mode Settlement", "restaurant-pos/reports/payments", "CreditCard", 13, cid);
+        createReportMenu(restPos, "Returns & Cancellations", "restaurant-pos/reports/returns", "Undo2", 14, cid);
     }
 
     private org.enterprise.security.entity.Module createModule(String code, String name, String description, String route, String icon, int order, Long companyId) {

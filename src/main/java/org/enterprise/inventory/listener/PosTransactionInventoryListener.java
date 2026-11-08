@@ -49,14 +49,24 @@ public class PosTransactionInventoryListener {
 
         boolean isReturn = "RETURN".equalsIgnoreCase(event.getTransactionType());
 
+        Long companyId = event.getCompanyId() != null ? event.getCompanyId() : TenantContext.getCompanyId();
         Long warehouseId = event.getWarehouseId();
+        Warehouse warehouse = warehouseId != null ? warehouseRepository.findById(warehouseId).orElse(null) : null;
+        if (warehouse == null) {
+            final Long lookupCompanyId = companyId;
+            warehouse = warehouseRepository.findAll().stream()
+                    .filter(w -> lookupCompanyId == null || lookupCompanyId.equals(w.getCompanyId()))
+                    .findFirst()
+                    .orElse(null);
+            if (warehouse != null) {
+                warehouseId = warehouse.getId();
+            }
+        }
         if (warehouseId == null) {
-            log.warn("No warehouse specified in POS transaction {}. Skipping inventory stock & COGS adjustment.", event.getTransactionNo());
+            log.warn("No warehouse specified or found for POS transaction {}. Skipping inventory stock & COGS adjustment.", event.getTransactionNo());
             return;
         }
 
-        Long companyId = TenantContext.getCompanyId();
-        Warehouse warehouse = warehouseRepository.findById(warehouseId).orElse(null);
         if (companyId == null && warehouse != null) {
             companyId = warehouse.getCompanyId();
         }
@@ -71,8 +81,10 @@ public class PosTransactionInventoryListener {
         List<JournalEntryLine> glLines = new ArrayList<>();
         JournalEntry cogsJournal = new JournalEntry();
         cogsJournal.setCompanyId(companyId);
-        cogsJournal.setPostingDate(LocalDate.now());
+        cogsJournal.setJournalNo("JV-COGS-" + (event.getTransactionNo() != null ? event.getTransactionNo() : System.currentTimeMillis()));
+        cogsJournal.setPostingDate(event.getTransactionDate() != null ? event.getTransactionDate().toLocalDate() : LocalDate.now());
         cogsJournal.setReferenceType("POS_COGS");
+        cogsJournal.setReferenceId(event.getTransactionId());
         cogsJournal.setStatus(JournalStatus.POSTED);
 
         for (PosTransactionCompletedEvent.LineItemDto item : event.getLineItems()) {
@@ -87,6 +99,7 @@ public class PosTransactionInventoryListener {
                 req.setItemId(item.getProductId());
                 req.setWarehouseId(warehouseId);
                 req.setDocumentType("POS_TRANSACTION");
+                req.setDocumentId(event.getTransactionId());
                 req.setQuantity(qty);
 
                 BigDecimal lineCost = BigDecimal.ZERO;
@@ -110,6 +123,9 @@ public class PosTransactionInventoryListener {
                     req.setUnitCost(item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO);
                     req.setTransactionType("SALES");
                     lineCost = inventoryService.issueStock(req);
+                    if ((lineCost == null || lineCost.compareTo(BigDecimal.ZERO) <= 0) && item.getUnitPrice() != null) {
+                        lineCost = qty.multiply(item.getUnitPrice());
+                    }
                 }
 
                 if (lineCost != null && lineCost.compareTo(BigDecimal.ZERO) > 0) {

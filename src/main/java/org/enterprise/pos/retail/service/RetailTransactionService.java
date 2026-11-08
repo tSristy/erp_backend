@@ -23,6 +23,7 @@ public class RetailTransactionService {
     private final ApplicationEventPublisher eventPublisher;
     private final org.enterprise.pos.retail.repository.RetailTransactionRepository retailTransactionRepository;
     private final org.enterprise.finance.repository.PaymentReceiptRepository paymentReceiptRepository;
+    private final PosTransactionReconciliationService posTransactionReconciliationService;
     private final EntityManager entityManager;
 
     @Transactional
@@ -321,6 +322,22 @@ public class RetailTransactionService {
             transaction.setStatus(RetailTransaction.TransactionStatus.COMPLETED);
         }
 
+        if (transaction.getStatus() == RetailTransaction.TransactionStatus.COMPLETED) {
+            if ((transaction.getPayments() == null || transaction.getPayments().isEmpty())
+                    && totalAmount.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                RetailTransactionPayment defaultPayment = new RetailTransactionPayment();
+                defaultPayment.setTransaction(transaction);
+                defaultPayment.setCompanyId(TenantContext.getCompanyId());
+                defaultPayment.setPaymentMode(RetailTransactionPayment.PaymentMode.CASH);
+                defaultPayment.setAmount(totalAmount);
+                defaultPayment.setReferenceNumber(transaction.getTransactionNo());
+                if (transaction.getPayments() == null) {
+                    transaction.setPayments(new ArrayList<>());
+                }
+                transaction.getPayments().add(defaultPayment);
+            }
+        }
+
         transaction = this.save(transaction);
 
         if (transaction.getStatus() == RetailTransaction.TransactionStatus.COMPLETED) {
@@ -342,16 +359,18 @@ public class RetailTransactionService {
         }
     }
 
-    private void publishCompletedEvent(RetailTransaction transaction) {
+    public void publishCompletedEvent(RetailTransaction transaction) {
         Long customerId = transaction.getCustomer() != null ? transaction.getCustomer().getId() : null;
         Long warehouseId = transaction.getWarehouse() != null ? transaction.getWarehouse().getId() : null;
 
         PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
                 this,
+                transaction.getId(),
+                transaction.getCompanyId(),
                 transaction.getTransactionNo(),
-                transaction.getType().name(),
+                transaction.getType() != null ? transaction.getType().name() : "SALES",
                 transaction.getTotalAmount(),
-                transaction.getTransactionDate(),
+                transaction.getTransactionDate() != null ? transaction.getTransactionDate() : java.time.LocalDateTime.now(),
                 customerId,
                 warehouseId,
                 transaction.getDetails(),
@@ -359,11 +378,12 @@ public class RetailTransactionService {
         );
 
         eventPublisher.publishEvent(event);
-        log.info("Published PosTransactionCompletedEvent for transaction: {}", transaction.getTransactionNo());
+        log.info("Published PosTransactionCompletedEvent for transaction: {} (id={})", transaction.getTransactionNo(), transaction.getId());
     }
 
     @Transactional(readOnly = true)
     public java.util.List<RetailTransaction> findAll() {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         return retailTransactionRepository.findAll();
     }
 
@@ -383,6 +403,7 @@ public class RetailTransactionService {
     }
 
     public org.springframework.data.domain.Page<RetailTransaction> searchRetailTransactions(Long companyId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
             return retailTransactionRepository.searchRetailTransactions(searchTerm.trim(), pageable);
         }

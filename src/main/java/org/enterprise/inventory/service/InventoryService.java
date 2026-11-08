@@ -59,6 +59,11 @@ public class InventoryService {
         Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> new RuntimeException("Warehouse not found"));
 
+        if (companyId == null) {
+            companyId = warehouse.getCompanyId() != null ? warehouse.getCompanyId() : product.getCompanyId();
+        }
+        final Long resolvedCompanyId = companyId;
+
         Location location = request.getLocationId() != null 
                 ? locationRepository.findById(request.getLocationId()).orElse(null) 
                 : null;
@@ -76,7 +81,7 @@ public class InventoryService {
                     sb.setQuantity(BigDecimal.ZERO);
                     sb.setAverageCost(BigDecimal.ZERO);
                     sb.setTotalValue(BigDecimal.ZERO);
-                    sb.setCompanyId(companyId);
+                    sb.setCompanyId(resolvedCompanyId);
                     return sb;
                 });
 
@@ -84,9 +89,10 @@ public class InventoryService {
         BigDecimal oldValue = balance.getTotalValue() != null ? balance.getTotalValue() : BigDecimal.ZERO;
 
         BigDecimal receivedQty = request.getQuantity();
-        BigDecimal receivedValue = receivedQty.multiply(request.getUnitCost());
+        BigDecimal unitCost = request.getUnitCost() != null ? request.getUnitCost() : BigDecimal.ZERO;
+        BigDecimal receivedValue = receivedQty.multiply(unitCost);
 
-        costingService.addCostLayer(product, warehouse, request.getDocumentType(), request.getDocumentId(), receivedQty, request.getUnitCost());
+        costingService.addCostLayer(product, warehouse, request.getDocumentType(), request.getDocumentId(), receivedQty, unitCost);
 
         BigDecimal newQty = oldQty.add(receivedQty);
         BigDecimal newValue = oldValue.add(receivedValue);
@@ -102,7 +108,7 @@ public class InventoryService {
         stockBalanceRepository.save(balance);
 
         InventoryLedger ledger = new InventoryLedger();
-        ledger.setCompanyId(companyId);
+        ledger.setCompanyId(resolvedCompanyId);
         ledger.setProduct(product);
         ledger.setWarehouse(warehouse);
         ledger.setLocation(location);
@@ -112,7 +118,7 @@ public class InventoryService {
         ledger.setTransactionDate(LocalDateTime.now());
         ledger.setQtyIn(receivedQty);
         ledger.setQtyOut(BigDecimal.ZERO);
-        ledger.setUnitCost(request.getUnitCost());
+        ledger.setUnitCost(unitCost);
         ledger.setTotalCost(receivedValue);
         ledger.setBalanceQty(newQty);
         ledger.setBalanceCost(newValue);
@@ -129,44 +135,84 @@ public class InventoryService {
         Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> new RuntimeException("Warehouse not found"));
 
+        if (companyId == null) {
+            companyId = warehouse.getCompanyId() != null ? warehouse.getCompanyId() : product.getCompanyId();
+        }
+        final Long resolvedCompanyId = companyId;
+
         Location location = request.getLocationId() != null 
                 ? locationRepository.findById(request.getLocationId()).orElse(null) 
                 : null;
+
+        BigDecimal issueQty = request.getQuantity();
+        boolean isPosTransaction = "POS_TRANSACTION".equalsIgnoreCase(request.getDocumentType());
 
         StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
                         product.getId(),
                         warehouse.getId(),
                         location != null ? location.getId() : null
                 )
-                .orElseThrow(() -> new RuntimeException("Stock not found for issue"));
+                .filter(sb -> sb.getQuantity() != null && sb.getQuantity().compareTo(issueQty) >= 0)
+                .or(() -> stockBalanceRepository.findByProductIdAndWarehouseIdOrderByQuantityDesc(product.getId(), warehouse.getId())
+                        .stream()
+                        .findFirst())
+                .orElseGet(() -> {
+                    if (!isPosTransaction) {
+                        throw new RuntimeException("Stock not found for issue");
+                    }
+                    StockBalance sb = new StockBalance();
+                    sb.setProduct(product);
+                    sb.setWarehouse(warehouse);
+                    sb.setLocation(location);
+                    sb.setQuantity(BigDecimal.ZERO);
+                    sb.setAverageCost(request.getUnitCost() != null ? request.getUnitCost() : BigDecimal.ZERO);
+                    sb.setTotalValue(BigDecimal.ZERO);
+                    sb.setCompanyId(resolvedCompanyId);
+                    return sb;
+                });
 
         BigDecimal oldQty = balance.getQuantity() != null ? balance.getQuantity() : BigDecimal.ZERO;
         BigDecimal oldValue = balance.getTotalValue() != null ? balance.getTotalValue() : BigDecimal.ZERO;
-        BigDecimal issueQty = request.getQuantity();
 
-        if (oldQty.compareTo(issueQty) < 0) {
+        if (!isPosTransaction && oldQty.compareTo(issueQty) < 0) {
             throw new RuntimeException("Insufficient stock to issue");
         }
 
         BigDecimal issueValue = costingService.consumeCost(product, warehouse, issueQty);
-        BigDecimal unitCost = issueValue.divide(issueQty, 6, RoundingMode.HALF_UP);
+        if ((issueValue == null || issueValue.compareTo(BigDecimal.ZERO) <= 0)
+                && balance.getAverageCost() != null && balance.getAverageCost().compareTo(BigDecimal.ZERO) > 0) {
+            issueValue = balance.getAverageCost().multiply(issueQty);
+        }
+        if ((issueValue == null || issueValue.compareTo(BigDecimal.ZERO) <= 0)
+                && request.getUnitCost() != null && request.getUnitCost().compareTo(BigDecimal.ZERO) > 0) {
+            issueValue = request.getUnitCost().multiply(issueQty);
+        }
+        if (issueValue == null) {
+            issueValue = BigDecimal.ZERO;
+        }
+        BigDecimal unitCost = issueQty.compareTo(BigDecimal.ZERO) > 0
+                ? issueValue.divide(issueQty, 6, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
 
         BigDecimal newQty = oldQty.subtract(issueQty);
         BigDecimal newValue = oldValue.subtract(issueValue);
+        if (isPosTransaction && newQty.compareTo(BigDecimal.ZERO) < 0) {
+            newQty = BigDecimal.ZERO;
+            newValue = BigDecimal.ZERO;
+        }
 
         balance.setQuantity(newQty);
-        balance.setTotalValue(newValue);
-        if (newQty.compareTo(BigDecimal.ZERO) == 0) {
-            balance.setAverageCost(BigDecimal.ZERO);
+        balance.setTotalValue(newValue.max(BigDecimal.ZERO));
+        if (newQty.compareTo(BigDecimal.ZERO) <= 0) {
             balance.setTotalValue(BigDecimal.ZERO);
         }
         stockBalanceRepository.save(balance);
 
         InventoryLedger ledger = new InventoryLedger();
-        ledger.setCompanyId(companyId);
+        ledger.setCompanyId(resolvedCompanyId);
         ledger.setProduct(product);
         ledger.setWarehouse(warehouse);
-        ledger.setLocation(location);
+        ledger.setLocation(balance.getLocation() != null ? balance.getLocation() : location);
         ledger.setTransactionType(InventoryTransactionType.valueOf(request.getTransactionType() != null ? request.getTransactionType() : "ISSUE"));
         ledger.setDocumentType(request.getDocumentType());
         ledger.setDocumentId(request.getDocumentId());
@@ -176,7 +222,7 @@ public class InventoryService {
         ledger.setUnitCost(unitCost);
         ledger.setTotalCost(issueValue);
         ledger.setBalanceQty(newQty);
-        ledger.setBalanceCost(newValue);
+        ledger.setBalanceCost(balance.getTotalValue());
         inventoryLedgerRepository.save(ledger);
         return issueValue;
     }

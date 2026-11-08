@@ -38,8 +38,8 @@ public class PosTransactionFinanceListener {
         log.info("Finance Module received POS transaction completion event for: {} (Type: {}). Processing payments...", event.getTransactionNo(), event.getTransactionType());
 
         try {
-            Long companyId = TenantContext.getCompanyId();
-            if (companyId == null || event.getPayments() == null || event.getPayments().isEmpty()) {
+            Long companyId = event.getCompanyId() != null ? event.getCompanyId() : TenantContext.getCompanyId();
+            if (companyId == null) {
                 return;
             }
 
@@ -56,35 +56,50 @@ public class PosTransactionFinanceListener {
 
             JournalEntry journal = new JournalEntry();
             journal.setCompanyId(companyId);
-            journal.setPostingDate(LocalDate.now());
+            journal.setJournalNo("JV-POS-" + (event.getTransactionNo() != null ? event.getTransactionNo() : System.currentTimeMillis()));
+            journal.setPostingDate(event.getTransactionDate() != null ? event.getTransactionDate().toLocalDate() : LocalDate.now());
             journal.setReferenceType("POS_TRANSACTION");
+            journal.setReferenceId(event.getTransactionId());
             journal.setStatus(JournalStatus.POSTED);
 
             List<JournalEntryLine> lines = new ArrayList<>();
             BigDecimal totalPosted = BigDecimal.ZERO;
 
-            for (PosTransactionCompletedEvent.PaymentDto payment : event.getPayments()) {
-                if (payment.getAmount() == null || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                    continue;
-                }
-                BigDecimal amount = payment.getAmount();
-                boolean isReceivableOrAdvance = "DUE".equalsIgnoreCase(payment.getPaymentMode())
-                        || "ADVANCE_RECEIPT".equalsIgnoreCase(payment.getPaymentMode());
-                Account settlementAccount = (isReceivableOrAdvance && arAccount != null) ? arAccount : cashAccount;
+            List<PosTransactionCompletedEvent.PaymentDto> payments = event.getPayments();
+            if ((payments == null || payments.isEmpty())
+                    && event.getTotalAmount() != null
+                    && event.getTotalAmount().abs().compareTo(BigDecimal.ZERO) > 0) {
+                payments = List.of(PosTransactionCompletedEvent.PaymentDto.builder()
+                        .paymentMode("CASH")
+                        .amount(event.getTotalAmount().abs())
+                        .referenceNumber(event.getTransactionNo())
+                        .build());
+            }
 
-                JournalEntryLine line = new JournalEntryLine();
-                line.setJournalEntry(journal);
-                line.setCompanyId(companyId);
-                line.setAccount(settlementAccount);
-                if (isReturn) {
-                    line.setDebit(BigDecimal.ZERO);
-                    line.setCredit(amount);
-                } else {
-                    line.setDebit(amount);
-                    line.setCredit(BigDecimal.ZERO);
+            if (payments != null) {
+                for (PosTransactionCompletedEvent.PaymentDto payment : payments) {
+                    if (payment.getAmount() == null || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                        continue;
+                    }
+                    BigDecimal amount = payment.getAmount();
+                    boolean isReceivableOrAdvance = "DUE".equalsIgnoreCase(payment.getPaymentMode())
+                            || "ADVANCE_RECEIPT".equalsIgnoreCase(payment.getPaymentMode());
+                    Account settlementAccount = (isReceivableOrAdvance && arAccount != null) ? arAccount : cashAccount;
+
+                    JournalEntryLine line = new JournalEntryLine();
+                    line.setJournalEntry(journal);
+                    line.setCompanyId(companyId);
+                    line.setAccount(settlementAccount);
+                    if (isReturn) {
+                        line.setDebit(BigDecimal.ZERO);
+                        line.setCredit(amount);
+                    } else {
+                        line.setDebit(amount);
+                        line.setCredit(BigDecimal.ZERO);
+                    }
+                    lines.add(line);
+                    totalPosted = totalPosted.add(amount);
                 }
-                lines.add(line);
-                totalPosted = totalPosted.add(amount);
             }
 
             if (totalPosted.compareTo(BigDecimal.ZERO) <= 0) {

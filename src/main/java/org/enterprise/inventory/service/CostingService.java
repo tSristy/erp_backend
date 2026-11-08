@@ -44,12 +44,11 @@ public class CostingService {
      */
     @Transactional
     public BigDecimal consumeCost(Product product, org.enterprise.inventory.entity.Warehouse warehouse, BigDecimal qtyToConsume) {
-        CostingMethod method = product.getCostingMethod();
+        CostingMethod method = product.getCostingMethod() != null ? product.getCostingMethod() : CostingMethod.FIFO;
 
         if (method == CostingMethod.AVERAGE) {
-            StockBalance stock = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(product.getId(), warehouse.getId(), null,null)
-                    .orElseThrow(() -> new RuntimeException("Stock not found for AVG costing"));
-            return stock.getAverageCost().multiply(qtyToConsume);
+            BigDecimal avgCost = resolveAverageCost(product.getId(), warehouse.getId());
+            return avgCost.multiply(qtyToConsume);
         }
 
         List<InventoryCostLayer> layers;
@@ -78,13 +77,23 @@ public class CostingService {
         if (remainingToConsume.compareTo(BigDecimal.ZERO) > 0) {
             // Edge case: if physical stock exists but layers don't (e.g. system was switched from AVG to FIFO mid-way)
             // Fallback to average cost for the remaining
-            StockBalance stock = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(product.getId(), warehouse.getId(), null,null)
-                    .orElseThrow(() -> new RuntimeException("Stock not found for fallback costing"));
-            
-            totalCogs = totalCogs.add(remainingToConsume.multiply(stock.getAverageCost()));
+            BigDecimal avgCost = resolveAverageCost(product.getId(), warehouse.getId());
+            totalCogs = totalCogs.add(remainingToConsume.multiply(avgCost));
         }
 
         return totalCogs;
+    }
+
+    private BigDecimal resolveAverageCost(Long productId, Long warehouseId) {
+        return stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(productId, warehouseId, null)
+                .filter(sb -> sb.getAverageCost() != null && sb.getAverageCost().compareTo(BigDecimal.ZERO) > 0)
+                .map(StockBalance::getAverageCost)
+                .or(() -> stockBalanceRepository.findByProductIdAndWarehouseIdOrderByQuantityDesc(productId, warehouseId)
+                        .stream()
+                        .filter(sb -> sb.getAverageCost() != null && sb.getAverageCost().compareTo(BigDecimal.ZERO) > 0)
+                        .map(StockBalance::getAverageCost)
+                        .findFirst())
+                .orElse(BigDecimal.ZERO);
     }
 
 

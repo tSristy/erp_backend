@@ -27,4 +27,10 @@ public interface StockBalanceRepository
             @org.springframework.data.repository.query.Param("productId") Long productId, 
             @org.springframework.data.repository.query.Param("warehouseId") Long warehouseId
     );
+
+    @org.springframework.data.jpa.repository.Query("SELECT sb FROM StockBalance sb WHERE sb.product.id = :productId AND sb.warehouse.id = :warehouseId ORDER BY sb.quantity DESC, sb.id ASC")
+    java.util.List<StockBalance> findByProductIdAndWarehouseIdOrderByQuantityDesc(
+            @org.springframework.data.repository.query.Param("productId") Long productId,
+            @org.springframework.data.repository.query.Param("warehouseId") Long warehouseId
+    );
 }

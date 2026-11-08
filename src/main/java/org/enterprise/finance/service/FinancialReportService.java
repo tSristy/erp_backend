@@ -28,8 +28,25 @@ public class FinancialReportService {
     private final DimensionBalanceRepository dimensionBalanceRepository;
     private final JournalEntryLineRepository journalEntryLineRepository;
     private final FiscalPeriodRepository fiscalPeriodRepository;
+    private final org.enterprise.pos.retail.service.PosTransactionReconciliationService posTransactionReconciliationService;
+
+    private String formatReference(org.enterprise.finance.entity.JournalEntry je) {
+        if (je == null) {
+            return "";
+        }
+        String type = je.getReferenceType() != null ? je.getReferenceType() : "";
+        Long refId = je.getReferenceId();
+        if (refId != null) {
+            return type.isEmpty() ? String.valueOf(refId) : (type + "-" + refId);
+        }
+        if (je.getJournalNo() != null && !je.getJournalNo().isEmpty()) {
+            return type.isEmpty() ? je.getJournalNo() : (type + " (" + je.getJournalNo() + ")");
+        }
+        return type;
+    }
 
     public List<TrialBalanceRowDto> getTrialBalance(Long periodId) {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         Long companyId = TenantContext.getCompanyId();
         List<AccountBalance> balances = accountBalanceRepository.findByFiscalPeriodIdAndCompanyId(periodId, companyId);
         
@@ -49,6 +66,7 @@ public class FinancialReportService {
     }
 
     public List<LedgerRowDto> getGlLedger(String glCode, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         Long companyId = TenantContext.getCompanyId();
         
         FiscalPeriod period = fiscalPeriodRepository.findPeriodByDate(startDate).orElse(null);
@@ -111,7 +129,7 @@ public class FinancialReportService {
         for (JournalEntryLine line : lines) {
             LedgerRowDto row = new LedgerRowDto();
             row.setDate(line.getJournalEntry().getPostingDate());
-            row.setReference(line.getJournalEntry().getReferenceType() + "-" + line.getJournalEntry().getReferenceId());
+            row.setReference(formatReference(line.getJournalEntry()));
             row.setDescription(line.getJournalEntry().getJournalNo() != null ? line.getJournalEntry().getJournalNo() : "");
             
             BigDecimal debit = line.getDebit() != null ? line.getDebit() : BigDecimal.ZERO;
@@ -198,7 +216,7 @@ public class FinancialReportService {
         for (JournalEntryLine line : lines) {
             LedgerRowDto row = new LedgerRowDto();
             row.setDate(line.getJournalEntry().getPostingDate());
-            row.setReference(line.getJournalEntry().getReferenceType() + "-" + line.getJournalEntry().getReferenceId());
+            row.setReference(formatReference(line.getJournalEntry()));
             row.setDescription(line.getJournalEntry().getJournalNo() != null ? line.getJournalEntry().getJournalNo() : "");
             
             BigDecimal debit = line.getDebit() != null ? line.getDebit() : BigDecimal.ZERO;
@@ -287,7 +305,7 @@ public class FinancialReportService {
         for (JournalEntryLine line : lines) {
             LedgerRowDto row = new LedgerRowDto();
             row.setDate(line.getJournalEntry().getPostingDate());
-            row.setReference(line.getJournalEntry().getReferenceType() + "-" + line.getJournalEntry().getReferenceId());
+            row.setReference(formatReference(line.getJournalEntry()));
             row.setDescription(line.getJournalEntry().getJournalNo() != null ? line.getJournalEntry().getJournalNo() : "");
             
             BigDecimal debit = line.getDebit() != null ? line.getDebit() : BigDecimal.ZERO;
@@ -399,7 +417,7 @@ public class FinancialReportService {
         for (JournalEntryLine line : lines) {
             LedgerRowDto row = new LedgerRowDto();
             row.setDate(line.getJournalEntry().getPostingDate());
-            row.setReference(line.getJournalEntry().getReferenceType() + "-" + line.getJournalEntry().getReferenceId());
+            row.setReference(formatReference(line.getJournalEntry()));
             row.setDescription(line.getJournalEntry().getJournalNo() != null ? line.getJournalEntry().getJournalNo() : "");
 
             BigDecimal debit = line.getDebit() != null ? line.getDebit() : BigDecimal.ZERO;

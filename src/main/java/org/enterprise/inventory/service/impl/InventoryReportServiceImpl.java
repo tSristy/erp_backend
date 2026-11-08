@@ -15,9 +15,11 @@ import java.util.Map;
 public class InventoryReportServiceImpl implements InventoryReportService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final org.enterprise.pos.retail.service.PosTransactionReconciliationService posTransactionReconciliationService;
 
     @Override
     public List<Map<String, Object>> getMovementRegister(Long companyId, Long warehouseId, Long locationId, LocalDate startDate, LocalDate endDate) {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         StringBuilder sql = new StringBuilder(
                 "SELECT l.transaction_date as \"date\", p.sku as \"sku\", p.name as \"productName\", " +
                 "w.name as \"warehouseName\", loc.name as \"locationName\", " +
@@ -43,6 +45,7 @@ public class InventoryReportServiceImpl implements InventoryReportService {
 
     @Override
     public List<Map<String, Object>> getInventoryStock(Long companyId, Long warehouseId, Long locationId, LocalDate asOfDate) {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         // Simple stock balance query for current stock
         // If asOfDate is provided, historical stock calculation is needed, but for simplicity, we return current stock if asOfDate is null
         StringBuilder sql = new StringBuilder(
@@ -90,6 +93,7 @@ public class InventoryReportServiceImpl implements InventoryReportService {
 
     @Override
     public List<Map<String, Object>> getInventoryValuation(Long companyId, Long warehouseId, Long locationId, LocalDate asOfDate) {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         // Similar to stock balance but focusing on valuation
         StringBuilder sql = new StringBuilder(
                 "SELECT p.sku as \"sku\", p.name as \"productName\", w.name as \"warehouseName\", " +

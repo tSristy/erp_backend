@@ -198,6 +198,8 @@ public class RestaurantOrderService {
                     Long warehouseId = savedExisting.getWarehouse() != null ? savedExisting.getWarehouse().getId() : savedExisting.getWarehouseId();
                     PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
                             this,
+                            savedExisting.getId(),
+                            savedExisting.getCompanyId(),
                             savedExisting.getOrderNo(),
                             savedExisting.getType() != null ? savedExisting.getType().name() : "SALES",
                             savedExisting.getTotalAmount(),
@@ -296,6 +298,8 @@ public class RestaurantOrderService {
             Long warehouseId = savedOrder.getWarehouse() != null ? savedOrder.getWarehouse().getId() : null;
             PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
                     this,
+                    savedOrder.getId(),
+                    savedOrder.getCompanyId(),
                     savedOrder.getOrderNo(),
                     savedOrder.getType() != null ? savedOrder.getType().name() : "SALES",
                     savedOrder.getTotalAmount(),
@@ -431,6 +435,8 @@ public class RestaurantOrderService {
             // Publish event for Sales, Finance, Inventory modules
             PosTransactionCompletedEvent event = PosTransactionCompletedEvent.fromInterfaces(
                     this,
+                    order.getId(),
+                    order.getCompanyId(),
                     order.getOrderNo(),
                     order.getType().name(),
                     order.getTotalAmount(),
@@ -442,7 +448,7 @@ public class RestaurantOrderService {
             );
 
             eventPublisher.publishEvent(event);
-            log.info("Published PosTransactionCompletedEvent for Restaurant Order: {}", order.getOrderNo());
+            log.info("Published PosTransactionCompletedEvent for Restaurant Order: {} (id={})", order.getOrderNo(), order.getId());
         }
 
         return order;
