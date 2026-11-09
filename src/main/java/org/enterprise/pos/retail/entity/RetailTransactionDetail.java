@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.enterprise.common.entity.AuditableEntity;
+import org.enterprise.inventory.entity.Batch;
 import org.enterprise.inventory.entity.Product;
 import org.enterprise.inventory.entity.ProductVariant;
 
@@ -33,6 +34,14 @@ public class RetailTransactionDetail extends AuditableEntity implements PosLineI
     @JoinColumn(name = "variant_id")
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ProductVariant variant;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "batch_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Batch batch;
+
+    @Column(length = 100)
+    private String batchNo;
 
     @Column(length = 100)
     private String serialNo;
@@ -74,6 +83,28 @@ public class RetailTransactionDetail extends AuditableEntity implements PosLineI
     @Override
     public Long getProductId() {
         return product != null ? product.getId() : null;
+    }
+
+    @Override
+    public Long getVariantId() {
+        return variant != null ? variant.getId() : null;
+    }
+
+    @Override
+    public Long getBatchId() {
+        return batch != null ? batch.getId() : null;
+    }
+
+    @Override
+    public String getBatchNo() {
+        if (batchNo != null && !batchNo.trim().isEmpty()) {
+            return batchNo.trim();
+        }
+        try {
+            return batch != null ? batch.getBatchNo() : null;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @Override

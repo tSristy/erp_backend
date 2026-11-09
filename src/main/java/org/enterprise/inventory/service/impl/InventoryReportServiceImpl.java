@@ -22,13 +22,14 @@ public class InventoryReportServiceImpl implements InventoryReportService {
         posTransactionReconciliationService.reconcileCompletedPosTransactions();
         StringBuilder sql = new StringBuilder(
                 "SELECT l.transaction_date as \"date\", p.sku as \"sku\", p.name as \"productName\", " +
-                "w.name as \"warehouseName\", loc.name as \"locationName\", " +
+                "w.name as \"warehouseName\", loc.name as \"locationName\", b.batch_no as \"batchNo\", " +
                 "l.transaction_type as \"type\", l.document_type as \"docType\", l.document_id as \"docId\", " +
                 "l.qty_in as \"qtyIn\", l.qty_out as \"qtyOut\", l.balance_qty as \"balanceQty\" " +
                 "FROM inv_inventory_ledger l " +
                 "JOIN products p ON l.product_id = p.id " +
                 "LEFT JOIN warehouses w ON l.warehouse_id = w.id " +
                 "LEFT JOIN locations loc ON l.location_id = loc.id " +
+                "LEFT JOIN inv_batches b ON l.batch_id = b.id " +
                 "WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
@@ -115,11 +116,14 @@ public class InventoryReportServiceImpl implements InventoryReportService {
 
     @Override
     public List<Map<String, Object>> getCurrentStockSerialNo(Long companyId, Long warehouseId, Long locationId) {
+        posTransactionReconciliationService.reconcileCompletedPosTransactions();
         StringBuilder sql = new StringBuilder(
-                "SELECT sn.serial_no as \"serialNo\", p.sku as \"sku\", p.name as \"productName\", " +
+                "SELECT sn.serial_no as \"serialNo\", p.id as \"productId\", p.sku as \"sku\", p.name as \"productName\", " +
+                "b.id as \"batchId\", b.batch_no as \"batchNo\", " +
                 "w.name as \"warehouseName\", loc.name as \"locationName\", sn.status as \"status\" " +
                 "FROM inv_serial_numbers sn " +
                 "JOIN products p ON sn.product_id = p.id " +
+                "LEFT JOIN inv_batches b ON sn.batch_id = b.id " +
                 "LEFT JOIN warehouses w ON sn.warehouse_id = w.id " +
                 "LEFT JOIN locations loc ON sn.location_id = loc.id " +
                 "WHERE sn.status = 'IN_STOCK' "

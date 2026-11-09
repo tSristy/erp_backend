@@ -76,8 +76,12 @@ public class PosTransactionReconciliationService {
 
                 // Backfill any orphan POS_TRANSACTION inventory ledger rows with null document_id
                 if (tx.getDetails() != null) {
+                    boolean isReturnTx = tx.getType() == RetailTransaction.TransactionType.RETURN;
+                    String targetSerialStatus = isReturnTx ? "IN_STOCK" : "ISSUED";
+
                     for (var detail : tx.getDetails()) {
                         if (detail.getProduct() != null && detail.getProduct().getId() != null) {
+                            Long pid = detail.getProduct().getId();
                             jdbcTemplate.update(
                                     "UPDATE inv_inventory_ledger SET document_id = ? " +
                                     "WHERE id IN (" +
@@ -87,8 +91,29 @@ public class PosTransactionReconciliationService {
                                     "  ORDER BY id ASC LIMIT 1" +
                                     ")",
                                     tx.getId(),
-                                    detail.getProduct().getId()
+                                    pid
                             );
+
+                            // Reconcile serial numbers status in inv_serial_numbers
+                            java.util.LinkedHashSet<String> detailSerials = new java.util.LinkedHashSet<>();
+                            if (detail.getSerialNumbers() != null) {
+                                for (String sn : detail.getSerialNumbers()) {
+                                    if (sn != null && !sn.trim().isEmpty()) {
+                                        detailSerials.add(sn.trim());
+                                    }
+                                }
+                            }
+                            if (detail.getSerialNo() != null && !detail.getSerialNo().trim().isEmpty()) {
+                                detailSerials.add(detail.getSerialNo().trim());
+                            }
+                            for (String sn : detailSerials) {
+                                jdbcTemplate.update(
+                                        "UPDATE inv_serial_numbers SET status = ? WHERE serial_no = ? AND product_id = ?",
+                                        targetSerialStatus,
+                                        sn,
+                                        pid
+                                );
+                            }
                         }
                     }
                 }

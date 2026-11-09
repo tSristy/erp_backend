@@ -75,6 +75,11 @@ public class RetailTransactionService {
                 } else {
                     detail.setVariant(null);
                 }
+                if (detail.getBatch() != null && detail.getBatch().getId() != null) {
+                    detail.setBatch(entityManager.getReference(org.enterprise.inventory.entity.Batch.class, detail.getBatch().getId()));
+                } else {
+                    detail.setBatch(null);
+                }
 
                 if ((detail.getSerialNo() == null || detail.getSerialNo().trim().isEmpty()) && detail.getSerialNumbers() != null && !detail.getSerialNumbers().isEmpty()) {
                     detail.setSerialNo(detail.getSerialNumbers().get(0));
@@ -203,6 +208,13 @@ public class RetailTransactionService {
             } else {
                 target.setVariant(null);
             }
+
+            if (incomingDetail.getBatch() != null && incomingDetail.getBatch().getId() != null) {
+                target.setBatch(entityManager.getReference(org.enterprise.inventory.entity.Batch.class, incomingDetail.getBatch().getId()));
+            } else {
+                target.setBatch(null);
+            }
+            target.setBatchNo(incomingDetail.getBatchNo());
 
             target.setQuantity(incomingDetail.getQuantity());
             target.setUnitPrice(incomingDetail.getUnitPrice());

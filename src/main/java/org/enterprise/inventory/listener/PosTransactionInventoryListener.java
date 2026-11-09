@@ -97,6 +97,11 @@ public class PosTransactionInventoryListener {
 
                 InventoryTransactionRequest req = new InventoryTransactionRequest();
                 req.setItemId(item.getProductId());
+                req.setVariantId(item.getVariantId());
+                req.setBatchId(item.getBatchId());
+                req.setBatchNo(item.getBatchNo());
+                req.setSerialNo(item.getSerialNo());
+                req.setSerialNumbers(item.getSerialNumbers());
                 req.setWarehouseId(warehouseId);
                 req.setDocumentType("POS_TRANSACTION");
                 req.setDocumentId(event.getTransactionId());

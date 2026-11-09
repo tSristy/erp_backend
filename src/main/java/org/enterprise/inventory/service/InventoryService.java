@@ -25,7 +25,35 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final WarehouseRepository warehouseRepository;
     private final LocationRepository locationRepository;
+    private final BatchRepository batchRepository;
+    private final SerialNumberRepository serialNumberRepository;
     private final CostingService costingService;
+
+    private List<String> collectSerialNumbers(InventoryTransactionRequest request) {
+        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+        if (request.getSerialNumbers() != null) {
+            for (String sn : request.getSerialNumbers()) {
+                if (sn != null && !sn.trim().isEmpty()) {
+                    set.add(sn.trim());
+                }
+            }
+        }
+        if (request.getSerialNo() != null && !request.getSerialNo().trim().isEmpty()) {
+            set.add(request.getSerialNo().trim());
+        }
+        return new java.util.ArrayList<>(set);
+    }
+
+    private Batch resolveBatchFromRequest(InventoryTransactionRequest request, Long productId) {
+        if (request.getBatchId() != null) {
+            Batch byId = batchRepository.findById(request.getBatchId()).orElse(null);
+            if (byId != null) return byId;
+        }
+        if (request.getBatchNo() != null && !request.getBatchNo().trim().isEmpty()) {
+            return batchRepository.findByBatchNoAndProductId(request.getBatchNo().trim(), productId).orElse(null);
+        }
+        return null;
+    }
 
     @Transactional(readOnly = true)
     public List<Inventory> getByProduct(Long productId) {
@@ -68,16 +96,71 @@ public class InventoryService {
                 ? locationRepository.findById(request.getLocationId()).orElse(null) 
                 : null;
 
-        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+        Batch resolvedBatch = resolveBatchFromRequest(request, product.getId());
+        List<String> serials = collectSerialNumbers(request);
+        for (String sn : serials) {
+            SerialNumber serialEntity = serialNumberRepository.findBySerialNoAndProductId(sn, product.getId())
+                    .orElse(null);
+            if (serialEntity != null) {
+                serialEntity.setStatus(SerialNumber.SerialStatus.IN_STOCK);
+                serialEntity.setWarehouse(warehouse);
+                if (location != null) {
+                    serialEntity.setLocation(location);
+                } else if (serialEntity.getLocation() != null) {
+                    location = serialEntity.getLocation();
+                }
+                if (resolvedBatch == null && serialEntity.getBatch() != null) {
+                    resolvedBatch = serialEntity.getBatch();
+                } else if (resolvedBatch != null && serialEntity.getBatch() == null) {
+                    serialEntity.setBatch(resolvedBatch);
+                }
+                serialNumberRepository.save(serialEntity);
+            } else {
+                SerialNumber newSerial = new SerialNumber();
+                newSerial.setCompanyId(resolvedCompanyId);
+                newSerial.setSerialNo(sn);
+                newSerial.setProduct(product);
+                newSerial.setWarehouse(warehouse);
+                newSerial.setLocation(location);
+                newSerial.setBatch(resolvedBatch);
+                newSerial.setStatus(SerialNumber.SerialStatus.IN_STOCK);
+                serialNumberRepository.save(newSerial);
+            }
+        }
+
+        if (resolvedBatch == null && Boolean.TRUE.equals(product.getIsBatchManaged())) {
+            resolvedBatch = stockBalanceRepository.findByProductIdAndWarehouseIdOrderByQuantityDesc(product.getId(), warehouse.getId())
+                    .stream()
+                    .map(StockBalance::getBatch)
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        final Location finalLocation = location;
+        final Batch finalBatch = resolvedBatch;
+
+        StockBalance balance = (finalBatch != null
+                ? stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
                         product.getId(),
                         warehouse.getId(),
-                        location != null ? location.getId() : null
-                )
+                        finalLocation != null ? finalLocation.getId() : null,
+                        finalBatch.getId()
+                  ).or(() -> stockBalanceRepository.findByProductIdAndWarehouseIdOrderByQuantityDesc(product.getId(), warehouse.getId())
+                        .stream()
+                        .filter(sb -> sb.getBatch() != null && sb.getBatch().getId().equals(finalBatch.getId()))
+                        .findFirst())
+                : stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+                        product.getId(),
+                        warehouse.getId(),
+                        finalLocation != null ? finalLocation.getId() : null
+                  ))
                 .orElseGet(() -> {
                     StockBalance sb = new StockBalance();
                     sb.setProduct(product);
                     sb.setWarehouse(warehouse);
-                    sb.setLocation(location);
+                    sb.setLocation(finalLocation);
+                    sb.setBatch(finalBatch);
                     sb.setQuantity(BigDecimal.ZERO);
                     sb.setAverageCost(BigDecimal.ZERO);
                     sb.setTotalValue(BigDecimal.ZERO);
@@ -105,13 +188,17 @@ public class InventoryService {
         balance.setQuantity(newQty);
         balance.setAverageCost(avgCost);
         balance.setTotalValue(newValue);
+        if (balance.getBatch() == null && finalBatch != null) {
+            balance.setBatch(finalBatch);
+        }
         stockBalanceRepository.save(balance);
 
         InventoryLedger ledger = new InventoryLedger();
         ledger.setCompanyId(resolvedCompanyId);
         ledger.setProduct(product);
         ledger.setWarehouse(warehouse);
-        ledger.setLocation(location);
+        ledger.setLocation(balance.getLocation() != null ? balance.getLocation() : finalLocation);
+        ledger.setBatch(balance.getBatch() != null ? balance.getBatch() : finalBatch);
         ledger.setTransactionType(InventoryTransactionType.valueOf(request.getTransactionType() != null ? request.getTransactionType() : "GRN"));
         ledger.setDocumentType(request.getDocumentType());
         ledger.setDocumentId(request.getDocumentId());
@@ -147,12 +234,75 @@ public class InventoryService {
         BigDecimal issueQty = request.getQuantity();
         boolean isPosTransaction = "POS_TRANSACTION".equalsIgnoreCase(request.getDocumentType());
 
-        StockBalance balance = stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+        Batch resolvedBatch = resolveBatchFromRequest(request, product.getId());
+        List<String> serials = collectSerialNumbers(request);
+
+        for (String sn : serials) {
+            SerialNumber serialEntity = serialNumberRepository.findBySerialNoAndProductId(sn, product.getId())
+                    .orElse(null);
+            if (serialEntity != null) {
+                serialEntity.setStatus(SerialNumber.SerialStatus.ISSUED);
+                if (resolvedBatch == null && serialEntity.getBatch() != null) {
+                    resolvedBatch = serialEntity.getBatch();
+                }
+                if (location == null && serialEntity.getLocation() != null) {
+                    location = serialEntity.getLocation();
+                }
+                serialNumberRepository.save(serialEntity);
+            }
+        }
+
+        // If serial-managed POS sale did not specify serial numbers explicitly, auto-issue available IN_STOCK serials in that warehouse
+        if (serials.isEmpty() && isPosTransaction && Boolean.TRUE.equals(product.getIsSerialManaged())) {
+            int countToIssue = issueQty != null ? issueQty.intValue() : 0;
+            if (countToIssue > 0) {
+                List<SerialNumber> availableSerials = serialNumberRepository.findByProductIdAndWarehouseIdAndStatusOrderByIdAsc(
+                        product.getId(), warehouse.getId(), SerialNumber.SerialStatus.IN_STOCK);
+                for (int i = 0; i < Math.min(countToIssue, availableSerials.size()); i++) {
+                    SerialNumber snEntity = availableSerials.get(i);
+                    snEntity.setStatus(SerialNumber.SerialStatus.ISSUED);
+                    if (resolvedBatch == null && snEntity.getBatch() != null) {
+                        resolvedBatch = snEntity.getBatch();
+                    }
+                    if (location == null && snEntity.getLocation() != null) {
+                        location = snEntity.getLocation();
+                    }
+                    serialNumberRepository.save(snEntity);
+                }
+            }
+        }
+
+        // If batch-managed product has no explicit batch, pick FEFO (First Expiry, First Out) batch
+        if (resolvedBatch == null && Boolean.TRUE.equals(product.getIsBatchManaged())) {
+            resolvedBatch = stockBalanceRepository.findAvailableBatchesForIssue(product.getId(), warehouse.getId())
+                    .stream()
+                    .map(StockBalance::getBatch)
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        final Location finalLocation = location;
+        final Batch finalBatch = resolvedBatch;
+
+        StockBalance balance = (finalBatch != null
+                ? stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchId(
                         product.getId(),
                         warehouse.getId(),
-                        location != null ? location.getId() : null
-                )
-                .filter(sb -> sb.getQuantity() != null && sb.getQuantity().compareTo(issueQty) >= 0)
+                        finalLocation != null ? finalLocation.getId() : null,
+                        finalBatch.getId()
+                  ).or(() -> stockBalanceRepository.findByProductIdAndWarehouseIdOrderByQuantityDesc(product.getId(), warehouse.getId())
+                        .stream()
+                        .filter(sb -> sb.getBatch() != null && sb.getBatch().getId().equals(finalBatch.getId()))
+                        .findFirst())
+                : stockBalanceRepository.findByProductIdAndWarehouseIdAndLocationIdAndBatchIsNull(
+                        product.getId(),
+                        warehouse.getId(),
+                        finalLocation != null ? finalLocation.getId() : null
+                  ).filter(sb -> sb.getQuantity() != null && sb.getQuantity().compareTo(issueQty) >= 0))
+                .or(() -> stockBalanceRepository.findAvailableBatchesForIssue(product.getId(), warehouse.getId())
+                        .stream()
+                        .findFirst())
                 .or(() -> stockBalanceRepository.findByProductIdAndWarehouseIdOrderByQuantityDesc(product.getId(), warehouse.getId())
                         .stream()
                         .findFirst())
@@ -163,7 +313,8 @@ public class InventoryService {
                     StockBalance sb = new StockBalance();
                     sb.setProduct(product);
                     sb.setWarehouse(warehouse);
-                    sb.setLocation(location);
+                    sb.setLocation(finalLocation);
+                    sb.setBatch(finalBatch);
                     sb.setQuantity(BigDecimal.ZERO);
                     sb.setAverageCost(request.getUnitCost() != null ? request.getUnitCost() : BigDecimal.ZERO);
                     sb.setTotalValue(BigDecimal.ZERO);
@@ -212,7 +363,8 @@ public class InventoryService {
         ledger.setCompanyId(resolvedCompanyId);
         ledger.setProduct(product);
         ledger.setWarehouse(warehouse);
-        ledger.setLocation(balance.getLocation() != null ? balance.getLocation() : location);
+        ledger.setLocation(balance.getLocation() != null ? balance.getLocation() : finalLocation);
+        ledger.setBatch(balance.getBatch() != null ? balance.getBatch() : finalBatch);
         ledger.setTransactionType(InventoryTransactionType.valueOf(request.getTransactionType() != null ? request.getTransactionType() : "ISSUE"));
         ledger.setDocumentType(request.getDocumentType());
         ledger.setDocumentId(request.getDocumentId());

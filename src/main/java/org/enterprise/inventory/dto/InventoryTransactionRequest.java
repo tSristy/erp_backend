@@ -13,6 +13,14 @@ public class InventoryTransactionRequest {
 
     private Long variantId;
 
+    private Long batchId;
+
+    private String batchNo;
+
+    private String serialNo;
+
+    private java.util.List<String> serialNumbers;
+
     private Long warehouseId;
 
     private Long locationId;

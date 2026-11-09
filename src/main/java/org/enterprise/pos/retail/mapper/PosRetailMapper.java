@@ -35,6 +35,7 @@ public interface PosRetailMapper {
     @Mapping(target = "transaction", ignore = true)
     @Mapping(target = "product.id", source = "productId")
     @Mapping(target = "variant.id", source = "variantId")
+    @Mapping(target = "batch.id", source = "batchId")
     @Mapping(target = "discountAmount", expression = "java(dto.getDiscountAmount() != null ? dto.getDiscountAmount() : dto.getDiscount())")
     RetailTransactionDetail toEntity(RetailTransactionDetailDto dto);
     
@@ -42,6 +43,8 @@ public interface PosRetailMapper {
     @Mapping(target = "productId", source = "product.id")
     @Mapping(target = "variantId", source = "variant.id")
     @Mapping(target = "variantSku", source = "variant.sku")
+    @Mapping(target = "batchId", source = "batch.id")
+    @Mapping(target = "batchNo", expression = "java(entity.getBatchNo() != null ? entity.getBatchNo() : (entity.getBatch() != null ? entity.getBatch().getBatchNo() : null))")
     @Mapping(target = "discount", source = "discountAmount")
     @Mapping(target = "discountAmount", source = "discountAmount")
     RetailTransactionDetailDto toDto(RetailTransactionDetail entity);

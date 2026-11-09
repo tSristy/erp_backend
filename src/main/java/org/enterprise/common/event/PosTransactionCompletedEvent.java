@@ -75,6 +75,11 @@ public class PosTransactionCompletedEvent extends ApplicationEvent {
         
         List<LineItemDto> lineItemDtos = lineItems != null ? lineItems.stream().map(item -> LineItemDto.builder()
                 .productId(item.getProductId())
+                .variantId(item.getVariantId())
+                .batchId(item.getBatchId())
+                .batchNo(item.getBatchNo())
+                .serialNo(item.getSerialNo())
+                .serialNumbers(item.getSerialNumbers() != null ? List.copyOf(item.getSerialNumbers()) : List.of())
                 .quantity(item.getQuantity())
                 .unitPrice(item.getUnitPrice())
                 .lineTotal(item.getLineTotal())
@@ -98,6 +103,11 @@ public class PosTransactionCompletedEvent extends ApplicationEvent {
     @lombok.AllArgsConstructor
     public static class LineItemDto {
         private final Long productId;
+        private final Long variantId;
+        private final Long batchId;
+        private final String batchNo;
+        private final String serialNo;
+        private final List<String> serialNumbers;
         private final BigDecimal quantity;
         private final BigDecimal unitPrice;
         private final BigDecimal lineTotal;

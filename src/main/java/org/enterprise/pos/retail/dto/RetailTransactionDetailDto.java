@@ -11,6 +11,8 @@ public class RetailTransactionDetailDto extends AuditableDto {
     private Long productId;
     private Long variantId;
     private String variantSku;
+    private Long batchId;
+    private String batchNo;
     private String serialNo;
     private List<String> serialNumbers;
     private BigDecimal quantity;
