@@ -45,13 +45,7 @@ public class PurchaseInvoiceService {
             invoice.setInvoiceNo("INV-" + System.currentTimeMillis());
         }
 
-        if (invoice.getGoodsReceipt() != null) {
-            boolean alreadyInvoiced = purchaseInvoiceRepository.existsByGoodsReceiptIdAndStatusNot(
-                    invoice.getGoodsReceipt().getId(), PurchaseInvoice.InvoiceStatus.CANCELLED);
-            if (alreadyInvoiced) {
-                throw new RuntimeException("This Goods Receipt has already been invoiced.");
-            }
-        }
+        resolveAndValidateGoodsReceipts(invoice, null);
 
         Long companyId = TenantContext.getCompanyId();
         invoice.setCompanyId(companyId);
@@ -61,6 +55,9 @@ public class PurchaseInvoiceService {
                 detail.setId(null);
                 detail.setPurchaseInvoice(invoice);
                 detail.setCompanyId(companyId);
+                if (detail.getGoodsReceipt() == null && invoice.getGoodsReceipt() != null) {
+                    detail.setGoodsReceipt(invoice.getGoodsReceipt());
+                }
             });
         }
         return purchaseInvoiceRepository.save(invoice);
@@ -73,11 +70,15 @@ public class PurchaseInvoiceService {
             throw new RuntimeException("Only DRAFT purchase invoices can be updated");
         }
 
+        resolveAndValidateGoodsReceipts(incoming, id);
+
         Long companyId = TenantContext.getCompanyId();
         if (incoming.getInvoiceDate() != null) existing.setInvoiceDate(incoming.getInvoiceDate());
         if (incoming.getDueDate() != null) existing.setDueDate(incoming.getDueDate());
         if (incoming.getVendor() != null) existing.setVendor(incoming.getVendor());
-        if (incoming.getGoodsReceipt() != null) existing.setGoodsReceipt(incoming.getGoodsReceipt());
+        existing.setPurchaseOrder(incoming.getPurchaseOrder());
+        existing.setGoodsReceipt(incoming.getGoodsReceipt());
+        existing.setGoodsReceipts(incoming.getGoodsReceipts() != null ? new ArrayList<>(incoming.getGoodsReceipts()) : new ArrayList<>());
         if (incoming.getInvoiceType() != null) existing.setInvoiceType(incoming.getInvoiceType());
         if (incoming.getTotalAmount() != null) existing.setTotalAmount(incoming.getTotalAmount());
 
@@ -87,10 +88,58 @@ public class PurchaseInvoiceService {
                 detail.setId(null);
                 detail.setPurchaseInvoice(existing);
                 detail.setCompanyId(companyId);
+                if (detail.getGoodsReceipt() == null && existing.getGoodsReceipt() != null) {
+                    detail.setGoodsReceipt(existing.getGoodsReceipt());
+                }
                 existing.getDetails().add(detail);
             });
         }
         return purchaseInvoiceRepository.save(existing);
+    }
+
+    private void resolveAndValidateGoodsReceipts(PurchaseInvoice invoice, Long excludeInvoiceId) {
+        java.util.LinkedHashSet<Long> grnIds = new java.util.LinkedHashSet<>();
+
+        if (invoice.getGoodsReceipts() != null) {
+            for (var grn : invoice.getGoodsReceipts()) {
+                if (grn != null && grn.getId() != null) {
+                    grnIds.add(grn.getId());
+                }
+            }
+        }
+        if (invoice.getGoodsReceipt() != null && invoice.getGoodsReceipt().getId() != null) {
+            grnIds.add(invoice.getGoodsReceipt().getId());
+        }
+        if (invoice.getDetails() != null) {
+            for (var detail : invoice.getDetails()) {
+                if (detail != null && detail.getGoodsReceipt() != null && detail.getGoodsReceipt().getId() != null) {
+                    grnIds.add(detail.getGoodsReceipt().getId());
+                }
+            }
+        }
+
+        List<org.enterprise.inventory.entity.GoodsReceipt> resolvedGrns = new ArrayList<>();
+        for (Long grnId : grnIds) {
+            boolean alreadyInvoiced = purchaseInvoiceRepository.isGoodsReceiptInvoiced(
+                    grnId, PurchaseInvoice.InvoiceStatus.CANCELLED, excludeInvoiceId);
+            if (alreadyInvoiced) {
+                throw new RuntimeException("Goods Receipt (ID: " + grnId + ") has already been invoiced.");
+            }
+            goodsReceiptRepository.findById(grnId).ifPresent(resolvedGrns::add);
+        }
+
+        invoice.setGoodsReceipts(resolvedGrns);
+        if (!resolvedGrns.isEmpty()) {
+            invoice.setGoodsReceipt(resolvedGrns.get(0));
+            if (invoice.getPurchaseOrder() == null && resolvedGrns.get(0).getPurchaseOrder() != null) {
+                invoice.setPurchaseOrder(resolvedGrns.get(0).getPurchaseOrder());
+            }
+            if (invoice.getVendor() == null && resolvedGrns.get(0).getVendor() != null) {
+                invoice.setVendor(resolvedGrns.get(0).getVendor());
+            }
+        } else {
+            invoice.setGoodsReceipt(null);
+        }
     }
 
     @Transactional
@@ -129,23 +178,72 @@ public class PurchaseInvoiceService {
     }
 
     private void adjustGrnInvoicedQty(PurchaseInvoice invoice, boolean increment) {
-        if (invoice.getGoodsReceipt() == null || invoice.getGoodsReceipt().getId() == null || invoice.getDetails() == null) {
+        if (invoice.getDetails() == null || invoice.getDetails().isEmpty()) {
             return;
         }
-        goodsReceiptRepository.findById(invoice.getGoodsReceipt().getId()).ifPresent(grn -> {
-            for (var invDetail : invoice.getDetails()) {
-                if (invDetail.getProduct() == null || invDetail.getQuantity() == null) continue;
-                grn.getDetails().stream()
-                        .filter(gd -> gd.getProduct() != null && gd.getProduct().getId().equals(invDetail.getProduct().getId()))
-                        .findFirst()
-                        .ifPresent(gd -> {
-                            BigDecimal current = gd.getInvoicedQuantity() != null ? gd.getInvoicedQuantity() : BigDecimal.ZERO;
-                            BigDecimal updated = increment ? current.add(invDetail.getQuantity()) : current.subtract(invDetail.getQuantity()).max(BigDecimal.ZERO);
-                            gd.setInvoicedQuantity(updated);
-                        });
+
+        java.util.LinkedHashSet<Long> grnIds = new java.util.LinkedHashSet<>();
+        if (invoice.getGoodsReceipts() != null) {
+            invoice.getGoodsReceipts().forEach(g -> {
+                if (g != null && g.getId() != null) grnIds.add(g.getId());
+            });
+        }
+        if (invoice.getGoodsReceipt() != null && invoice.getGoodsReceipt().getId() != null) {
+            grnIds.add(invoice.getGoodsReceipt().getId());
+        }
+        for (var invDetail : invoice.getDetails()) {
+            if (invDetail.getGoodsReceipt() != null && invDetail.getGoodsReceipt().getId() != null) {
+                grnIds.add(invDetail.getGoodsReceipt().getId());
             }
+        }
+
+        if (grnIds.isEmpty()) {
+            return;
+        }
+
+        java.util.Map<Long, org.enterprise.inventory.entity.GoodsReceipt> grnMap = new java.util.LinkedHashMap<>();
+        for (Long grnId : grnIds) {
+            goodsReceiptRepository.findById(grnId).ifPresent(grn -> grnMap.put(grnId, grn));
+        }
+
+        for (var invDetail : invoice.getDetails()) {
+            if (invDetail.getProduct() == null || invDetail.getQuantity() == null) continue;
+
+            Long targetGrnId = invDetail.getGoodsReceipt() != null ? invDetail.getGoodsReceipt().getId() : null;
+            Long targetGrnDetailId = invDetail.getGoodsReceiptDetail() != null ? invDetail.getGoodsReceiptDetail().getId() : null;
+
+            List<org.enterprise.inventory.entity.GoodsReceipt> candidateGrns = new ArrayList<>();
+            if (targetGrnId != null && grnMap.containsKey(targetGrnId)) {
+                candidateGrns.add(grnMap.get(targetGrnId));
+            } else {
+                candidateGrns.addAll(grnMap.values());
+            }
+
+            boolean matched = false;
+            for (var grn : candidateGrns) {
+                if (grn.getDetails() == null) continue;
+                var matchOpt = grn.getDetails().stream()
+                        .filter(gd -> {
+                            if (targetGrnDetailId != null && targetGrnDetailId.equals(gd.getId())) {
+                                return true;
+                            }
+                            return gd.getProduct() != null && gd.getProduct().getId().equals(invDetail.getProduct().getId());
+                        })
+                        .findFirst();
+                if (matchOpt.isPresent()) {
+                    var gd = matchOpt.get();
+                    BigDecimal current = gd.getInvoicedQuantity() != null ? gd.getInvoicedQuantity() : BigDecimal.ZERO;
+                    BigDecimal updated = increment ? current.add(invDetail.getQuantity()) : current.subtract(invDetail.getQuantity()).max(BigDecimal.ZERO);
+                    gd.setInvoicedQuantity(updated);
+                    matched = true;
+                    break;
+                }
+            }
+        }
+
+        for (var grn : grnMap.values()) {
             goodsReceiptRepository.save(grn);
-        });
+        }
     }
 
     private void createAccountingEntry(PurchaseInvoice invoice) {

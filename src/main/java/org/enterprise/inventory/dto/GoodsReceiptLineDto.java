@@ -59,6 +59,29 @@ public class GoodsReceiptLineDto {
 
     private BigDecimal unitCost;
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"batch_id"})
+    private Long batchId;
+
+    @com.fasterxml.jackson.annotation.JsonSetter("batch")
+    public void setBatch(Object batch) {
+        if (batch instanceof Number) {
+            this.batchId = ((Number) batch).longValue();
+        } else if (batch instanceof String) {
+            try {
+                this.batchId = Long.valueOf((String) batch);
+            } catch (NumberFormatException ignored) {}
+        } else if (batch instanceof java.util.Map) {
+            Object id = ((java.util.Map<?, ?>) batch).get("id");
+            if (id instanceof Number) {
+                this.batchId = ((Number) id).longValue();
+            } else if (id instanceof String) {
+                try {
+                    this.batchId = Long.valueOf((String) id);
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+    }
+
     private String batchNo;
 
     private java.time.LocalDate manufactureDate;

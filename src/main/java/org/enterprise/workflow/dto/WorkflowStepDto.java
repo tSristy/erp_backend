@@ -9,7 +9,9 @@ public class WorkflowStepDto {
     private String name;
     private String approvalType;
     private Long roleId;
+    private String roleName;
     private Long userId;
+    private String userName;
     private Boolean mandatory;
     private Boolean parallelApproval;
     private Integer escalationHours;

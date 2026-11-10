@@ -47,11 +47,20 @@ public class WorkflowMapperImpl implements WorkflowMapper {
                 }
                 BeanUtils.copyProperties(stepDto, step, "id", "createdAt", "updatedAt", "createdBy", "updatedBy", "deleted", "deletedAt", "deletedBy", "deleteReason");
                 step.setWorkflow(entity);
-                if (stepDto.getRoleId() != null) {
-                    step.setRole(roleRepository.findById(stepDto.getRoleId()).orElse(null));
+                if (step.getApprovalType() != null) {
+                    step.setApprovalType(step.getApprovalType().trim().toUpperCase());
+                } else {
+                    step.setApprovalType("ROLE");
                 }
-                if (stepDto.getUserId() != null) {
-                    step.setUser(userRepository.findById(stepDto.getUserId()).orElse(null));
+                if ("ROLE".equalsIgnoreCase(step.getApprovalType())) {
+                    step.setRole(stepDto.getRoleId() != null ? roleRepository.findById(stepDto.getRoleId()).orElse(null) : null);
+                    step.setUser(null);
+                } else if ("USER".equalsIgnoreCase(step.getApprovalType())) {
+                    step.setUser(stepDto.getUserId() != null ? userRepository.findById(stepDto.getUserId()).orElse(null) : null);
+                    step.setRole(null);
+                } else {
+                    step.setRole(stepDto.getRoleId() != null ? roleRepository.findById(stepDto.getRoleId()).orElse(null) : null);
+                    step.setUser(stepDto.getUserId() != null ? userRepository.findById(stepDto.getUserId()).orElse(null) : null);
                 }
             }
         } else if (entity.getSteps() != null) {
@@ -97,8 +106,19 @@ public class WorkflowMapperImpl implements WorkflowMapper {
             dto.setSteps(entity.getSteps().stream().map(step -> {
                 WorkflowStepDto stepDto = new WorkflowStepDto();
                 BeanUtils.copyProperties(step, stepDto);
-                if (step.getRole() != null) stepDto.setRoleId(step.getRole().getId());
-                if (step.getUser() != null) stepDto.setUserId(step.getUser().getId());
+                stepDto.setApprovalType(step.getApprovalType() != null ? step.getApprovalType().trim().toUpperCase() : "ROLE");
+                if (step.getRole() != null) {
+                    stepDto.setRoleId(step.getRole().getId());
+                    stepDto.setRoleName(
+                            step.getRole().getName() != null && !step.getRole().getName().isBlank()
+                                    ? step.getRole().getName()
+                                    : step.getRole().getCode()
+                    );
+                }
+                if (step.getUser() != null) {
+                    stepDto.setUserId(step.getUser().getId());
+                    stepDto.setUserName(step.getUser().getUsername());
+                }
                 return stepDto;
             }).collect(Collectors.toList()));
         }

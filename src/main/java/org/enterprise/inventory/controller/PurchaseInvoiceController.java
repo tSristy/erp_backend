@@ -54,6 +54,11 @@ public class PurchaseInvoiceController {
         return ResponseEntity.ok(purchaseInvoiceService.updateInvoiceStatus(id, status));
     }
 
+    @PostMapping("/{id}/post")
+    public ResponseEntity<PurchaseInvoice> postInvoice(@PathVariable Long id) {
+        return ResponseEntity.ok(purchaseInvoiceService.updateInvoiceStatus(id, PurchaseInvoice.InvoiceStatus.POSTED));
+    }
+
 
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<org.enterprise.inventory.entity.PurchaseInvoice> search(

@@ -21,24 +21,51 @@ public class BatchSerialTrackingService {
     private final SerialNumberTransactionRepository serialNumberTransactionRepository;
 
     public Batch findOrCreateBatch(Product product, String batchNo, LocalDate mfgDate, LocalDate expDate) {
+        String normalizedBatchNo = batchNo != null ? batchNo.trim() : "";
         if (!Boolean.TRUE.equals(product.getIsBatchManaged())) {
+            if (!normalizedBatchNo.isEmpty()) {
+                throw new RuntimeException("Product '" + product.getName() + "' is not batch-enabled. Enable Batch Managed on the product to assign a batch number.");
+            }
             return null;
         }
-        if (batchNo == null || batchNo.trim().isEmpty()) {
-            throw new RuntimeException("Batch number is required for batch managed product: " + product.getName());
+        if (normalizedBatchNo.isEmpty()) {
+            throw new RuntimeException("Batch number is required for batch-enabled product: " + product.getName());
+        }
+        if (mfgDate != null && expDate != null && expDate.isBefore(mfgDate)) {
+            throw new RuntimeException("Expiry date cannot be earlier than manufacture date for batch: " + normalizedBatchNo);
         }
 
-        return batchRepository.findByBatchNoAndProductId(batchNo, product.getId())
+        Long companyId = org.enterprise.common.util.TenantContext.getCompanyId();
+        List<Batch> existingByNo = batchRepository.findByBatchNoIgnoreCase(normalizedBatchNo);
+        for (Batch existing : existingByNo) {
+            boolean sameCompany = companyId == null || existing.getCompanyId() == null || companyId.equals(existing.getCompanyId());
+            if (sameCompany && existing.getProduct() != null && !existing.getProduct().getId().equals(product.getId())) {
+                throw new RuntimeException("Batch number '" + normalizedBatchNo + "' already exists for another product: " + existing.getProduct().getName());
+            }
+        }
+
+        Batch batch = batchRepository.findFirstByBatchNoIgnoreCaseAndProductId(normalizedBatchNo, product.getId())
+                .or(() -> batchRepository.findByBatchNoAndProductId(normalizedBatchNo, product.getId()))
                 .orElseGet(() -> {
                     Batch newBatch = new Batch();
-                    newBatch.setBatchNo(batchNo);
+                    newBatch.setBatchNo(normalizedBatchNo);
                     newBatch.setProduct(product);
-                    newBatch.setManufactureDate(mfgDate);
-                    newBatch.setExpiryDate(expDate);
                     newBatch.setActive(true);
-                    newBatch.setCompanyId(org.enterprise.common.util.TenantContext.getCompanyId());
-                    return batchRepository.save(newBatch);
+                    newBatch.setCompanyId(companyId);
+                    return newBatch;
                 });
+
+        if (Boolean.FALSE.equals(batch.getActive())) {
+            throw new RuntimeException("Batch " + normalizedBatchNo + " is inactive for product: " + product.getName());
+        }
+
+        if (mfgDate != null) {
+            batch.setManufactureDate(mfgDate);
+        }
+        if (expDate != null) {
+            batch.setExpiryDate(expDate);
+        }
+        return batchRepository.save(batch);
     }
 
     public void validateSerialNumbers(Product product, List<String> serialNumbers, int expectedQuantity) {

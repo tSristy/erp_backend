@@ -19,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/workflow/definitions")
 @RequiredArgsConstructor
+@org.springframework.transaction.annotation.Transactional
 public class WorkflowDefinitionController {
 
     private final WorkflowDefinitionService service;

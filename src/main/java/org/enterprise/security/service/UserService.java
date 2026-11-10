@@ -47,9 +47,16 @@ public class UserService {
     private final CostCenterRepository costCenterRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
-        Long companyId = TenantContext.get().getCompanyId();
-        return userRepository.findActiveUsersByCompanyId(companyId).stream()
+        Long companyId = TenantContext.getCompanyId();
+        List<User> users = companyId != null
+                ? userRepository.findActiveUsersByCompanyId(companyId)
+                : userRepository.findByActiveTrue();
+        if (users.isEmpty()) {
+            users = userRepository.findByActiveTrue();
+        }
+        return users.stream()
                 .map(this::mapToDto)
                 .toList();
     }
@@ -66,6 +73,7 @@ public class UserService {
         return users.map(this::mapToDto);
     }
 
+    @Transactional(readOnly = true)
     public UserDto getUserById(Long id) {
         return userRepository.findById(id)
                 .map(this::mapToDto)

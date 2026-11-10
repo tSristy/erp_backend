@@ -51,8 +51,34 @@ public class GoodsReceiptDetail extends AuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private PurchaseOrderDetail purchaseOrderDetail;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "batch_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "product"})
     private Batch batch;
+
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonProperty("batchId")
+    public Long getBatchId() {
+        return batch != null ? batch.getId() : null;
+    }
+
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonProperty("batchNo")
+    public String getBatchNo() {
+        return batch != null ? batch.getBatchNo() : null;
+    }
+
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonProperty("manufactureDate")
+    public java.time.LocalDate getManufactureDate() {
+        return batch != null ? batch.getManufactureDate() : null;
+    }
+
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonProperty("expiryDate")
+    public java.time.LocalDate getExpiryDate() {
+        return batch != null ? batch.getExpiryDate() : null;
+    }
 
     @ElementCollection
     @CollectionTable(name = "inv_goods_receipt_detail_serials", joinColumns = @JoinColumn(name = "detail_id"))

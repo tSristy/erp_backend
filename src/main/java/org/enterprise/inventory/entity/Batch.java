@@ -11,11 +11,13 @@ import java.time.LocalDate;
 @Table(name = "inv_batches")
 @Getter
 @Setter
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Batch extends AuditableEntity {
 
     private String batchNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;
 
     private LocalDate manufactureDate;

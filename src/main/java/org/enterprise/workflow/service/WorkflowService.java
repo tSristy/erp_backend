@@ -2,6 +2,8 @@ package org.enterprise.workflow.service;
 
 import lombok.RequiredArgsConstructor;
 import org.enterprise.common.util.TenantContext;
+import org.enterprise.security.entity.User;
+import org.enterprise.security.repository.UserRepository;
 import org.enterprise.workflow.dto.WorkflowActionRequest;
 import org.enterprise.workflow.dto.WorkflowStartRequest;
 import org.enterprise.workflow.dto.WorkflowTaskDto;
@@ -33,6 +35,7 @@ public class WorkflowService {
         private final WorkflowHistoryRepository historyRepository;
         private final WorkflowRuleEngine ruleEngine;
         private final ApplicationEventPublisher eventPublisher;
+        private final UserRepository userRepository;
 
         // =========================
         // START WORKFLOW
@@ -43,7 +46,7 @@ public class WorkflowService {
 
                 WorkflowDefinition definition = definitionRepository
                                 .findByCode(request.getWorkflowCode())
-                                .orElseThrow(() -> new RuntimeException("Workflow not found"));
+                                .orElseGet(() -> ensureDefaultWorkflowDefinition(request));
 
                 WorkflowInstance instance = new WorkflowInstance();
 
@@ -63,9 +66,62 @@ public class WorkflowService {
                                 definition,
                                 request.getAmount());
 
+                if (steps.isEmpty()) {
+                        steps = ensureDefaultWorkflowSteps(definition);
+                }
+
                 createTasks(instance, steps);
 
                 return instance;
+        }
+
+        private WorkflowDefinition ensureDefaultWorkflowDefinition(WorkflowStartRequest request) {
+                String code = request.getWorkflowCode() != null ? request.getWorkflowCode().trim() : "PO_APPROVAL";
+                WorkflowDefinition def = new WorkflowDefinition();
+                def.setCode(code);
+                if ("PO_APPROVAL".equalsIgnoreCase(code)) {
+                        def.setName("Purchase Order Approval");
+                        def.setModule("INVENTORY");
+                        def.setEntityName(request.getEntityName() != null ? request.getEntityName() : "PurchaseOrder");
+                } else {
+                        def.setName(code.replace('_', ' '));
+                        def.setModule("GENERAL");
+                        def.setEntityName(request.getEntityName() != null ? request.getEntityName() : "Document");
+                }
+                def.setActive(true);
+                def.setCompanyId(TenantContext.getCompanyId());
+                return definitionRepository.save(def);
+        }
+
+        private List<WorkflowStep> ensureDefaultWorkflowSteps(WorkflowDefinition definition) {
+                List<WorkflowStep> existingSteps = stepRepository.findByWorkflowOrderByStepNo(definition);
+                if (!existingSteps.isEmpty()) {
+                        return existingSteps;
+                }
+
+                Long currentUserId = TenantContext.get() != null ? TenantContext.get().getUserId() : null;
+                User assignedUser = null;
+                if (currentUserId != null) {
+                        assignedUser = userRepository.findById(currentUserId).orElse(null);
+                }
+                if (assignedUser == null) {
+                        assignedUser = userRepository.findAll().stream()
+                                        .filter(u -> Boolean.TRUE.equals(u.getActive()))
+                                        .findFirst()
+                                        .orElse(null);
+                }
+
+                WorkflowStep defaultStep = new WorkflowStep();
+                defaultStep.setStepNo(1);
+                defaultStep.setName("Manager Approval");
+                defaultStep.setApprovalType("USER");
+                defaultStep.setMandatory(true);
+                defaultStep.setFinalStep(true);
+                defaultStep.setWorkflow(definition);
+                defaultStep.setUser(assignedUser);
+                defaultStep.setCompanyId(TenantContext.getCompanyId());
+
+                return List.of(stepRepository.save(defaultStep));
         }
 
         // =========================
@@ -117,11 +173,35 @@ public class WorkflowService {
 
                 task.setInstance(instance);
                 task.setStep(firstStep);
-                task.setAssignedUser(firstStep.getUser());
+                task.setAssignedUser(resolveStepAssignee(firstStep));
                 task.setStatus("PENDING");
                 task.setCompanyId(instance.getCompanyId());
 
                 taskRepository.save(task);
+        }
+
+        private User resolveStepAssignee(WorkflowStep step) {
+                if (step.getUser() != null) {
+                        return step.getUser();
+                }
+                if (step.getRole() != null && step.getRole().getId() != null) {
+                        Long targetRoleId = step.getRole().getId();
+                        User roleUser = userRepository.findByActiveTrue().stream()
+                                        .filter(u -> u.getRoles() != null && u.getRoles().stream()
+                                                        .anyMatch(ur -> Boolean.TRUE.equals(ur.getActive())
+                                                                        && ur.getRole() != null
+                                                                        && targetRoleId.equals(ur.getRole().getId())))
+                                        .findFirst()
+                                        .orElse(null);
+                        if (roleUser != null) {
+                                return roleUser;
+                        }
+                }
+                Long currentUserId = TenantContext.get() != null ? TenantContext.get().getUserId() : null;
+                if (currentUserId != null) {
+                        return userRepository.findById(currentUserId).orElse(null);
+                }
+                return null;
         }
 
         // =========================
@@ -135,7 +215,7 @@ public class WorkflowService {
                                 .findById(request.getTaskId())
                                 .orElseThrow(() -> new RuntimeException("Task not found"));
 
-                if (!task.getAssignedUser().getId()
+                if (task.getAssignedUser() != null && !task.getAssignedUser().getId()
                                 .equals(TenantContext.get().getUserId())) {
 
                         throw new RuntimeException("Unauthorized approval");
@@ -230,7 +310,7 @@ public class WorkflowService {
 
                 nextTask.setInstance(instance);
                 nextTask.setStep(nextStep);
-                nextTask.setAssignedUser(nextStep.getUser());
+                nextTask.setAssignedUser(resolveStepAssignee(nextStep));
                 nextTask.setStatus("PENDING");
                 nextTask.setCompanyId(instance.getCompanyId());
 

@@ -16,4 +16,18 @@ public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice
     List<PurchaseInvoice> findUnpaidByVendorOrderByDueDateAsc(@org.springframework.data.repository.query.Param("vendorId") Long vendorId, @org.springframework.data.repository.query.Param("status") PurchaseInvoice.InvoiceStatus status);
 
     boolean existsByGoodsReceiptIdAndStatusNot(Long goodsReceiptId, PurchaseInvoice.InvoiceStatus status);
+
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT COUNT(p) > 0 FROM PurchaseInvoice p " +
+            "LEFT JOIN p.goodsReceipts gr " +
+            "LEFT JOIN p.details d " +
+            "WHERE p.status <> :status " +
+            "AND (p.goodsReceipt.id = :goodsReceiptId OR gr.id = :goodsReceiptId OR d.goodsReceipt.id = :goodsReceiptId) " +
+            "AND (:excludeInvoiceId IS NULL OR p.id <> :excludeInvoiceId)"
+    )
+    boolean isGoodsReceiptInvoiced(
+            @org.springframework.data.repository.query.Param("goodsReceiptId") Long goodsReceiptId,
+            @org.springframework.data.repository.query.Param("status") PurchaseInvoice.InvoiceStatus status,
+            @org.springframework.data.repository.query.Param("excludeInvoiceId") Long excludeInvoiceId
+    );
 }

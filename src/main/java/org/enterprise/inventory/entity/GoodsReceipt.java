@@ -24,12 +24,15 @@ public class GoodsReceipt extends AuditableEntity {
     private GoodsReceiptStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private BusinessPartner vendor;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Warehouse warehouse;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "details"})
     private PurchaseOrder purchaseOrder;
 
     @Column(precision = 18, scale = 2)

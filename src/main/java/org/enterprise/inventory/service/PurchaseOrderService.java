@@ -185,8 +185,8 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
         PurchaseOrder po = findById(id)
                 .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
 
-        if (po.getStatus() != PurchaseOrderStatus.DRAFT) {
-            throw new RuntimeException("Only DRAFT purchase orders can be updated");
+        if (po.getStatus() != PurchaseOrderStatus.DRAFT && po.getStatus() != PurchaseOrderStatus.REJECTED) {
+            throw new RuntimeException("Only DRAFT or REJECTED purchase orders can be updated");
         }
 
         if (request.getPoDate() != null) po.setPoDate(request.getPoDate());
@@ -270,12 +270,36 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
     }
 
     @Transactional
+    public PurchaseOrder submitToWorkflow(Long id) {
+        PurchaseOrder po = findById(id)
+                .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
+
+        if (po.getStatus() != PurchaseOrderStatus.DRAFT
+                && po.getStatus() != PurchaseOrderStatus.REJECTED
+                && !(po.getStatus() == PurchaseOrderStatus.SUBMITTED && po.getWorkflowInstanceId() == null)) {
+            throw new RuntimeException("Only DRAFT or REJECTED purchase orders can be submitted for workflow approval");
+        }
+
+        WorkflowStartRequest workflowReq = new WorkflowStartRequest();
+        workflowReq.setWorkflowCode("PO_APPROVAL");
+        workflowReq.setEntityId(po.getId());
+        workflowReq.setEntityName("PurchaseOrder");
+        workflowReq.setDocumentNo(po.getPoNo());
+        workflowReq.setAmount(po.getTotalAmount() != null ? po.getTotalAmount() : BigDecimal.ZERO);
+
+        WorkflowInstance instance = workflowService.startWorkflow(workflowReq);
+        po.setWorkflowInstanceId(instance.getId());
+        po.setStatus(PurchaseOrderStatus.SUBMITTED);
+        return this.save(po);
+    }
+
+    @Transactional
     public PurchaseOrder approvePurchaseOrder(Long id) {
         PurchaseOrder po = findById(id)
                 .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
                 
-        if (po.getStatus() != PurchaseOrderStatus.DRAFT) {
-            throw new RuntimeException("Only DRAFT purchase orders can be approved");
+        if (po.getStatus() != PurchaseOrderStatus.DRAFT && po.getStatus() != PurchaseOrderStatus.SUBMITTED) {
+            throw new RuntimeException("Only DRAFT or SUBMITTED purchase orders can be approved");
         }
         
         po.setStatus(PurchaseOrderStatus.APPROVED);
@@ -351,8 +375,10 @@ public class PurchaseOrderService extends BaseService<PurchaseOrder, Long> {
         PurchaseOrder po = findById(id)
                 .orElseThrow(() -> new RuntimeException("Purchase Order not found"));
                 
-        if (po.getStatus() != PurchaseOrderStatus.DRAFT && po.getStatus() != PurchaseOrderStatus.APPROVED) {
-            throw new RuntimeException("Only DRAFT or APPROVED purchase orders can be cancelled");
+        if (po.getStatus() != PurchaseOrderStatus.DRAFT
+                && po.getStatus() != PurchaseOrderStatus.SUBMITTED
+                && po.getStatus() != PurchaseOrderStatus.APPROVED) {
+            throw new RuntimeException("Only DRAFT, SUBMITTED or APPROVED purchase orders can be cancelled");
         }
         
         po.setStatus(PurchaseOrderStatus.CANCELLED);

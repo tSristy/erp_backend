@@ -47,6 +47,11 @@ public class PurchaseOrderController {
         return ResponseEntity.noContent().build();
     }
     
+    @PostMapping("/{id}/submit")
+    public ResponseEntity<PurchaseOrder> submitPurchaseOrderToWorkflow(@PathVariable Long id) {
+        return ResponseEntity.ok(purchaseOrderService.submitToWorkflow(id));
+    }
+
     @PostMapping("/{id}/approve")
     public ResponseEntity<PurchaseOrder> approvePurchaseOrder(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseOrderService.approvePurchaseOrder(id));

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
 
     private final GoodsReceiptRepository goodsReceiptRepository;
@@ -137,16 +138,36 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                     .orElseThrow(() -> new RuntimeException("Product not found"));
 
             detail.setProduct(product);
+            PurchaseOrderDetail matchedPoDetail = null;
+            if (goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
+                matchedPoDetail = goodsReceipt.getPurchaseOrder().getDetails().stream()
+                        .filter(poDetail -> poDetail.getProduct() != null
+                                && poDetail.getProduct().getId().equals(product.getId())
+                                && (dto.getVariantId() == null
+                                        || (poDetail.getVariant() != null && poDetail.getVariant().getId().equals(dto.getVariantId()))))
+                        .findFirst()
+                        .orElseGet(() -> goodsReceipt.getPurchaseOrder().getDetails().stream()
+                                .filter(poDetail -> poDetail.getProduct() != null && poDetail.getProduct().getId().equals(product.getId()))
+                                .findFirst()
+                                .orElse(null));
+            }
+            if (matchedPoDetail != null) {
+                detail.setPurchaseOrderDetail(matchedPoDetail);
+            }
             if (dto.getVariantId() != null) {
                 detail.setVariant(productVariantRepository.findById(dto.getVariantId()).orElse(null));
-            } else if (goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
-                goodsReceipt.getPurchaseOrder().getDetails().stream()
-                        .filter(poDetail -> poDetail.getProduct() != null && poDetail.getProduct().getId().equals(product.getId()) && poDetail.getVariant() != null)
-                        .findFirst()
-                        .ifPresent(poDetail -> detail.setVariant(poDetail.getVariant()));
+            } else if (matchedPoDetail != null && matchedPoDetail.getVariant() != null) {
+                detail.setVariant(matchedPoDetail.getVariant());
+            }
+            BigDecimal resolvedUnitCost = dto.getUnitCost();
+            if ((resolvedUnitCost == null || resolvedUnitCost.compareTo(BigDecimal.ZERO) <= 0) && matchedPoDetail != null && matchedPoDetail.getUnitPrice() != null) {
+                resolvedUnitCost = matchedPoDetail.getUnitPrice();
+            }
+            if (resolvedUnitCost == null) {
+                resolvedUnitCost = BigDecimal.ZERO;
             }
             detail.setQuantity(dto.getQuantity());
-            detail.setUnitCost(dto.getUnitCost());
+            detail.setUnitCost(resolvedUnitCost);
 
             Batch batch = batchSerialTrackingService.findOrCreateBatch(product, dto.getBatchNo(), dto.getManufactureDate(), dto.getExpiryDate());
             detail.setBatch(batch);
@@ -156,7 +177,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                 detail.setSerialNumbers(dto.getSerialNumbers());
             }
 
-            BigDecimal lineAmount = dto.getQuantity().multiply(dto.getUnitCost());
+            BigDecimal lineAmount = dto.getQuantity().multiply(resolvedUnitCost);
             detail.setLineTotal(lineAmount);
 
             totalAmount = totalAmount.add(lineAmount);
@@ -211,16 +232,36 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                     .orElseThrow(() -> new RuntimeException("Product not found"));
 
             detail.setProduct(product);
+            PurchaseOrderDetail matchedPoDetail = null;
+            if (goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
+                matchedPoDetail = goodsReceipt.getPurchaseOrder().getDetails().stream()
+                        .filter(poDetail -> poDetail.getProduct() != null
+                                && poDetail.getProduct().getId().equals(product.getId())
+                                && (dto.getVariantId() == null
+                                        || (poDetail.getVariant() != null && poDetail.getVariant().getId().equals(dto.getVariantId()))))
+                        .findFirst()
+                        .orElseGet(() -> goodsReceipt.getPurchaseOrder().getDetails().stream()
+                                .filter(poDetail -> poDetail.getProduct() != null && poDetail.getProduct().getId().equals(product.getId()))
+                                .findFirst()
+                                .orElse(null));
+            }
+            if (matchedPoDetail != null) {
+                detail.setPurchaseOrderDetail(matchedPoDetail);
+            }
             if (dto.getVariantId() != null) {
                 detail.setVariant(productVariantRepository.findById(dto.getVariantId()).orElse(null));
-            } else if (goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
-                goodsReceipt.getPurchaseOrder().getDetails().stream()
-                        .filter(poDetail -> poDetail.getProduct() != null && poDetail.getProduct().getId().equals(product.getId()) && poDetail.getVariant() != null)
-                        .findFirst()
-                        .ifPresent(poDetail -> detail.setVariant(poDetail.getVariant()));
+            } else if (matchedPoDetail != null && matchedPoDetail.getVariant() != null) {
+                detail.setVariant(matchedPoDetail.getVariant());
+            }
+            BigDecimal resolvedUnitCost = dto.getUnitCost();
+            if ((resolvedUnitCost == null || resolvedUnitCost.compareTo(BigDecimal.ZERO) <= 0) && matchedPoDetail != null && matchedPoDetail.getUnitPrice() != null) {
+                resolvedUnitCost = matchedPoDetail.getUnitPrice();
+            }
+            if (resolvedUnitCost == null) {
+                resolvedUnitCost = BigDecimal.ZERO;
             }
             detail.setQuantity(dto.getQuantity());
-            detail.setUnitCost(dto.getUnitCost());
+            detail.setUnitCost(resolvedUnitCost);
 
             Batch batch = batchSerialTrackingService.findOrCreateBatch(product, dto.getBatchNo(), dto.getManufactureDate(), dto.getExpiryDate());
             detail.setBatch(batch);
@@ -230,7 +271,7 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                 detail.setSerialNumbers(dto.getSerialNumbers());
             }
 
-            BigDecimal lineAmount = dto.getQuantity().multiply(dto.getUnitCost());
+            BigDecimal lineAmount = dto.getQuantity().multiply(resolvedUnitCost);
             detail.setLineTotal(lineAmount);
 
             totalAmount = totalAmount.add(lineAmount);
@@ -455,15 +496,24 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
                 batchSerialTrackingService.processOutboundSerials(detail.getProduct(), detail.getBatch(), detail.getSerialNumbers(), goodsReceipt.getWarehouse(), null, SerialNumber.SerialStatus.RETURNED, InventoryTransactionType.PURCHASE_RETURN, "GRN", goodsReceipt.getId());
             }
             
-            if (detail.getPurchaseOrderDetail() != null) {
+            PurchaseOrderDetail poDetailToUpdate = detail.getPurchaseOrderDetail();
+            if (poDetailToUpdate == null && goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
+                poDetailToUpdate = goodsReceipt.getPurchaseOrder().getDetails().stream()
+                        .filter(pod -> pod.getProduct() != null && pod.getProduct().getId().equals(detail.getProduct().getId()))
+                        .findFirst()
+                        .orElse(null);
+                if (poDetailToUpdate != null) {
+                    detail.setPurchaseOrderDetail(poDetailToUpdate);
+                }
+            }
+
+            if (poDetailToUpdate != null) {
                 if (isInbound) {
-                    detail.getPurchaseOrderDetail().setReceivedQty(
-                        detail.getPurchaseOrderDetail().getReceivedQty().add(detail.getQuantity())
-                    );
+                    BigDecimal existingReceived = Optional.ofNullable(poDetailToUpdate.getReceivedQty()).orElse(BigDecimal.ZERO);
+                    poDetailToUpdate.setReceivedQty(existingReceived.add(detail.getQuantity()));
                 } else {
-                    detail.getPurchaseOrderDetail().setReturnedQty(
-                        detail.getPurchaseOrderDetail().getReturnedQty().add(detail.getQuantity())
-                    );
+                    BigDecimal existingReturned = Optional.ofNullable(poDetailToUpdate.getReturnedQty()).orElse(BigDecimal.ZERO);
+                    poDetailToUpdate.setReturnedQty(existingReturned.add(detail.getQuantity()));
                 }
             }
 
@@ -485,6 +535,27 @@ public class GoodsReceiptService extends BaseService<GoodsReceipt, Long> {
             }
         }
         goodsReceipt.setTotalAmount(updatedTotalAmount);
+
+        if (goodsReceipt.getPurchaseOrder() != null && goodsReceipt.getPurchaseOrder().getDetails() != null) {
+            PurchaseOrder po = goodsReceipt.getPurchaseOrder();
+            boolean allReceived = !po.getDetails().isEmpty() && po.getDetails().stream().allMatch(pod -> {
+                BigDecimal ordered = Optional.ofNullable(pod.getOrderedQty()).orElse(BigDecimal.ZERO);
+                BigDecimal received = Optional.ofNullable(pod.getReceivedQty()).orElse(BigDecimal.ZERO);
+                BigDecimal returned = Optional.ofNullable(pod.getReturnedQty()).orElse(BigDecimal.ZERO);
+                return received.subtract(returned).compareTo(ordered) >= 0;
+            });
+            boolean anyReceived = po.getDetails().stream().anyMatch(pod -> {
+                BigDecimal received = Optional.ofNullable(pod.getReceivedQty()).orElse(BigDecimal.ZERO);
+                BigDecimal returned = Optional.ofNullable(pod.getReturnedQty()).orElse(BigDecimal.ZERO);
+                return received.subtract(returned).compareTo(BigDecimal.ZERO) > 0;
+            });
+            if (allReceived) {
+                po.setStatus(org.enterprise.inventory.enums.PurchaseOrderStatus.CLOSED);
+            } else if (anyReceived) {
+                po.setStatus(org.enterprise.inventory.enums.PurchaseOrderStatus.PARTIAL_RECEIVED);
+            }
+            purchaseOrderRepository.save(po);
+        }
     }
 
     /**

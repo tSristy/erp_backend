@@ -34,14 +34,20 @@ public class RoleService {
         return roleRepository.search(companyId, query, pageable).map(this::mapToDto);
     }
 
+    @Transactional(readOnly = true)
     public List<RoleDto> getAllRoles() {
-        Long companyId = TenantContext.get().getCompanyId();
-        return roleRepository.findAll().stream()
-                .filter(r -> r.getCompanyId() == null || r.getCompanyId().equals(companyId))
+        Long companyId = TenantContext.getCompanyId();
+        List<Role> allRoles = roleRepository.findAll();
+        List<Role> filtered = allRoles.stream()
+                .filter(r -> companyId == null || r.getCompanyId() == null || r.getCompanyId().equals(companyId))
+                .toList();
+        List<Role> effective = filtered.isEmpty() ? allRoles : filtered;
+        return effective.stream()
                 .map(this::mapToDto)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public RoleDto getRoleById(Long id) {
         return roleRepository.findById(id)
                 .map(this::mapToDto)
@@ -50,6 +56,7 @@ public class RoleService {
 
 
 
+    @Transactional(readOnly = true)
     public List<String> getRolePermissions(Long roleId) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
@@ -147,7 +154,7 @@ public class RoleService {
         RoleDto dto = new RoleDto();
         dto.setId(role.getId());
         dto.setCode(role.getCode());
-        dto.setName(role.getName());
+        dto.setName(role.getName() != null && !role.getName().isBlank() ? role.getName() : role.getCode());
         dto.setCompanyId(role.getCompanyId());
         return dto;
     }

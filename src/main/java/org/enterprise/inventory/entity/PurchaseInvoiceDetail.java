@@ -19,6 +19,16 @@ public class PurchaseInvoiceDetail extends AuditableEntity {
     private PurchaseInvoice purchaseInvoice;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "goods_receipt_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "details"})
+    private GoodsReceipt goodsReceipt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "goods_receipt_detail_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "goodsReceipt"})
+    private GoodsReceiptDetail goodsReceiptDetail;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;
 
