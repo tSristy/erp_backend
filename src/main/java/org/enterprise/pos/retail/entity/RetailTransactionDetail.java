@@ -27,6 +27,11 @@ public class RetailTransactionDetail extends AuditableEntity implements PosLineI
     private RetailTransaction transaction;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reference_transaction_detail_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private RetailTransactionDetail referenceTransactionDetail;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
@@ -110,5 +115,59 @@ public class RetailTransactionDetail extends AuditableEntity implements PosLineI
     @Override
     public List<? extends PosLineItemDiscount> getLineDiscounts() {
         return discounts;
+    }
+
+    public Long resolveSourceDetailId() {
+        if (referenceTransactionDetail != null && referenceTransactionDetail.getId() != null) {
+            return referenceTransactionDetail.getId();
+        }
+        try {
+            if (transaction != null
+                    && transaction.getReferenceTransaction() != null
+                    && transaction.getReferenceTransaction().getDetails() != null
+                    && product != null
+                    && product.getId() != null) {
+                Long prodId = product.getId();
+                Long varId = variant != null ? variant.getId() : null;
+                Long bId = batch != null ? batch.getId() : null;
+                String bNo = getBatchNo();
+
+                for (RetailTransactionDetail refDetail : transaction.getReferenceTransaction().getDetails()) {
+                    if (refDetail.getId() == null || refDetail.getProduct() == null || !prodId.equals(refDetail.getProduct().getId())) {
+                        continue;
+                    }
+                    Long refVarId = refDetail.getVariant() != null ? refDetail.getVariant().getId() : null;
+                    if (!java.util.Objects.equals(varId, refVarId)) {
+                        continue;
+                    }
+                    Long refBatchId = refDetail.getBatch() != null ? refDetail.getBatch().getId() : null;
+                    String refBatchNo = refDetail.getBatchNo();
+                    boolean batchMatches = (bId == null && refBatchId == null)
+                            || java.util.Objects.equals(bId, refBatchId)
+                            || (bNo != null && refBatchNo != null && bNo.equalsIgnoreCase(refBatchNo));
+                    if (batchMatches) {
+                        return refDetail.getId();
+                    }
+                }
+
+                for (RetailTransactionDetail refDetail : transaction.getReferenceTransaction().getDetails()) {
+                    if (refDetail.getId() == null || refDetail.getProduct() == null || !prodId.equals(refDetail.getProduct().getId())) {
+                        continue;
+                    }
+                    Long refVarId = refDetail.getVariant() != null ? refDetail.getVariant().getId() : null;
+                    if (java.util.Objects.equals(varId, refVarId)) {
+                        return refDetail.getId();
+                    }
+                }
+
+                for (RetailTransactionDetail refDetail : transaction.getReferenceTransaction().getDetails()) {
+                    if (refDetail.getId() != null && refDetail.getProduct() != null && prodId.equals(refDetail.getProduct().getId())) {
+                        return refDetail.getId();
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 }

@@ -8,6 +8,9 @@ import org.enterprise.common.dto.AuditableDto;
 @Data
 public class RetailTransactionDetailDto extends AuditableDto {
     private Long transactionId;
+    private Long sourceDetailId;
+    private Long referenceTransactionDetailId;
+    private Long originalTransactionDetailId;
     private Long productId;
     private Long variantId;
     private String variantSku;

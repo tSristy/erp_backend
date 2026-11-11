@@ -80,6 +80,16 @@ public class RetailTransactionService {
                 } else {
                     detail.setBatch(null);
                 }
+                if (detail.getReferenceTransactionDetail() != null && detail.getReferenceTransactionDetail().getId() != null) {
+                    detail.setReferenceTransactionDetail(entityManager.getReference(RetailTransactionDetail.class, detail.getReferenceTransactionDetail().getId()));
+                } else {
+                    Long inferredSourceDetailId = detail.resolveSourceDetailId();
+                    if (inferredSourceDetailId != null) {
+                        detail.setReferenceTransactionDetail(entityManager.getReference(RetailTransactionDetail.class, inferredSourceDetailId));
+                    } else {
+                        detail.setReferenceTransactionDetail(null);
+                    }
+                }
 
                 if ((detail.getSerialNo() == null || detail.getSerialNo().trim().isEmpty()) && detail.getSerialNumbers() != null && !detail.getSerialNumbers().isEmpty()) {
                     detail.setSerialNo(detail.getSerialNumbers().get(0));
@@ -215,6 +225,14 @@ public class RetailTransactionService {
                 target.setBatch(null);
             }
             target.setBatchNo(incomingDetail.getBatchNo());
+            if (incomingDetail.getReferenceTransactionDetail() != null && incomingDetail.getReferenceTransactionDetail().getId() != null) {
+                target.setReferenceTransactionDetail(entityManager.getReference(RetailTransactionDetail.class, incomingDetail.getReferenceTransactionDetail().getId()));
+            } else {
+                Long inferredSourceDetailId = target.resolveSourceDetailId();
+                if (inferredSourceDetailId != null) {
+                    target.setReferenceTransactionDetail(entityManager.getReference(RetailTransactionDetail.class, inferredSourceDetailId));
+                }
+            }
 
             target.setQuantity(incomingDetail.getQuantity());
             target.setUnitPrice(incomingDetail.getUnitPrice());

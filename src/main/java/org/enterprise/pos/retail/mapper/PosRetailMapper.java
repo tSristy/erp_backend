@@ -5,6 +5,7 @@ import org.mapstruct.Mapping;
 import java.util.List;
 import org.enterprise.pos.retail.entity.*;
 import org.enterprise.pos.retail.dto.*;
+import org.mapstruct.Named;
 
 @Mapper(componentModel = "spring")
 public interface PosRetailMapper {
@@ -33,6 +34,7 @@ public interface PosRetailMapper {
     RetailTransactionDto toDto(RetailTransaction entity);
 
     @Mapping(target = "transaction", ignore = true)
+    @Mapping(target = "referenceTransactionDetail", expression = "java(mapReferenceDetail(dto))")
     @Mapping(target = "product.id", source = "productId")
     @Mapping(target = "variant.id", source = "variantId")
     @Mapping(target = "batch.id", source = "batchId")
@@ -40,6 +42,9 @@ public interface PosRetailMapper {
     RetailTransactionDetail toEntity(RetailTransactionDetailDto dto);
     
     @Mapping(target = "transactionId", source = "transaction.id")
+    @Mapping(target = "sourceDetailId", expression = "java(entity.resolveSourceDetailId())")
+    @Mapping(target = "referenceTransactionDetailId", expression = "java(entity.resolveSourceDetailId())")
+    @Mapping(target = "originalTransactionDetailId", expression = "java(entity.resolveSourceDetailId())")
     @Mapping(target = "productId", source = "product.id")
     @Mapping(target = "variantId", source = "variant.id")
     @Mapping(target = "variantSku", source = "variant.sku")
@@ -48,6 +53,22 @@ public interface PosRetailMapper {
     @Mapping(target = "discount", source = "discountAmount")
     @Mapping(target = "discountAmount", source = "discountAmount")
     RetailTransactionDetailDto toDto(RetailTransactionDetail entity);
+
+    @Named("mapReferenceDetail")
+    default RetailTransactionDetail mapReferenceDetail(RetailTransactionDetailDto dto) {
+        if (dto == null) {
+            return null;
+        }
+        Long refDetailId = dto.getReferenceTransactionDetailId() != null
+                ? dto.getReferenceTransactionDetailId()
+                : (dto.getSourceDetailId() != null ? dto.getSourceDetailId() : dto.getOriginalTransactionDetailId());
+        if (refDetailId == null) {
+            return null;
+        }
+        RetailTransactionDetail ref = new RetailTransactionDetail();
+        ref.setId(refDetailId);
+        return ref;
+    }
 
     @Mapping(target = "transactionDetail", ignore = true)
     RetailTransactionDetailDiscount toEntity(RetailTransactionDetailDiscountDto dto);
