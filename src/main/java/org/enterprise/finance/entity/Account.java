@@ -36,6 +36,9 @@ public class Account extends AuditableEntity {
     @Column(name = "is_project_required")
     private boolean isProjectRequired = false;
 
+    @Column(name = "is_internal_order_required")
+    private boolean isInternalOrderRequired = false;
+
     @Column(name = "is_lc_required")
     private boolean isLcRequired = false;
 

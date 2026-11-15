@@ -12,9 +12,13 @@ import java.util.List;
 public class ServiceRequestController {
 
     private final ServiceRequestService service;
+    private final org.enterprise.crm.service.service.ServiceOrderService serviceOrderService;
 
-    public ServiceRequestController(ServiceRequestService service) {
+    public ServiceRequestController(
+            ServiceRequestService service,
+            org.enterprise.crm.service.service.ServiceOrderService serviceOrderService) {
         this.service = service;
+        this.serviceOrderService = serviceOrderService;
     }
 
     @GetMapping
@@ -58,6 +62,11 @@ public class ServiceRequestController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/generate-bill")
+    public ResponseEntity<org.enterprise.sales.entity.SalesInvoice> generateBill(@PathVariable Long id) {
+        return ResponseEntity.ok(serviceOrderService.generateCustomerBillForRequest(id));
     }
 
     @org.springframework.web.bind.annotation.GetMapping("/search")

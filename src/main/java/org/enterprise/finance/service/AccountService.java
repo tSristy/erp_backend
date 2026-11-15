@@ -57,10 +57,18 @@ public class AccountService {
         account.setName(accountDetails.getName());
         account.setAllowPosting(accountDetails.getAllowPosting());
         account.setActive(accountDetails.getActive());
+        account.setBusinessPartnerRequired(accountDetails.isBusinessPartnerRequired());
+        account.setCostCenterRequired(accountDetails.isCostCenterRequired());
+        account.setProjectRequired(accountDetails.isProjectRequired());
+        account.setInternalOrderRequired(accountDetails.isInternalOrderRequired());
+        account.setLcRequired(accountDetails.isLcRequired());
+        account.setLoanRequired(accountDetails.isLoanRequired());
         
         if (accountDetails.getParent() != null && accountDetails.getParent().getId() != null) {
             Account parent = getAccountById(accountDetails.getParent().getId());
             account.setParent(parent);
+        } else {
+            account.setParent(null);
         }
         
         if (accountDetails.getCode() != null && !accountDetails.getCode().trim().isEmpty() && !accountDetails.getCode().equals(account.getCode())) {

@@ -90,4 +90,8 @@ public class SalesInvoice extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     private SalesChannel salesChannel = SalesChannel.B2C;
+
+    private Long serviceRequestId;
+
+    private Long serviceOrderId;
 }

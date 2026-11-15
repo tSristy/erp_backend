@@ -51,6 +51,15 @@ public class InternalOrderService {
                     });
         }
         
+        if (internalOrder.getBudget() == null) {
+            internalOrder.setBudget(java.math.BigDecimal.ZERO);
+        }
+        if (internalOrder.getUtilizedAmount() == null) {
+            internalOrder.setUtilizedAmount(java.math.BigDecimal.ZERO);
+        }
+        if (internalOrder.getBudgetControlled() == null) {
+            internalOrder.setBudgetControlled(true);
+        }
         internalOrder.setCompanyId(companyId);
         return internalOrderRepository.save(internalOrder);
     }
@@ -70,8 +79,15 @@ public class InternalOrderService {
             internalOrder.setCode(details.getCode());
         }
 
-        internalOrder.setName(details.getName());
-        internalOrder.setBudget(details.getBudget());
+        if (details.getName() != null) {
+            internalOrder.setName(details.getName());
+        }
+        if (details.getBudget() != null) {
+            internalOrder.setBudget(details.getBudget());
+        }
+        if (details.getBudgetControlled() != null) {
+            internalOrder.setBudgetControlled(details.getBudgetControlled());
+        }
         if (details.getActive() != null) {
             internalOrder.setActive(details.getActive());
         }

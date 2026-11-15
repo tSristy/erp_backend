@@ -58,12 +58,29 @@ public class ServiceRequest extends AuditableEntity {
     @Column(columnDefinition = "TEXT")
     private String serviceAddress;
 
+    private String registrationNumber;
+
+    private Long odometerReading;
+
+    private Long nextServiceMileage;
+
+    private String fuelLevel;
+
+    @Column(columnDefinition = "TEXT")
+    private String intakeConditionNotes;
+
+    private Boolean warrantyCovered = false;
+
+    private Long salesInvoiceId;
+
+    private String salesInvoiceNo;
+
     public enum ServiceRequestPriority {
         LOW, MEDIUM, HIGH, CRITICAL
     }
 
     public enum ServiceRequestStatus {
-        OPEN, PENDING_ESTIMATE, WAITING_APPROVAL, APPROVED, IN_PROGRESS, RESOLVED, READY_FOR_DELIVERY, DELIVERED, CLOSED
+        OPEN, DIAGNOSIS, PENDING_ESTIMATE, WAITING_APPROVAL, APPROVED, IN_PROGRESS, WAITING_PARTS, RESOLVED, READY_FOR_DELIVERY, DELIVERED, CLOSED
     }
 
     public enum ServiceLocationType {

@@ -46,6 +46,14 @@ public class ServiceOrder extends AuditableEntity {
     @Column(name = "qc_inspector_id")
     private Long qcInspectorId;
 
+    private String serviceBay;
+
+    private Long odometerReading;
+
+    private Long salesInvoiceId;
+
+    private String salesInvoiceNo;
+
     public enum ServiceOrderStatus {
         OPEN, DIAGNOSED, IN_PROGRESS, WAITING_PARTS, RESOLVED
     }
@@ -82,5 +90,21 @@ public class ServiceOrder extends AuditableEntity {
     @com.fasterxml.jackson.annotation.JsonProperty("serviceRequestNumber")
     public void setServiceRequestNumber(String serviceRequestNumber) {
         // Accept for deserialization
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("salesInvoiceId")
+    public Long getEffectiveSalesInvoiceId() {
+        if (salesInvoiceId != null) {
+            return salesInvoiceId;
+        }
+        return serviceRequest != null ? serviceRequest.getSalesInvoiceId() : null;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("salesInvoiceNo")
+    public String getEffectiveSalesInvoiceNo() {
+        if (salesInvoiceNo != null && !salesInvoiceNo.isEmpty()) {
+            return salesInvoiceNo;
+        }
+        return serviceRequest != null ? serviceRequest.getSalesInvoiceNo() : null;
     }
 }

@@ -122,6 +122,13 @@ public class ServiceRequestService extends BaseService<ServiceRequest, Long> {
                 if (entity.getVariant() == null && rp.getVariant() != null) {
                     entity.setVariant(rp.getVariant());
                 }
+                if ((entity.getRegistrationNumber() == null || entity.getRegistrationNumber().trim().isEmpty())
+                        && rp.getSerialNumber() != null && !rp.getSerialNumber().trim().isEmpty()) {
+                    entity.setRegistrationNumber(rp.getSerialNumber());
+                }
+                if (entity.getWarrantyCovered() == null && rp.getWarrantyExpiryDate() != null) {
+                    entity.setWarrantyCovered(!rp.getWarrantyExpiryDate().isBefore(java.time.LocalDate.now()));
+                }
             }
         } else {
             entity.setRegisteredProduct(null);

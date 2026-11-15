@@ -30,6 +30,8 @@ public class SalesInvoiceDetail extends AuditableEntity {
     @JoinColumn(name = "variant_id")
     private org.enterprise.inventory.entity.ProductVariant variant;
 
+    private String description;
+
     @Column(precision = 18, scale = 6)
     private BigDecimal quantity = BigDecimal.ZERO;
 

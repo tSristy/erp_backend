@@ -86,7 +86,47 @@ public class ServiceEstimateService extends BaseService<ServiceEstimate, Long> {
             }
         }
 
-        return super.save(entity);
+        ServiceEstimate saved = super.save(entity);
+
+        if (saved.getServiceRequest() != null) {
+            org.enterprise.crm.service.entity.ServiceRequest sr = saved.getServiceRequest();
+            org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus currentSrStatus = sr.getStatus();
+            boolean srChanged = false;
+
+            if (saved.getStatus() == ServiceEstimate.EstimateStatus.DRAFT) {
+                if (currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.OPEN
+                        || currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.DIAGNOSIS) {
+                    sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.PENDING_ESTIMATE);
+                    srChanged = true;
+                }
+            } else if (saved.getStatus() == ServiceEstimate.EstimateStatus.SENT) {
+                if (currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.OPEN
+                        || currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.DIAGNOSIS
+                        || currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.PENDING_ESTIMATE) {
+                    sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.WAITING_APPROVAL);
+                    srChanged = true;
+                }
+            } else if (saved.getStatus() == ServiceEstimate.EstimateStatus.APPROVED) {
+                if (currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.OPEN
+                        || currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.DIAGNOSIS
+                        || currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.PENDING_ESTIMATE
+                        || currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.WAITING_APPROVAL) {
+                    sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.APPROVED);
+                    srChanged = true;
+                }
+            } else if (saved.getStatus() == ServiceEstimate.EstimateStatus.REJECTED) {
+                if (currentSrStatus == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.WAITING_APPROVAL) {
+                    sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.PENDING_ESTIMATE);
+                    srChanged = true;
+                }
+            }
+
+            if (srChanged) {
+                serviceRequestRepository.save(sr);
+            }
+        }
+
+        return saved;
     }
 
     public Page<ServiceEstimate> searchServiceEstimates(Long companyId, String searchTerm, Pageable pageable) {

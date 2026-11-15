@@ -32,6 +32,7 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
     private final JournalEntryService journalEntryService;
     private final WarehouseRepository warehouseRepository;
     private final ServiceOrderRepository serviceOrderRepository;
+    private final org.enterprise.crm.service.repository.ServiceRequestRepository serviceRequestRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
 
@@ -40,6 +41,7 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
                                           JournalEntryService journalEntryService,
                                           WarehouseRepository warehouseRepository,
                                           ServiceOrderRepository serviceOrderRepository,
+                                          org.enterprise.crm.service.repository.ServiceRequestRepository serviceRequestRepository,
                                           ProductRepository productRepository,
                                           ProductVariantRepository productVariantRepository) {
         super(repository);
@@ -48,6 +50,7 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
         this.journalEntryService = journalEntryService;
         this.warehouseRepository = warehouseRepository;
         this.serviceOrderRepository = serviceOrderRepository;
+        this.serviceRequestRepository = serviceRequestRepository;
         this.productRepository = productRepository;
         this.productVariantRepository = productVariantRepository;
     }
@@ -163,6 +166,28 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
 
                 if (entity.getStatus() == ServicePartsRequisition.RequisitionStatus.CANCELLED) {
                     detail.setQuantityIssued(BigDecimal.ZERO);
+                }
+            }
+
+            if (entity.getStatus() != ServicePartsRequisition.RequisitionStatus.CANCELLED && !entity.getDetails().isEmpty()) {
+                boolean allIssued = true;
+                boolean anyIssued = false;
+                for (ServicePartsRequisitionDetail d : entity.getDetails()) {
+                    BigDecimal reqQty = d.getQuantityRequested() != null ? d.getQuantityRequested() : BigDecimal.ZERO;
+                    BigDecimal issQty = d.getQuantityIssued() != null ? d.getQuantityIssued() : BigDecimal.ZERO;
+                    if (issQty.compareTo(BigDecimal.ZERO) > 0) {
+                        anyIssued = true;
+                    }
+                    if (reqQty.compareTo(BigDecimal.ZERO) <= 0 || issQty.compareTo(reqQty) < 0) {
+                        allIssued = false;
+                    }
+                }
+                if (allIssued && anyIssued) {
+                    entity.setStatus(ServicePartsRequisition.RequisitionStatus.ISSUED);
+                } else if (anyIssued) {
+                    entity.setStatus(ServicePartsRequisition.RequisitionStatus.PARTIALLY_ISSUED);
+                } else if (entity.getStatus() == null) {
+                    entity.setStatus(ServicePartsRequisition.RequisitionStatus.REQUESTED);
                 }
             }
         }
@@ -287,6 +312,44 @@ public class ServicePartsRequisitionService extends BaseService<ServicePartsRequ
 
             if (hasJournalEntries) {
                 journalEntryService.save(journalEntry);
+            }
+        }
+
+        // Automatically synchronize ServiceOrder and ServiceRequest status based on Parts Requisition status
+        if (saved.getServiceOrder() != null) {
+            org.enterprise.crm.service.entity.ServiceOrder so = saved.getServiceOrder();
+            org.enterprise.crm.service.entity.ServiceRequest sr = so.getServiceRequest();
+
+            if (saved.getStatus() == ServicePartsRequisition.RequisitionStatus.REQUESTED
+                    || saved.getStatus() == ServicePartsRequisition.RequisitionStatus.PARTIALLY_ISSUED) {
+                if (so.getStatus() != org.enterprise.crm.service.entity.ServiceOrder.ServiceOrderStatus.RESOLVED
+                        && so.getStatus() != org.enterprise.crm.service.entity.ServiceOrder.ServiceOrderStatus.WAITING_PARTS) {
+                    so.setStatus(org.enterprise.crm.service.entity.ServiceOrder.ServiceOrderStatus.WAITING_PARTS);
+                    serviceOrderRepository.save(so);
+                }
+                if (sr != null
+                        && sr.getStatus() != org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.RESOLVED
+                        && sr.getStatus() != org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.READY_FOR_DELIVERY
+                        && sr.getStatus() != org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.DELIVERED
+                        && sr.getStatus() != org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.CLOSED) {
+                    sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.WAITING_PARTS);
+                    serviceRequestRepository.save(sr);
+                }
+            } else if (saved.getStatus() == ServicePartsRequisition.RequisitionStatus.ISSUED) {
+                if (so.getStatus() == org.enterprise.crm.service.entity.ServiceOrder.ServiceOrderStatus.WAITING_PARTS
+                        || so.getStatus() == org.enterprise.crm.service.entity.ServiceOrder.ServiceOrderStatus.OPEN
+                        || so.getStatus() == org.enterprise.crm.service.entity.ServiceOrder.ServiceOrderStatus.DIAGNOSED) {
+                    so.setStatus(org.enterprise.crm.service.entity.ServiceOrder.ServiceOrderStatus.IN_PROGRESS);
+                    serviceOrderRepository.save(so);
+                }
+                if (sr != null
+                        && (sr.getStatus() == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.WAITING_PARTS
+                        || sr.getStatus() == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.OPEN
+                        || sr.getStatus() == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.APPROVED
+                        || sr.getStatus() == org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.PENDING_ESTIMATE)) {
+                    sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.IN_PROGRESS);
+                    serviceRequestRepository.save(sr);
+                }
             }
         }
 

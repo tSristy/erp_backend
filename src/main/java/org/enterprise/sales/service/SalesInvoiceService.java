@@ -29,6 +29,7 @@ public class SalesInvoiceService {
     private final org.enterprise.inventory.repository.ProductRepository productRepository;
     private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
     private final org.enterprise.crm.service.LoyaltyService loyaltyService;
+    private final org.enterprise.crm.service.repository.ServiceRequestRepository serviceRequestRepository;
 
     public synchronized String generateNextInvoiceNo(Long companyId) {
         long nextNum = salesInvoiceRepository.findTopByOrderByIdDesc()
@@ -268,6 +269,15 @@ public class SalesInvoiceService {
 
         invoice.setStatus(SalesInvoice.InvoiceStatus.POSTED);
         SalesInvoice savedInvoice = salesInvoiceRepository.save(invoice);
+
+        if (savedInvoice.getServiceRequestId() != null) {
+            serviceRequestRepository.findById(savedInvoice.getServiceRequestId()).ifPresent(sr -> {
+                if (sr.getStatus() != org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.CLOSED) {
+                    sr.setStatus(org.enterprise.crm.service.entity.ServiceRequest.ServiceRequestStatus.DELIVERED);
+                    serviceRequestRepository.save(sr);
+                }
+            });
+        }
 
         if (savedInvoice.getCustomer() != null && savedInvoice.getCustomer().getId() != null) {
             if (isInvoice) {

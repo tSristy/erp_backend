@@ -57,6 +57,11 @@ public class ServiceOrderController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/generate-bill")
+    public ResponseEntity<org.enterprise.sales.entity.SalesInvoice> generateBill(@PathVariable Long id) {
+        return ResponseEntity.ok(service.generateCustomerBill(id));
+    }
+
     @org.springframework.web.bind.annotation.GetMapping("/search")
     public org.springframework.data.domain.Page<ServiceOrder> search(
             @org.springframework.web.bind.annotation.RequestParam(required = false) Long companyId,
