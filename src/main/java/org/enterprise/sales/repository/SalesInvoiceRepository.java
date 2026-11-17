@@ -13,16 +13,22 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
     java.util.Optional<SalesInvoice> findTopByOrderByIdDesc();
 
     @Override
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "deliveryNote"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "salesOrder", "deliveryNote"})
     org.springframework.data.domain.Page<SalesInvoice> findAll(org.springframework.data.jpa.domain.Specification<SalesInvoice> spec, org.springframework.data.domain.Pageable pageable);
 
     @Override
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "deliveryNote"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "salesOrder", "deliveryNote"})
     org.springframework.data.domain.Page<SalesInvoice> findAll(org.springframework.data.domain.Pageable pageable);
 
     @Override
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "deliveryNote"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "salesOrder", "deliveryNote"})
     List<SalesInvoice> findAll();
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "salesOrder", "deliveryNote", "details", "details.product", "details.variant", "details.salesOrderDetail", "details.deliveryNoteDetail"})
+    List<SalesInvoice> findBySalesOrderId(Long salesOrderId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "warehouse", "salesOrder", "deliveryNote", "details", "details.product", "details.variant", "details.salesOrderDetail", "details.deliveryNoteDetail"})
+    List<SalesInvoice> findByDeliveryNoteId(Long deliveryNoteId);
 
     List<SalesInvoice> findByCompanyId(Long companyId);
     

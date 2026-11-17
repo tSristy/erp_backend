@@ -12,6 +12,8 @@ public class SalesQuotationDetailDto extends AuditableDto {
     private Long variantId;
     private String variantSku;
     private BigDecimal quantity;
+    private BigDecimal orderedQuantity;
+    private BigDecimal availableQuantity;
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private BigDecimal discountTotal;

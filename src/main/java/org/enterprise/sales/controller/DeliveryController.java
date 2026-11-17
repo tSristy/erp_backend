@@ -28,19 +28,19 @@ public class DeliveryController {
     public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> create(@Valid @RequestBody org.enterprise.sales.dto.DeliveryNoteDto dto) {
         DeliveryNote entity = mapper.toEntity(dto);
         DeliveryNote saved = deliveryService.save(entity);
-        org.enterprise.sales.dto.DeliveryNoteDto created = mapper.toDto(saved);
+        org.enterprise.sales.dto.DeliveryNoteDto created = deliveryService.toEnrichedDto(saved);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(created.getId()).toUri();
         return ResponseEntity.created(location).body(created);
     }
 
     @PostMapping("/{id}/confirm")
     public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> confirmDelivery(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toDto(deliveryService.confirmDelivery(id)));
+        return ResponseEntity.ok(deliveryService.toEnrichedDto(deliveryService.confirmDelivery(id)));
     }
 
     @PostMapping("/{id}/create-return")
     public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> createReturn(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toDto(deliveryService.createReturn(id)));
+        return ResponseEntity.ok(deliveryService.toEnrichedDto(deliveryService.createReturn(id)));
     }
 
     @GetMapping
@@ -51,15 +51,14 @@ public class DeliveryController {
             @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
         String searchTerm = org.springframework.util.StringUtils.hasText(query) ? query : (org.springframework.util.StringUtils.hasText(search) ? search : q);
         if (org.springframework.util.StringUtils.hasText(searchTerm)) {
-            return ResponseEntity.ok(deliveryService.search(searchTerm, pageable).map(mapper::toDto));
+            return ResponseEntity.ok(deliveryService.search(searchTerm, pageable).map(deliveryService::toEnrichedDto));
         }
-        return ResponseEntity.ok(deliveryService.findAll(pageable).map(mapper::toDto));
+        return ResponseEntity.ok(deliveryService.findAll(pageable).map(deliveryService::toEnrichedDto));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> getById(@PathVariable Long id) {
-        return deliveryService.findById(id)
-                .map(mapper::toDto)
+        return deliveryService.findDtoById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -68,7 +67,7 @@ public class DeliveryController {
     public ResponseEntity<org.enterprise.sales.dto.DeliveryNoteDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.sales.dto.DeliveryNoteDto dto) {
         dto.setId(id);
         DeliveryNote entity = mapper.toEntity(dto);
-        return ResponseEntity.ok(mapper.toDto(deliveryService.save(entity)));
+        return ResponseEntity.ok(deliveryService.toEnrichedDto(deliveryService.save(entity)));
     }
 
     @DeleteMapping("/{id}")

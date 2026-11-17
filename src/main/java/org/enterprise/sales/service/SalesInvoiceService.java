@@ -30,6 +30,8 @@ public class SalesInvoiceService {
     private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
     private final org.enterprise.crm.service.LoyaltyService loyaltyService;
     private final org.enterprise.crm.service.repository.ServiceRequestRepository serviceRequestRepository;
+    private final org.enterprise.sales.mapper.SalesMapper mapper;
+    private final SalesQuantitySyncService quantitySyncService;
 
     public synchronized String generateNextInvoiceNo(Long companyId) {
         long nextNum = salesInvoiceRepository.findTopByOrderByIdDesc()
@@ -176,6 +178,14 @@ public class SalesInvoiceService {
                             break;
                         }
                     }
+                    if (matchedDnd == null && detail.getProduct() != null && detail.getProduct().getId() != null) {
+                        for (var dnd : salesInvoice.getDeliveryNote().getDetails()) {
+                            if (dnd.getProduct() != null && dnd.getProduct().getId().equals(detail.getProduct().getId())) {
+                                matchedDnd = dnd;
+                                break;
+                            }
+                        }
+                    }
                     detail.setDeliveryNoteDetail(matchedDnd);
                 } else {
                     detail.setDeliveryNoteDetail(null);
@@ -185,20 +195,16 @@ public class SalesInvoiceService {
                 if (detail.getDeliveryNoteDetail() != null && detail.getDeliveryNoteDetail().getSalesOrderDetail() != null) {
                     matchedSod = detail.getDeliveryNoteDetail().getSalesOrderDetail();
                 } else if (salesInvoice.getSalesOrder() != null && salesInvoice.getSalesOrder().getDetails() != null) {
-                    for (var sod : salesInvoice.getSalesOrder().getDetails()) {
-                        if (detail.getSalesOrderDetail() != null && detail.getSalesOrderDetail().getId() != null && detail.getSalesOrderDetail().getId().equals(sod.getId())) {
-                            matchedSod = sod;
-                            break;
-                        }
-                    }
-                    if (matchedSod == null && detail.getProduct() != null && detail.getProduct().getId() != null) {
-                        for (var sod : salesInvoice.getSalesOrder().getDetails()) {
-                            if (sod.getProduct() != null && sod.getProduct().getId().equals(detail.getProduct().getId())) {
-                                matchedSod = sod;
-                                break;
-                            }
-                        }
-                    }
+                    Long incomingSodId = (detail.getSalesOrderDetail() != null && detail.getSalesOrderDetail().getId() != null)
+                            ? detail.getSalesOrderDetail().getId() : null;
+                    Long prodId = (detail.getProduct() != null && detail.getProduct().getId() != null)
+                            ? detail.getProduct().getId() : null;
+                    matchedSod = quantitySyncService.findMatchingOrderDetail(
+                            salesInvoice.getSalesOrder().getDetails(),
+                            incomingSodId,
+                            prodId,
+                            varId
+                    );
                 }
                 detail.setSalesOrderDetail(matchedSod);
 
@@ -227,7 +233,13 @@ public class SalesInvoiceService {
                 }
             }
         }
-        return salesInvoiceRepository.save(salesInvoice);
+        SalesInvoice saved = salesInvoiceRepository.saveAndFlush(salesInvoice);
+        if (saved.getSalesOrder() != null && saved.getSalesOrder().getId() != null) {
+            quantitySyncService.syncSalesOrderById(saved.getSalesOrder().getId());
+        } else if (saved.getDeliveryNote() != null) {
+            quantitySyncService.syncDeliveryNoteQuantities(saved.getDeliveryNote());
+        }
+        return saved;
     }
     @Transactional
     public SalesInvoice postInvoice(Long invoiceId) {
@@ -268,7 +280,12 @@ public class SalesInvoiceService {
         }
 
         invoice.setStatus(SalesInvoice.InvoiceStatus.POSTED);
-        SalesInvoice savedInvoice = salesInvoiceRepository.save(invoice);
+        SalesInvoice savedInvoice = salesInvoiceRepository.saveAndFlush(invoice);
+        if (savedInvoice.getSalesOrder() != null && savedInvoice.getSalesOrder().getId() != null) {
+            quantitySyncService.syncSalesOrderById(savedInvoice.getSalesOrder().getId());
+        } else if (savedInvoice.getDeliveryNote() != null) {
+            quantitySyncService.syncDeliveryNoteQuantities(savedInvoice.getDeliveryNote());
+        }
 
         if (savedInvoice.getServiceRequestId() != null) {
             serviceRequestRepository.findById(savedInvoice.getServiceRequestId()).ifPresent(sr -> {
@@ -459,7 +476,13 @@ public class SalesInvoiceService {
         creditMemo.setVatTotal(original.getVatTotal());
         creditMemo.setTotalAmount(totalAmount);
 
-        return salesInvoiceRepository.save(creditMemo);
+        SalesInvoice savedCreditMemo = salesInvoiceRepository.saveAndFlush(creditMemo);
+        if (savedCreditMemo.getSalesOrder() != null && savedCreditMemo.getSalesOrder().getId() != null) {
+            quantitySyncService.syncSalesOrderById(savedCreditMemo.getSalesOrder().getId());
+        } else if (savedCreditMemo.getDeliveryNote() != null) {
+            quantitySyncService.syncDeliveryNoteQuantities(savedCreditMemo.getDeliveryNote());
+        }
+        return savedCreditMemo;
 }
     public java.util.List<SalesInvoice> findAll() {
         return salesInvoiceRepository.findAll();
@@ -472,6 +495,20 @@ public class SalesInvoiceService {
     public java.util.Optional<SalesInvoice> findById(Long id) {
         return salesInvoiceRepository.findById(id);
     }
+
+    @org.springframework.transaction.annotation.Transactional
+    public org.enterprise.sales.dto.SalesInvoiceDto toEnrichedDto(SalesInvoice entity) {
+        if (entity == null) return null;
+        org.enterprise.sales.dto.SalesInvoiceDto dto = mapper.toDto(entity);
+        quantitySyncService.enrichSalesInvoiceDto(entity, dto);
+        return dto;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public java.util.Optional<org.enterprise.sales.dto.SalesInvoiceDto> findDtoById(Long id) {
+        return findById(id).map(this::toEnrichedDto);
+    }
+
     @org.springframework.transaction.annotation.Transactional
     public void delete(Long id) {
         SalesInvoice existing = salesInvoiceRepository.findById(id)
@@ -479,7 +516,17 @@ public class SalesInvoiceService {
         if (existing.getStatus() != null && existing.getStatus() != SalesInvoice.InvoiceStatus.DRAFT) {
             throw new RuntimeException("Only DRAFT sales invoices can be deleted");
         }
+        Long salesOrderId = existing.getSalesOrder() != null ? existing.getSalesOrder().getId()
+                : (existing.getDeliveryNote() != null && existing.getDeliveryNote().getSalesOrder() != null
+                    ? existing.getDeliveryNote().getSalesOrder().getId() : null);
+        Long deliveryNoteId = existing.getDeliveryNote() != null ? existing.getDeliveryNote().getId() : null;
         salesInvoiceRepository.deleteById(id);
+        salesInvoiceRepository.flush();
+        if (salesOrderId != null) {
+            quantitySyncService.syncSalesOrderById(salesOrderId);
+        } else if (deliveryNoteId != null) {
+            deliveryNoteRepository.findById(deliveryNoteId).ifPresent(quantitySyncService::syncDeliveryNoteQuantities);
+        }
     }
 
 

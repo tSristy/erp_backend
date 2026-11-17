@@ -13,6 +13,10 @@ public class DeliveryNoteDetailDto extends AuditableDto {
     private Long variantId;
     private String variantSku;
     private BigDecimal quantity;
+    private BigDecimal invoicedQuantity;
+    private BigDecimal sourceQuantity;
+    private BigDecimal previouslyDeliveredQuantity;
+    private BigDecimal remainingQuantity;
     private BigDecimal unitCost;
     private Long batchId;
     private String batchNumber;

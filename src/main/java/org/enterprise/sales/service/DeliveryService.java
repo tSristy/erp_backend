@@ -43,6 +43,9 @@ public class DeliveryService {
     private final org.enterprise.inventory.repository.BusinessPartnerRepository businessPartnerRepository;
     private final org.enterprise.inventory.repository.WarehouseRepository warehouseRepository;
     private final org.enterprise.sales.repository.SalesOrderRepository salesOrderRepository;
+    private final org.enterprise.inventory.repository.BatchRepository batchRepository;
+    private final org.enterprise.sales.mapper.SalesMapper mapper;
+    private final SalesQuantitySyncService quantitySyncService;
 
     public synchronized String generateNextDeliveryNo(Long companyId) {
         long nextNum = deliveryNoteRepository.findTopByOrderByIdDesc()
@@ -77,7 +80,7 @@ public class DeliveryService {
         }
 
         if (deliveryNote.getSalesOrder() != null && deliveryNote.getSalesOrder().getId() != null) {
-            salesOrderRepository.findById(deliveryNote.getSalesOrder().getId()).ifPresent(so -> {
+            salesOrderRepository.findById(deliveryNote.getSalesOrder().getId()).ifPresentOrElse(so -> {
                 deliveryNote.setSalesOrder(so);
                 if (deliveryNote.getCustomer() == null && so.getCustomer() != null) {
                     deliveryNote.setCustomer(so.getCustomer());
@@ -90,15 +93,25 @@ public class DeliveryService {
                         deliveryNote.setSalesChannel(DeliveryNote.SalesChannel.valueOf(so.getSalesChannel().name()));
                     } catch (Exception ignored) {}
                 }
-            });
+            }, () -> deliveryNote.setSalesOrder(null));
+        } else {
+            deliveryNote.setSalesOrder(null);
         }
         if (deliveryNote.getCustomer() != null && deliveryNote.getCustomer().getId() != null) {
             businessPartnerRepository.findById(deliveryNote.getCustomer().getId())
-                    .ifPresent(deliveryNote::setCustomer);
+                    .ifPresentOrElse(deliveryNote::setCustomer, () -> deliveryNote.setCustomer(null));
+        } else if (deliveryNote.getSalesOrder() != null && deliveryNote.getSalesOrder().getCustomer() != null) {
+            deliveryNote.setCustomer(deliveryNote.getSalesOrder().getCustomer());
+        } else {
+            deliveryNote.setCustomer(null);
         }
         if (deliveryNote.getWarehouse() != null && deliveryNote.getWarehouse().getId() != null) {
             warehouseRepository.findById(deliveryNote.getWarehouse().getId())
-                    .ifPresent(deliveryNote::setWarehouse);
+                    .ifPresentOrElse(deliveryNote::setWarehouse, () -> deliveryNote.setWarehouse(null));
+        } else if (deliveryNote.getSalesOrder() != null && deliveryNote.getSalesOrder().getWarehouse() != null) {
+            deliveryNote.setWarehouse(deliveryNote.getSalesOrder().getWarehouse());
+        } else {
+            deliveryNote.setWarehouse(null);
         }
         
         if (deliveryNote.getDetails() != null) {
@@ -106,29 +119,51 @@ public class DeliveryService {
                 detail.setDeliveryNote(deliveryNote);
                 if (detail.getCompanyId() == null) {
                     detail.setCompanyId(companyId);
-}
-                if (detail.getProduct() != null && detail.getProduct().getId() != null) {
-                    productRepository.findById(detail.getProduct().getId()).ifPresent(detail::setProduct);
+                }
+                Long prodId = (detail.getProduct() != null && detail.getProduct().getId() != null)
+                        ? detail.getProduct().getId() : null;
+                if (prodId != null) {
+                    detail.setProduct(productRepository.findById(prodId).orElse(null));
+                } else {
+                    detail.setProduct(null);
                 }
                 Long varId = (detail.getVariant() != null && detail.getVariant().getId() != null)
                         ? detail.getVariant().getId() : null;
                 if (varId != null) {
-                    productVariantRepository.findById(varId)
-                            .ifPresentOrElse(detail::setVariant, () -> detail.setVariant(null));
-                } else if (deliveryNote.getSalesOrder() != null && deliveryNote.getSalesOrder().getDetails() != null) {
-                    for (var sod : deliveryNote.getSalesOrder().getDetails()) {
-                        if (detail.getSalesOrderDetail() != null && sod.getId() != null && sod.getId().equals(detail.getSalesOrderDetail().getId())) {
-                            detail.setVariant(sod.getVariant());
-                            break;
-                        }
-                    }
+                    detail.setVariant(productVariantRepository.findById(varId).orElse(null));
                 } else {
                     detail.setVariant(null);
                 }
-}
-}        
-        return deliveryNoteRepository.save(deliveryNote);
-}
+                Long batchId = (detail.getBatch() != null && detail.getBatch().getId() != null)
+                        ? detail.getBatch().getId() : null;
+                if (batchId != null) {
+                    detail.setBatch(batchRepository.findById(batchId).orElse(null));
+                } else {
+                    detail.setBatch(null);
+                }
+
+                Long incomingSodId = (detail.getSalesOrderDetail() != null && detail.getSalesOrderDetail().getId() != null)
+                        ? detail.getSalesOrderDetail().getId() : null;
+                if (deliveryNote.getSalesOrder() != null && deliveryNote.getSalesOrder().getDetails() != null) {
+                    org.enterprise.sales.entity.SalesOrderDetail matchedSod = quantitySyncService.findMatchingOrderDetail(
+                            deliveryNote.getSalesOrder().getDetails(),
+                            incomingSodId,
+                            prodId,
+                            varId
+                    );
+                    detail.setSalesOrderDetail(matchedSod);
+                    if (detail.getVariant() == null && matchedSod != null && matchedSod.getVariant() != null) {
+                        detail.setVariant(matchedSod.getVariant());
+                    }
+                } else {
+                    detail.setSalesOrderDetail(null);
+                }
+            }
+        }        
+        DeliveryNote saved = deliveryNoteRepository.saveAndFlush(deliveryNote);
+        quantitySyncService.syncDeliveryNoteQuantities(saved);
+        return saved;
+    }
     @Transactional
     public DeliveryNote confirmDelivery(Long deliveryNoteId) {
         DeliveryNote delivery = deliveryNoteRepository.findById(deliveryNoteId)
@@ -282,8 +317,10 @@ public class DeliveryService {
         createAccountingEntry(delivery, totalCogs, isOutbound);
 
         delivery.setStatus(DeliveryNote.DeliveryStatus.SHIPPED);
-        return deliveryNoteRepository.save(delivery);
-}
+        DeliveryNote saved = deliveryNoteRepository.saveAndFlush(delivery);
+        quantitySyncService.syncDeliveryNoteQuantities(saved);
+        return saved;
+    }
     private void createAccountingEntry(DeliveryNote delivery, BigDecimal totalCogs, boolean isOutbound) {
         if (totalCogs.compareTo(BigDecimal.ZERO) <= 0) return;
 
@@ -351,21 +388,39 @@ public class DeliveryService {
         }
         returnDelivery.setDetails(returnDetails);
 
-        return deliveryNoteRepository.save(returnDelivery);
+        DeliveryNote saved = deliveryNoteRepository.saveAndFlush(returnDelivery);
+        quantitySyncService.syncDeliveryNoteQuantities(saved);
+        return saved;
     }
 
     public java.util.List<DeliveryNote> findAll() {
         return deliveryNoteRepository.findAll();
     }
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional
     public org.springframework.data.domain.Page<DeliveryNote> findAll(org.springframework.data.domain.Pageable pageable) {
         return deliveryNoteRepository.findAll(pageable);
     }
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional
     public java.util.Optional<DeliveryNote> findById(Long id) {
-        return deliveryNoteRepository.findById(id);
+        return deliveryNoteRepository.findById(id).map(dn -> {
+            quantitySyncService.syncDeliveryNoteQuantities(dn);
+            return dn;
+        });
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public org.enterprise.sales.dto.DeliveryNoteDto toEnrichedDto(DeliveryNote entity) {
+        if (entity == null) return null;
+        org.enterprise.sales.dto.DeliveryNoteDto dto = mapper.toDto(entity);
+        quantitySyncService.enrichDeliveryNoteDto(entity, dto);
+        return dto;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public java.util.Optional<org.enterprise.sales.dto.DeliveryNoteDto> findDtoById(Long id) {
+        return findById(id).map(this::toEnrichedDto);
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -375,7 +430,12 @@ public class DeliveryService {
         if (delivery.getStatus() != DeliveryNote.DeliveryStatus.DRAFT) {
             throw new RuntimeException("Only DRAFT delivery notes can be deleted. Create a Sales Return for SHIPPED deliveries.");
         }
+        Long salesOrderId = delivery.getSalesOrder() != null ? delivery.getSalesOrder().getId() : null;
         deliveryNoteRepository.deleteById(id);
+        deliveryNoteRepository.flush();
+        if (salesOrderId != null) {
+            quantitySyncService.syncSalesOrderById(salesOrderId);
+        }
     }
 
 

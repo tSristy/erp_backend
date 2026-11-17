@@ -31,6 +31,14 @@ public class SalesQuotationDetail extends AuditableEntity {
     @Column(precision = 18, scale = 6)
     private BigDecimal orderedQuantity = BigDecimal.ZERO;
 
+    @Transient
+    public BigDecimal getAvailableQuantity() {
+        BigDecimal q = quantity != null ? quantity : BigDecimal.ZERO;
+        BigDecimal o = orderedQuantity != null ? orderedQuantity : BigDecimal.ZERO;
+        BigDecimal avail = q.subtract(o);
+        return avail.compareTo(BigDecimal.ZERO) > 0 ? avail : BigDecimal.ZERO;
+    }
+
     @Column(precision = 18, scale = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 

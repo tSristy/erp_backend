@@ -32,4 +32,10 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long>, J
     @Override
     @EntityGraph(attributePaths = {"customer", "warehouse", "salesQuotation"})
     Optional<SalesOrder> findById(Long id);
+
+    @EntityGraph(attributePaths = {"details", "details.product", "details.variant", "salesQuotation"})
+    List<SalesOrder> findBySalesQuotationId(Long salesQuotationId);
+
+    @EntityGraph(attributePaths = {"details", "details.product", "details.variant", "referenceOrder"})
+    List<SalesOrder> findByReferenceOrderId(Long referenceOrderId);
 }

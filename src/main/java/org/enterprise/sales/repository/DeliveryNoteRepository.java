@@ -32,4 +32,7 @@ public interface DeliveryNoteRepository extends JpaRepository<DeliveryNote, Long
     @Override
     @EntityGraph(attributePaths = {"customer", "warehouse", "salesOrder"})
     List<DeliveryNote> findAll();
+
+    @EntityGraph(attributePaths = {"customer", "warehouse", "salesOrder", "details", "details.product", "details.variant", "details.salesOrderDetail"})
+    List<DeliveryNote> findBySalesOrderId(Long salesOrderId);
 }

@@ -14,6 +14,9 @@ public class SalesInvoiceDetailDto extends AuditableDto {
     private Long variantId;
     private String variantSku;
     private BigDecimal quantity;
+    private BigDecimal sourceQuantity;
+    private BigDecimal invoicedQuantity;
+    private BigDecimal availableQuantity;
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private BigDecimal discountTotal;

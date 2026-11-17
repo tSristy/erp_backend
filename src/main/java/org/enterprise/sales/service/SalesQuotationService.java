@@ -17,6 +17,7 @@ public class SalesQuotationService {
     private final org.enterprise.inventory.repository.ProductRepository productRepository;
     private final org.enterprise.inventory.repository.ProductVariantRepository productVariantRepository;
     private final org.enterprise.sales.mapper.SalesMapper mapper;
+    private final SalesQuantitySyncService quantitySyncService;
 
     public synchronized String generateNextQuotationNo(Long companyId) {
         long nextNum = salesQuotationRepository.findTopByOrderByIdDesc()
@@ -251,7 +252,9 @@ public class SalesQuotationService {
             }
         }
 
-        return salesQuotationRepository.save(existing);
+        SalesQuotation saved = salesQuotationRepository.save(existing);
+        quantitySyncService.syncQuotationQuantities(saved);
+        return saved;
     }
     private void syncOpportunityStageFromQuotation(org.enterprise.crm.sales.entity.Opportunity opp, SalesQuotation sq) {
         if (opp == null) return;
@@ -296,9 +299,11 @@ public class SalesQuotationService {
         return salesQuotationRepository.findAll();
     }
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional
     public org.springframework.data.domain.Page<SalesQuotation> findAll(org.springframework.data.domain.Pageable pageable) {
-        return salesQuotationRepository.findAll(pageable);
+        org.springframework.data.domain.Page<SalesQuotation> page = salesQuotationRepository.findAll(pageable);
+        page.forEach(quantitySyncService::syncQuotationQuantities);
+        return page;
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -308,6 +313,7 @@ public class SalesQuotationService {
                 sq.setQuotationNo(String.format("SQ-%05d", sq.getId()));
                 sq = salesQuotationRepository.save(sq);
             }
+            quantitySyncService.syncQuotationQuantities(sq);
             if (sq.getDetails() != null) {
                 for (var d : sq.getDetails()) {
                     if (d.getVariant() != null) {
@@ -320,7 +326,7 @@ public class SalesQuotationService {
         });
     }
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional
     public java.util.Optional<org.enterprise.sales.dto.SalesQuotationDto> findDtoById(Long id) {
         return findById(id).map(mapper::toDto);
     }
@@ -331,8 +337,10 @@ public class SalesQuotationService {
     }
 
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional
     public org.springframework.data.domain.Page<SalesQuotation> search(String query, org.springframework.data.domain.Pageable pageable) {
-        return salesQuotationRepository.findAll(org.enterprise.sales.specification.SalesQuotationSpecification.searchByQuery(query), pageable);
+        org.springframework.data.domain.Page<SalesQuotation> page = salesQuotationRepository.findAll(org.enterprise.sales.specification.SalesQuotationSpecification.searchByQuery(query), pageable);
+        page.forEach(quantitySyncService::syncQuotationQuantities);
+        return page;
     }
 }

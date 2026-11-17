@@ -27,19 +27,19 @@ public class SalesInvoiceController {
     public ResponseEntity<org.enterprise.sales.dto.SalesInvoiceDto> create(@Valid @RequestBody org.enterprise.sales.dto.SalesInvoiceDto dto) {
         SalesInvoice entity = mapper.toEntity(dto);
         SalesInvoice saved = salesInvoiceService.save(entity);
-        org.enterprise.sales.dto.SalesInvoiceDto created = mapper.toDto(saved);
+        org.enterprise.sales.dto.SalesInvoiceDto created = salesInvoiceService.toEnrichedDto(saved);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(created.getId()).toUri();
         return ResponseEntity.created(location).body(created);
     }
 
     @PostMapping("/{id}/post")
     public ResponseEntity<org.enterprise.sales.dto.SalesInvoiceDto> postInvoice(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toDto(salesInvoiceService.postInvoice(id)));
+        return ResponseEntity.ok(salesInvoiceService.toEnrichedDto(salesInvoiceService.postInvoice(id)));
     }
 
     @PostMapping("/{id}/create-credit-memo")
     public ResponseEntity<org.enterprise.sales.dto.SalesInvoiceDto> createCreditMemo(@PathVariable Long id) {
-        return ResponseEntity.ok(mapper.toDto(salesInvoiceService.createCreditMemo(id)));
+        return ResponseEntity.ok(salesInvoiceService.toEnrichedDto(salesInvoiceService.createCreditMemo(id)));
     }
 
     @GetMapping
@@ -50,15 +50,14 @@ public class SalesInvoiceController {
             @org.springframework.data.web.PageableDefault(size = 10) org.springframework.data.domain.Pageable pageable) {
         String searchTerm = org.springframework.util.StringUtils.hasText(query) ? query : (org.springframework.util.StringUtils.hasText(search) ? search : q);
         if (org.springframework.util.StringUtils.hasText(searchTerm)) {
-            return ResponseEntity.ok(salesInvoiceService.search(searchTerm, pageable).map(mapper::toDto));
+            return ResponseEntity.ok(salesInvoiceService.search(searchTerm, pageable).map(salesInvoiceService::toEnrichedDto));
         }
-        return ResponseEntity.ok(salesInvoiceService.findAll(pageable).map(mapper::toDto));
+        return ResponseEntity.ok(salesInvoiceService.findAll(pageable).map(salesInvoiceService::toEnrichedDto));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<org.enterprise.sales.dto.SalesInvoiceDto> getById(@PathVariable Long id) {
-        return salesInvoiceService.findById(id)
-                .map(mapper::toDto)
+        return salesInvoiceService.findDtoById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -67,7 +66,7 @@ public class SalesInvoiceController {
     public ResponseEntity<org.enterprise.sales.dto.SalesInvoiceDto> update(@PathVariable Long id, @Valid @RequestBody org.enterprise.sales.dto.SalesInvoiceDto dto) {
         dto.setId(id);
         SalesInvoice entity = mapper.toEntity(dto);
-        return ResponseEntity.ok(mapper.toDto(salesInvoiceService.save(entity)));
+        return ResponseEntity.ok(salesInvoiceService.toEnrichedDto(salesInvoiceService.save(entity)));
     }
 
     @DeleteMapping("/{id}")
